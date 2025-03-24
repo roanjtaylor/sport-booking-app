@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { auth } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { UserRole } from '@/types/user';
 
 /**
@@ -43,37 +43,45 @@ export function RegisterForm() {
     }
 
     try {
-      // Register the user with Supabase
-      const { error } = await auth.signUp(email, password);
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      // After successful registration, insert user profile with name and role
-      const { data: { user } } = await auth.getUser();
-      
-      if (user) {
-        // Insert user profile data into profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
+      // Step 1: Register the user with Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
             name,
-            role,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-          
-        if (profileError) {
-          throw new Error(profileError.message);
+            role
+          }
         }
-      }
-
-      // Redirect to dashboard on successful registration
+      });
+      
+      if (signUpError) throw new Error(signUpError.message);
+      if (!data?.user) throw new Error('Registration failed');
+      
+      // Step 2: Sign in the user immediately to get authenticated session
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInError) throw new Error(signInError.message);
+      
+      // Step 3: Insert profile with authenticated session
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          name,
+          role
+        });
+      
+      if (profileError) throw new Error(`Failed to create profile: ${profileError.message}`);
+      
+      // Success - redirect to dashboard
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
+      console.error('Registration error:', err);
       setError(err.message || 'Failed to create account');
     } finally {
       setIsLoading(false);

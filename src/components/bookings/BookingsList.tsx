@@ -3,7 +3,6 @@ import React from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Booking } from '@/types/booking';
 import { ExtendedBooking } from '../../types/booking';
 import { formatDate, formatTime, formatPrice } from '@/lib/utils';
 

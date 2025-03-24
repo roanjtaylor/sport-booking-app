@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { formatTime } from '@/lib/utils';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 /**
  * Page component for displaying a single facility with booking functionality

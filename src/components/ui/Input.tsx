@@ -8,6 +8,8 @@ type InputProps = {
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
+  min?: string;
+  max?: string;
   placeholder?: string;
   error?: string;
   className?: string;
@@ -23,6 +25,8 @@ export function Input({
   value,
   onChange,
   required = false,
+  min,
+  max,
   placeholder,
   error,
   className = '',
@@ -39,6 +43,8 @@ export function Input({
         value={value}
         onChange={onChange}
         required={required}
+        min={min}
+        max={max}
         placeholder={placeholder}
         className={`block w-full rounded-md shadow-sm ${
           error 

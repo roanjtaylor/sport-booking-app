@@ -1,47 +1,13 @@
-// src/lib/supabase.ts
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 
-// Retrieve environment variables for Supabase connection
+// Retrieve environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-// Validate that environment variables are properly set
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "Supabase URL or anonymous key is missing. Make sure to set the NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables."
-  );
-}
-
-// Create a single supabase client for the entire application
+// Create a single supabase client for browser-side usage
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-/**
- * Helper function to create a server-side Supabase client
- * This is needed for server components in Next.js App Router
- */
-export async function createServerSupabaseClient() {
-  const cookieStore = cookies();
-
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      storage: {
-        getItem: (key) => {
-          const value = cookieStore.get(key)?.value;
-          return value ?? null;
-        },
-        setItem: () => {},
-        removeItem: () => {},
-      },
-    },
-  });
-}
-
-/**
- * Functions for authentication
- */
+// Functions for authentication
 export const auth = {
   // Sign up a new user
   async signUp(email: string, password: string) {

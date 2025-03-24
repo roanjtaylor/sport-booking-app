@@ -1,5 +1,6 @@
 // src/app/facilities/add/page.tsx
 import { FacilityForm } from '@/components/facilities/FacilityForm';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 /**
  * Page component for adding a new facility

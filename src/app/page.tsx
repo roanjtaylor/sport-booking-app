@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 /**
  * Home page component - serves as the landing page for the application
