@@ -1,103 +1,188 @@
-import Image from "next/image";
+// src/app/page.tsx
+import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 
-export default function Home() {
+/**
+ * Home page component - serves as the landing page for the application
+ */
+export default function HomePage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="space-y-16">
+      {/* Hero section */}
+      <section className="text-center py-16">
+        <h1 className="text-4xl sm:text-5xl font-bold mb-6 text-gray-900">
+          Find and Book Sports Facilities
+        </h1>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+          Book your favorite sports facilities online, hassle-free. Perfect for teams, groups, or individuals.
+        </p>
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <Link href="/facilities">
+            <Button size="lg">Browse Facilities</Button>
+          </Link>
+          <Link href="/auth/register">
+            <Button variant="secondary" size="lg">Sign Up Free</Button>
+          </Link>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* How it works section */}
+      <section>
+        <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Step 1 */}
+          <div className="text-center">
+            <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xl font-bold mb-4">
+              1
+            </div>
+            <h3 className="text-xl font-medium mb-2">Find a Facility</h3>
+            <p className="text-gray-600">
+              Browse through our selection of sports facilities and find the perfect spot for your activity.
+            </p>
+          </div>
+          
+          {/* Step 2 */}
+          <div className="text-center">
+            <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xl font-bold mb-4">
+              2
+            </div>
+            <h3 className="text-xl font-medium mb-2">Book Your Slot</h3>
+            <p className="text-gray-600">
+              Choose a date and time slot that works for you and complete your booking in minutes.
+            </p>
+          </div>
+          
+          {/* Step 3 */}
+          <div className="text-center">
+            <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xl font-bold mb-4">
+              3
+            </div>
+            <h3 className="text-xl font-medium mb-2">Play & Enjoy</h3>
+            <p className="text-gray-600">
+              Show up at the facility and enjoy your game without any booking hassles.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured facilities section */}
+      <section>
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl font-bold">Featured Facilities</h2>
+          <Link href="/facilities" className="text-primary-600 hover:text-primary-700">
+            View All →
+          </Link>
+        </div>
+        
+        {/* Sample facilities - would come from database in production */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Facility 1 */}
+          <Card className="transition-shadow hover:shadow-lg">
+            <div className="bg-gray-200 h-48 flex items-center justify-center">
+              <span className="text-gray-400">Facility Image</span>
+            </div>
+            <div className="p-4">
+              <h3 className="text-lg font-semibold mb-1">Downtown Football Field</h3>
+              <p className="text-gray-600 text-sm mb-2">123 Main St, City</p>
+              <p className="text-gray-700 text-sm mb-3 line-clamp-2">
+                A well-maintained football field in the heart of downtown.
+              </p>
+              <div className="flex justify-between items-center">
+                <span className="text-primary-600 font-medium">$30/hour</span>
+                <Link href="/facilities/1">
+                  <Button variant="primary" size="sm">Book Now</Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+          
+          {/* Facility 2 */}
+          <Card className="transition-shadow hover:shadow-lg">
+            <div className="bg-gray-200 h-48 flex items-center justify-center">
+              <span className="text-gray-400">Facility Image</span>
+            </div>
+            <div className="p-4">
+              <h3 className="text-lg font-semibold mb-1">Westside Tennis Courts</h3>
+              <p className="text-gray-600 text-sm mb-2">456 Park Ave, City</p>
+              <p className="text-gray-700 text-sm mb-3 line-clamp-2">
+                Professional tennis courts with excellent lighting and facilities.
+              </p>
+              <div className="flex justify-between items-center">
+                <span className="text-primary-600 font-medium">$25/hour</span>
+                <Link href="/facilities/2">
+                  <Button variant="primary" size="sm">Book Now</Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+          
+          {/* Facility 3 */}
+          <Card className="transition-shadow hover:shadow-lg">
+            <div className="bg-gray-200 h-48 flex items-center justify-center">
+              <span className="text-gray-400">Facility Image</span>
+            </div>
+            <div className="p-4">
+              <h3 className="text-lg font-semibold mb-1">Eastside Basketball Court</h3>
+              <p className="text-gray-600 text-sm mb-2">789 Oak St, City</p>
+              <p className="text-gray-700 text-sm mb-3 line-clamp-2">
+                Indoor basketball court with high-quality flooring and equipment.
+              </p>
+              <div className="flex justify-between items-center">
+                <span className="text-primary-600 font-medium">$20/hour</span>
+                <Link href="/facilities/3">
+                  <Button variant="primary" size="sm">Book Now</Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* Testimonials section */}
+      <section className="bg-gray-50 p-8 rounded-lg">
+        <h2 className="text-3xl font-bold text-center mb-8">What Our Users Say</h2>
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Testimonial 1 */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <p className="text-gray-700 italic mb-4">
+              "This platform has made booking football pitches so much easier. No more phone calls or visiting in person!"
+            </p>
+            <div className="flex items-center">
+              <div className="h-10 w-10 rounded-full bg-gray-300 mr-3"></div>
+              <div>
+                <h4 className="font-medium">Alex Johnson</h4>
+                <p className="text-gray-500 text-sm">Football Team Captain</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Testimonial 2 */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <p className="text-gray-700 italic mb-4">
+              "As a facility owner, I've seen a 30% increase in bookings since joining this platform. Highly recommended!"
+            </p>
+            <div className="flex items-center">
+              <div className="h-10 w-10 rounded-full bg-gray-300 mr-3"></div>
+              <div>
+                <h4 className="font-medium">Sarah Lee</h4>
+                <p className="text-gray-500 text-sm">Sports Center Owner</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA section */}
+      <section className="text-center py-8">
+        <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          Join thousands of users who book sports facilities through our platform.
+        </p>
+        <Link href="/auth/register">
+          <Button size="lg">Sign Up Now</Button>
+        </Link>
+      </section>
     </div>
   );
 }
