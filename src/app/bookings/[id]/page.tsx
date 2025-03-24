@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { BookingDetail } from '@/components/bookings/BookingDetail';
 import { supabase } from '@/lib/supabase';
@@ -13,8 +14,10 @@ import { ExtendedBooking } from '@/types/booking';
 /**
  * Page component for displaying details of a single booking
  */
-export default function BookingDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function BookingDetailPage() {
+  // Use useParams hook instead of getting params as a prop
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
 
   const [booking, setBooking] = useState<ExtendedBooking | null>(null);

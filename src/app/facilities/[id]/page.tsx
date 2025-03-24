@@ -9,7 +9,11 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
  * Page component for displaying a single facility with booking functionality
  * In a real application, this would fetch data from Supabase based on the ID
  */
-export default function FacilityDetailPage({ params }: { params: { id: string } }) {
+type Props = {
+  params: { id: string };
+}
+
+export default function FacilityDetailPage({ params }: Props) {
   const { id } = params;
   
   // Mock facility data - would come from a database in production

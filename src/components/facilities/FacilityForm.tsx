@@ -27,16 +27,16 @@ export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
   const [description, setDescription] = useState(facility?.description || '');
   const [address, setAddress] = useState(facility?.address || '');
   const [city, setCity] = useState(facility?.city || '');
-  const [postalCode, setPostalCode] = useState(facility?.postalCode || '');
+  const [postalCode, setPostalCode] = useState(facility?.postal_code || '');
   const [country, setCountry] = useState(facility?.country || '');
-  const [pricePerHour, setPricePerHour] = useState(facility?.pricePerHour?.toString() || '');
+  const [pricePerHour, setPricePerHour] = useState(facility?.price_per_hour?.toString() || '');
   const [currency, setCurrency] = useState(facility?.currency || 'USD');
-  const [sportTypes, setSportTypes] = useState<SportType[]>(facility?.sportType || []);
+  const [sportTypes, setSportTypes] = useState<SportType[]>(facility?.sport_type || []);
   const [amenities, setAmenities] = useState<string[]>(facility?.amenities || []);
   
   // Operating hours state
   const [operatingHours, setOperatingHours] = useState<OperatingHours>(
-    facility?.operatingHours || {
+    facility?.operating_hours || {
       monday: { open: '09:00', close: '18:00' },
       tuesday: { open: '09:00', close: '18:00' },
       wednesday: { open: '09:00', close: '18:00' },
@@ -91,15 +91,15 @@ export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
         description,
         address,
         city,
-        postalCode,
+        postal_code: postalCode,
         country,
-        operatingHours,
-        pricePerHour: parseFloat(pricePerHour),
+        operating_hours: operatingHours,
+        price_per_hour: parseFloat(pricePerHour),
         currency,
-        sportType: sportTypes,
+        sport_type: sportTypes,
         amenities,
-        ownerId: user.id,
-        updatedAt: new Date().toISOString()
+        owner_id: user.id,
+        updated_at: new Date().toISOString()
       };
       
       if (isEdit && facility?.id) {
@@ -116,7 +116,7 @@ export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
           .from('facilities')
           .insert({
             ...facilityData,
-            createdAt: new Date().toISOString()
+            created_at: new Date().toISOString()
           });
           
         if (insertError) throw new Error(insertError.message);
