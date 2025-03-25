@@ -18,9 +18,9 @@ export function FacilityCard({ facility }: FacilityCardProps) {
     <Card className="h-full flex flex-col transition-shadow hover:shadow-md">
       {/* Facility image */}
       <div className="bg-gray-200 h-48 relative">
-        {facility.imageUrl ? (
+        {facility.image_url ? (
           <img 
-            src={facility.imageUrl} 
+            src={facility.image_url} 
             alt={facility.name} 
             className="w-full h-full object-cover"
           />
@@ -38,7 +38,7 @@ export function FacilityCard({ facility }: FacilityCardProps) {
         
         {/* Sport types */}
         <div className="mb-3 flex flex-wrap gap-1">
-          {facility.sportType.map((sport) => (
+          {facility.sport_type.map((sport) => (
             <span 
               key={sport} 
               className="inline-block bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded"
@@ -56,7 +56,7 @@ export function FacilityCard({ facility }: FacilityCardProps) {
         {/* Price and booking button */}
         <div className="mt-auto flex justify-between items-center">
           <span className="font-medium text-primary-600">
-            {formatPrice(facility.pricePerHour, facility.currency)}/hour
+            {formatPrice(facility.price_per_hour, facility.currency)}/hour
           </span>
           <Link href={`/facilities/${facility.id}`}>
             <Button variant="primary" size="sm">

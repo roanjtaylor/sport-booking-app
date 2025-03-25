@@ -1,50 +1,96 @@
 // src/app/facilities/[id]/page.tsx
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { formatTime } from '@/lib/utils';
+import { BookingForm } from '@/components/bookings/BookingForm';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { notFound } from 'next/navigation';
+import { Database } from '@/types/supabase';
 
-/**
- * Page component for displaying a single facility with booking functionality
- * In a real application, this would fetch data from Supabase based on the ID
- */
 type Props = {
   params: { id: string };
 }
 
-export default function FacilityDetailPage({ params }: Props) {
-  const { id } = params;
-  
-  // Mock facility data - would come from a database in production
-  const facility = {
-    id,
-    name: 'Downtown Football Field',
-    description: 'A well-maintained football field in the heart of downtown. Perfect for 5-a-side or 7-a-side games. The field features high-quality artificial turf, floodlights for evening games, and changing facilities with showers.',
-    address: '123 Main St, City',
-    city: 'Metropolis',
-    postalCode: '12345',
-    country: 'United States',
-    pricePerHour: 30,
-    currency: 'USD',
-    sportType: ['football'],
-    amenities: [
-      'Floodlights',
-      'Changing Rooms',
-      'Showers',
-      'Parking',
-      'Equipment Rental',
-    ],
-    operatingHours: {
-      monday: { open: '09:00', close: '22:00' },
-      tuesday: { open: '09:00', close: '22:00' },
-      wednesday: { open: '09:00', close: '22:00' },
-      thursday: { open: '09:00', close: '22:00' },
-      friday: { open: '09:00', close: '22:00' },
-      saturday: { open: '10:00', close: '20:00' },
-      sunday: { open: '10:00', close: '18:00' },
-    },
+type DBFacility = Database['public']['Tables']['facilities']['Row'];
+type DBBooking = Database['public']['Tables']['bookings']['Row'];
+
+interface Facility extends Omit<DBFacility, 'price_per_hour'> {
+  price_per_hour: number;
+  sport_type: string[];
+  amenities: string[];
+  operating_hours: {
+    [key: string]: {
+      open: string;
+      close: string;
+    };
   };
+}
+
+interface ExistingBooking {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  facility_id: string;
+  user_id: string;
+}
+
+/**
+ * Page component for displaying a single facility with booking functionality
+ */
+export default async function FacilityDetailPage({ params }: Props) {
+  const { id } = params;
+  const supabase = await createServerSupabaseClient();
+  
+  // Fetch specific facility by ID with type safety
+  const { data: facility, error } = await supabase
+    .from('facilities')
+    .select('*')
+    .eq('id', params.id)
+    .single<DBFacility>();
+
+  if (error || !facility) {
+    console.error('Error fetching facility:', error);
+    return notFound();
+  }
+
+  // Fetch existing bookings for this facility with type safety
+  const { data: existingBookings } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('facility_id', params.id)
+    .in('status', ['confirmed', 'pending'])
+    .returns<DBBooking[]>();
+
+  // Format the facility data to match the Facility interface
+  const formattedFacility: Facility = {
+    ...facility,
+    sport_type: Array.isArray(facility.sport_type) ? facility.sport_type : [],
+    price_per_hour: Number(facility.price_per_hour),
+    amenities: facility.amenities ?? [],
+    operating_hours: typeof facility.operating_hours === 'object' && facility.operating_hours !== null
+      ? Object.fromEntries(
+          Object.entries(facility.operating_hours).map(([day, hours]) => [
+            day,
+            typeof hours === 'object' && hours !== null && 'open' in hours && 'close' in hours
+              ? { open: String(hours.open), close: String(hours.close) }
+              : { open: '', close: '' },
+          ])
+        )
+      : {}
+  };
+
+  // Format the bookings data to match the ExistingBooking interface
+  const formattedBookings: ExistingBooking[] = (existingBookings ?? []).map(booking => ({
+    id: booking.id,
+    date: booking.date,
+    start_time: booking.start_time,
+    end_time: booking.end_time,
+    status: booking.status as 'pending' | 'confirmed' | 'cancelled',
+    facility_id: booking.facility_id,
+    user_id: booking.user_id
+  }));
 
   return (
     <div>
@@ -60,12 +106,20 @@ export default function FacilityDetailPage({ params }: Props) {
         <div className="md:col-span-2 space-y-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">{facility.name}</h1>
-            <p className="text-gray-600">{facility.address}, {facility.city}, {facility.postalCode}</p>
+            <p className="text-gray-600">{facility.address}, {facility.city}, {facility.postal_code}</p>
           </div>
           
           {/* Facility image */}
           <div className="bg-gray-200 h-64 sm:h-96 rounded-lg flex items-center justify-center">
-            <span className="text-gray-400">Facility Image</span>
+            {facility.image_url ? (
+              <img 
+                src={facility.image_url} 
+                alt={facility.name} 
+                className="w-full h-full object-cover rounded-lg"
+              />
+            ) : (
+              <span className="text-gray-400">Facility Image</span>
+            )}
           </div>
           
           {/* Facility description */}
@@ -79,7 +133,7 @@ export default function FacilityDetailPage({ params }: Props) {
                 <div>
                   <h3 className="font-medium mb-2">Amenities</h3>
                   <ul className="space-y-1">
-                    {facility.amenities.map((amenity) => (
+                    {facility.amenities && facility.amenities.map((amenity) => (
                       <li key={amenity} className="flex items-center text-gray-700">
                         <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -94,11 +148,11 @@ export default function FacilityDetailPage({ params }: Props) {
                 <div>
                   <h3 className="font-medium mb-2">Operating Hours</h3>
                   <ul className="space-y-1">
-                    {Object.entries(facility.operatingHours).map(([day, hours]) => (
+                    {facility.operating_hours && Object.entries(facility.operating_hours).map(([day, hours]) => (
                       <li key={day} className="flex justify-between text-gray-700">
                         <span className="capitalize">{day}:</span>
                         <span>
-                          {hours
+                          {hours && hours.open
                             ? `${formatTime(hours.open)} - ${formatTime(hours.close)}`
                             : 'Closed'
                           }
@@ -119,7 +173,7 @@ export default function FacilityDetailPage({ params }: Props) {
                 <div>
                   <h3 className="font-medium mb-1">Sport Types</h3>
                   <div className="flex flex-wrap gap-1">
-                    {facility.sportType.map((sport) => (
+                    {facility.sport_type && facility.sport_type.map((sport) => (
                       <span 
                         key={sport} 
                         className="inline-block bg-primary-100 text-primary-800 text-sm px-3 py-1 rounded-full"
@@ -134,7 +188,7 @@ export default function FacilityDetailPage({ params }: Props) {
                   <h3 className="font-medium mb-1">Price</h3>
                   <p className="text-gray-700">
                     <span className="text-2xl font-semibold text-primary-600">
-                      ${facility.pricePerHour}
+                      ${facility.price_per_hour}
                     </span>
                     <span className="text-gray-500"> / hour</span>
                   </p>
@@ -153,72 +207,10 @@ export default function FacilityDetailPage({ params }: Props) {
         
         {/* Booking sidebar - takes up 1/3 of the width on medium+ screens */}
         <div>
-          <Card className="sticky top-24">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Book this facility</h2>
-              
-              <form className="space-y-4">
-                <div>
-                  <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    id="date"
-                    name="date"
-                    className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-                    min={new Date().toISOString().split('T')[0]} // Today's date
-                  />
-                </div>
-                
-                {/* Time slot selection would be more interactive in a real app */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Time Slot
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00'].map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        className="p-2 border border-gray-300 rounded text-center text-sm hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      >
-                        {slot}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes (optional)
-                  </label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    rows={3}
-                    placeholder="Any special requests"
-                    className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-                  ></textarea>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Price per hour</span>
-                    <span>${facility.pricePerHour}</span>
-                  </div>
-                  <div className="flex justify-between font-medium">
-                    <span>Total</span>
-                    <span>${facility.pricePerHour}</span>
-                  </div>
-                </div>
-                
-                <Button type="submit" fullWidth>
-                  Proceed to Book
-                </Button>
-              </form>
-            </div>
-          </Card>
+        <BookingForm 
+          facility={formattedFacility} 
+          existingBookings={formattedBookings} 
+        />
         </div>
       </div>
     </div>

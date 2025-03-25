@@ -43,6 +43,24 @@ export default function BookingsPage() {
           .order('date', { ascending: true });
           
         if (error) throw error;
+
+        // // Transform the data to match component expectations
+        // const transformedBookings = data?.map(booking => ({
+        //   ...booking,
+        //   // Add any necessary transformations from snake_case to camelCase
+        //   facilityId: booking.facility_id,
+        //   userId: booking.user_id,
+        //   startTime: booking.start_time,
+        //   endTime: booking.end_time,
+        //   totalPrice: booking.total_price,
+        //   createdAt: booking.created_at,
+        //   facility: {
+        //     ...booking.facility,
+        //     pricePerHour: booking.facility.price_per_hour,
+        //     sportType: booking.facility.sport_type,
+        //     operatingHours: booking.facility.operating_hours,
+        //   }
+        // })) || [];
         
         setBookings(data || []);
       } catch (err) {

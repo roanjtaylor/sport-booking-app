@@ -183,9 +183,6 @@ export default function DashboardPage() {
             Welcome back, {profile?.name || user?.email}
           </p>
         </div>
-        <Button variant="secondary" onClick={handleSignOut}>
-          Sign Out
-        </Button>
       </div>
       
       {/* Statistics cards */}

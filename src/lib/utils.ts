@@ -6,10 +6,21 @@ import { OperatingHours, TimeRange } from "@/types/facility";
 /**
  * Format a date string to a human-readable format
  */
-export function formatDate(dateString: string, formatString: string = "PPP") {
-  const date = new Date(dateString);
-  if (!isValid(date)) return "Invalid date";
-  return format(date, formatString);
+export function formatDate(dateString: string) {
+  if (!dateString) return "";
+
+  try {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(date);
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return dateString;
+  }
 }
 
 /**
@@ -19,12 +30,15 @@ export function formatTime(timeString: string) {
   if (!timeString) return "";
 
   try {
-    // Parse the time string (assuming it's in 24-hour format)
-    const date = parse(timeString, "HH:mm", new Date());
-    if (!isValid(date)) return timeString;
+    // Split the time string into hours and minutes
+    const [hours, minutes] = timeString.split(":").map(Number);
 
-    // Format to 12-hour format
-    return format(date, "h:mm a");
+    // Convert to 12-hour format
+    const period = hours >= 12 ? "PM" : "AM";
+    const displayHours = hours % 12 || 12; // Convert 0 to 12 for 12 AM
+
+    // Format as "1:30 PM"
+    return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
   } catch (error) {
     console.error("Error formatting time:", error);
     return timeString;
@@ -122,14 +136,17 @@ export function calculateTotalPrice(
   startTime: string,
   endTime: string,
   pricePerHour: number
-): number {
-  const start = parse(startTime, "HH:mm", new Date());
-  const end = parse(endTime, "HH:mm", new Date());
+) {
+  // Convert times to minutes since midnight
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  const startMinutes = startHour * 60 + startMinute;
+  const endMinutes = endHour * 60 + endMinute;
 
   // Calculate duration in hours
-  const durationMs = end.getTime() - start.getTime();
-  const durationHours = durationMs / (1000 * 60 * 60);
+  const durationHours = (endMinutes - startMinutes) / 60;
 
   // Calculate total price
-  return durationHours * pricePerHour;
+  return pricePerHour * durationHours;
 }

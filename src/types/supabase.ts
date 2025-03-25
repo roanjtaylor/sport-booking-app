@@ -1,22 +1,144 @@
+// src/types/supabase.ts
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export interface Database {
   public: {
     Tables: {
-      profiles: {
+      facilities: {
         Row: {
           id: string;
-          email: string;
-          name: string | null;
-          role: "user" | "facility_owner";
+          name: string;
+          description: string;
+          address: string;
+          city: string;
+          postal_code: string;
+          country: string;
+          image_url: string | null;
+          owner_id: string;
+          operating_hours: Json;
+          price_per_hour: number;
+          currency: string;
+          sport_type: string[];
+          amenities: string[] | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["profiles"]["Row"],
-          "created_at" | "updated_at"
-        >;
-        Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Insert: {
+          id?: string;
+          name: string;
+          description: string;
+          address: string;
+          city: string;
+          postal_code: string;
+          country: string;
+          image_url?: string | null;
+          owner_id: string;
+          operating_hours: Json;
+          price_per_hour: number;
+          currency: string;
+          sport_type: string[];
+          amenities?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string;
+          address?: string;
+          city?: string;
+          postal_code?: string;
+          country?: string;
+          image_url?: string | null;
+          owner_id?: string;
+          operating_hours?: Json;
+          price_per_hour?: number;
+          currency?: string;
+          sport_type?: string[];
+          amenities?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
+        };
       };
-      // Other table definitions will go here
+      bookings: {
+        Row: {
+          id: string;
+          facility_id: string;
+          user_id: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          status: string;
+          total_price: number;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          facility_id: string;
+          user_id: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          status: string;
+          total_price: number;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          facility_id?: string;
+          user_id?: string;
+          date?: string;
+          start_time?: string;
+          end_time?: string;
+          status?: string;
+          total_price?: number;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      profiles: {
+        Row: {
+          id: string;
+          name: string | null;
+          role: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          name?: string | null;
+          role: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string | null;
+          role?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
     };
   };
 }

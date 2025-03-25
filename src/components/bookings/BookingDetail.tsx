@@ -113,7 +113,7 @@ export function BookingDetail({
               <div>
                 <dt className="text-gray-500">Address</dt>
                 <dd className="mt-1 text-gray-900">
-                  {booking.facility.address}, {booking.facility.city}, {booking.facility.postalCode}
+                  {booking.facility.address}, {booking.facility.city}, {booking.facility.postal_code}
                 </dd>
               </div>
               <div>
@@ -126,7 +126,7 @@ export function BookingDetail({
               <div>
                 <dt className="text-gray-500">Sport Types</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
-                  {booking.facility.sportType.map((sport) => (
+                  {booking.facility.sport_type.map((sport) => (
                     <span 
                       key={sport} 
                       className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
