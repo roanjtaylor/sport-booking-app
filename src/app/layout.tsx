@@ -1,18 +1,16 @@
 // src/app/layout.tsx
+"use client";
 import './globals.css';
-import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
-import {AuthStatus} from '@/components/auth/AuthStatus';
+import { AuthStatus } from '@/components/auth/AuthStatus';
+import { useEffect, useState } from 'react';
+import { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { AuthenticatedLink } from '@/components/ui/AuthenticatedLink';
 
-// Load the Inter font
+// Load the Inter font with Latin subset for optimal performance
 const inter = Inter({ subsets: ['latin'] });
-
-// Default metadata for the application
-export const metadata: Metadata = {
-  title: 'SportBooking - Find and Book Sports Facilities',
-  description: 'Book sports facilities or join games with other players in your area',
-};
 
 /**
  * Root layout component that wraps all pages in the application
@@ -23,6 +21,28 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Track authentication state
+  const [user, setUser] = useState<User | null>(null);
+
+  // Set up auth listener on component mount
+  useEffect(() => {
+    // Initial auth check
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+    };
+
+    checkAuth();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    // Clean up subscription on unmount
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen flex flex-col`}>
@@ -34,7 +54,7 @@ export default function RootLayout({
               <div className="flex">
                 <div className="flex-shrink-0 flex items-center">
                   <Link 
-                    href="/" 
+                    href={user ? "/dashboard" : "/"} 
                     className="text-primary-600 font-bold text-xl"
                   >
                     SportBooking
@@ -45,14 +65,14 @@ export default function RootLayout({
                     href="/facilities" 
                     className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
                   >
-                    Facilities
+                    Browse Facilities
                   </Link>
-                  <Link 
-                    href="/bookings" 
+                  <AuthenticatedLink
+                    href="/bookings"
                     className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
                   >
                     Bookings
-                  </Link>
+                  </AuthenticatedLink>
                 </nav>
               </div>
               
@@ -61,7 +81,7 @@ export default function RootLayout({
                 <AuthStatus />
               </div>
               
-              {/* Mobile menu button - would typically toggle a mobile menu */}
+              {/* Mobile menu button */}
               <div className="flex items-center md:hidden">
                 <button
                   type="button"
@@ -69,7 +89,6 @@ export default function RootLayout({
                   aria-expanded="false"
                 >
                   <span className="sr-only">Open main menu</span>
-                  {/* Icon would go here - simplified for this example */}
                   <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
@@ -90,15 +109,6 @@ export default function RootLayout({
         <footer className="bg-gray-50 border-t border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="md:flex md:items-center md:justify-between">
-              <div className="flex justify-center md:order-2 space-x-6">
-                {/* Social media links would go here */}
-                <a href="#" className="text-gray-400 hover:text-gray-500">
-                  <span className="sr-only">Twitter</span>
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                  </svg>
-                </a>
-              </div>
               <div className="mt-8 md:mt-0 md:order-1">
                 <p className="text-center text-sm text-gray-500">
                   &copy; {new Date().getFullYear()} SportBooking. All rights reserved.

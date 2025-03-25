@@ -86,7 +86,7 @@ export function BookingDetail({
               <div>
                 <dt className="text-gray-500">Price</dt>
                 <dd className="mt-1 text-gray-900">
-                  {booking.facility ? formatPrice(booking.total_price, booking.facility.currency) : 'N/A'}
+                  {formatPrice(booking.total_price, booking.facility?.currency || 'GBP')}
                 </dd>
               </div>
               <div>

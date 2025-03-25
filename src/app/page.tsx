@@ -2,15 +2,25 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 /**
- * Home page component - serves as the landing page for the application
+ * Home page component that serves as the landing page for unauthenticated users
+ * Authenticated users are redirected to their dashboard
  */
-export default function HomePage() {
+export default async function HomePage() {
+  // Check authentication status and redirect if logged in
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (user) {
+    redirect('/dashboard');
+  }
+
   return (
     <div className="space-y-16">
-      {/* Hero section */}
+      {/* Hero section - Primary call to action */}
       <section className="text-center py-16">
         <h1 className="text-4xl sm:text-5xl font-bold mb-6 text-gray-900">
           Find and Book Sports Facilities
@@ -28,46 +38,39 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How it works section */}
+      {/* How it works section - Explains the booking process */}
       <section>
         <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Step 1 */}
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xl font-bold mb-4">
-              1
+          {[
+            {
+              step: 1,
+              title: "Find a Facility",
+              description: "Browse through our selection of sports facilities and find the perfect spot for your activity."
+            },
+            {
+              step: 2,
+              title: "Book Your Slot",
+              description: "Choose a date and time slot that works for you and complete your booking in minutes."
+            },
+            {
+              step: 3,
+              title: "Play & Enjoy",
+              description: "Show up at the facility and enjoy your game without any booking hassles."
+            }
+          ].map(({ step, title, description }) => (
+            <div key={step} className="text-center">
+              <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xl font-bold mb-4">
+                {step}
+              </div>
+              <h3 className="text-xl font-medium mb-2">{title}</h3>
+              <p className="text-gray-600">{description}</p>
             </div>
-            <h3 className="text-xl font-medium mb-2">Find a Facility</h3>
-            <p className="text-gray-600">
-              Browse through our selection of sports facilities and find the perfect spot for your activity.
-            </p>
-          </div>
-          
-          {/* Step 2 */}
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xl font-bold mb-4">
-              2
-            </div>
-            <h3 className="text-xl font-medium mb-2">Book Your Slot</h3>
-            <p className="text-gray-600">
-              Choose a date and time slot that works for you and complete your booking in minutes.
-            </p>
-          </div>
-          
-          {/* Step 3 */}
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xl font-bold mb-4">
-              3
-            </div>
-            <h3 className="text-xl font-medium mb-2">Play & Enjoy</h3>
-            <p className="text-gray-600">
-              Show up at the facility and enjoy your game without any booking hassles.
-            </p>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* Featured facilities section */}
+      {/* Featured facilities section - Shows sample facilities */}
       <section>
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl font-bold">Featured Facilities</h2>
@@ -76,105 +79,84 @@ export default function HomePage() {
           </Link>
         </div>
         
-        {/* Sample facilities - would come from database in production */}
+        {/* Sample facilities - In production, these would be fetched from the database */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Facility 1 */}
-          <Card className="transition-shadow hover:shadow-lg">
-            <div className="bg-gray-200 h-48 flex items-center justify-center">
-              <span className="text-gray-400">Facility Image</span>
-            </div>
-            <div className="p-4">
-              <h3 className="text-lg font-semibold mb-1">Downtown Football Field</h3>
-              <p className="text-gray-600 text-sm mb-2">123 Main St, City</p>
-              <p className="text-gray-700 text-sm mb-3 line-clamp-2">
-                A well-maintained football field in the heart of downtown.
-              </p>
-              <div className="flex justify-between items-center">
-                <span className="text-primary-600 font-medium">$30/hour</span>
-                <Link href="/facilities/1">
-                  <Button variant="primary" size="sm">Book Now</Button>
-                </Link>
+          {[
+            {
+              id: 1,
+              name: "Downtown Football Field",
+              address: "123 Main St, City",
+              description: "A well-maintained football field in the heart of downtown.",
+              price: 30
+            },
+            {
+              id: 2,
+              name: "Westside Tennis Courts",
+              address: "456 Park Ave, City",
+              description: "Professional tennis courts with excellent lighting and facilities.",
+              price: 25
+            },
+            {
+              id: 3,
+              name: "Eastside Basketball Court",
+              address: "789 Oak St, City",
+              description: "Indoor basketball court with high-quality flooring and equipment.",
+              price: 20
+            }
+          ].map(facility => (
+            <Card key={facility.id} className="transition-shadow hover:shadow-lg">
+              <div className="bg-gray-200 h-48 flex items-center justify-center">
+                <span className="text-gray-400">Facility Image</span>
               </div>
-            </div>
-          </Card>
-          
-          {/* Facility 2 */}
-          <Card className="transition-shadow hover:shadow-lg">
-            <div className="bg-gray-200 h-48 flex items-center justify-center">
-              <span className="text-gray-400">Facility Image</span>
-            </div>
-            <div className="p-4">
-              <h3 className="text-lg font-semibold mb-1">Westside Tennis Courts</h3>
-              <p className="text-gray-600 text-sm mb-2">456 Park Ave, City</p>
-              <p className="text-gray-700 text-sm mb-3 line-clamp-2">
-                Professional tennis courts with excellent lighting and facilities.
-              </p>
-              <div className="flex justify-between items-center">
-                <span className="text-primary-600 font-medium">$25/hour</span>
-                <Link href="/facilities/2">
-                  <Button variant="primary" size="sm">Book Now</Button>
-                </Link>
+              <div className="p-4">
+                <h3 className="text-lg font-semibold mb-1">{facility.name}</h3>
+                <p className="text-gray-600 text-sm mb-2">{facility.address}</p>
+                <p className="text-gray-700 text-sm mb-3 line-clamp-2">
+                  {facility.description}
+                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-primary-600 font-medium">${facility.price}/hour</span>
+                  <Link href={`/facilities/${facility.id}`}>
+                    <Button variant="primary" size="sm">Book Now</Button>
+                  </Link>
+                </div>
               </div>
-            </div>
-          </Card>
-          
-          {/* Facility 3 */}
-          <Card className="transition-shadow hover:shadow-lg">
-            <div className="bg-gray-200 h-48 flex items-center justify-center">
-              <span className="text-gray-400">Facility Image</span>
-            </div>
-            <div className="p-4">
-              <h3 className="text-lg font-semibold mb-1">Eastside Basketball Court</h3>
-              <p className="text-gray-600 text-sm mb-2">789 Oak St, City</p>
-              <p className="text-gray-700 text-sm mb-3 line-clamp-2">
-                Indoor basketball court with high-quality flooring and equipment.
-              </p>
-              <div className="flex justify-between items-center">
-                <span className="text-primary-600 font-medium">$20/hour</span>
-                <Link href="/facilities/3">
-                  <Button variant="primary" size="sm">Book Now</Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          ))}
         </div>
       </section>
 
-      {/* Testimonials section */}
+      {/* Testimonials section - Social proof */}
       <section className="bg-gray-50 p-8 rounded-lg">
         <h2 className="text-3xl font-bold text-center mb-8">What Our Users Say</h2>
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Testimonial 1 */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <p className="text-gray-700 italic mb-4">
-              "This platform has made booking football pitches so much easier. No more phone calls or visiting in person!"
-            </p>
-            <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-gray-300 mr-3"></div>
-              <div>
-                <h4 className="font-medium">Alex Johnson</h4>
-                <p className="text-gray-500 text-sm">Football Team Captain</p>
+          {[
+            {
+              quote: "This platform has made booking football pitches so much easier. No more phone calls or visiting in person!",
+              name: "Alex Johnson",
+              title: "Football Team Captain"
+            },
+            {
+              quote: "As a facility owner, I've seen a 30% increase in bookings since joining this platform. Highly recommended!",
+              name: "Sarah Lee",
+              title: "Sports Center Owner"
+            }
+          ].map((testimonial, index) => (
+            <div key={index} className="bg-white p-6 rounded-lg shadow">
+              <p className="text-gray-700 italic mb-4">"{testimonial.quote}"</p>
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-full bg-gray-300 mr-3"></div>
+                <div>
+                  <h4 className="font-medium">{testimonial.name}</h4>
+                  <p className="text-gray-500 text-sm">{testimonial.title}</p>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* Testimonial 2 */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <p className="text-gray-700 italic mb-4">
-              "As a facility owner, I've seen a 30% increase in bookings since joining this platform. Highly recommended!"
-            </p>
-            <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-gray-300 mr-3"></div>
-              <div>
-                <h4 className="font-medium">Sarah Lee</h4>
-                <p className="text-gray-500 text-sm">Sports Center Owner</p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* CTA section */}
+      {/* CTA section - Final conversion point */}
       <section className="text-center py-8">
         <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
