@@ -1,11 +1,30 @@
 // src/lib/supabase.ts
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Database } from "@/types/supabase"; // You can create this later
+import { createClient } from "@supabase/supabase-js";
 
-// Create a client for use in client components
-export const supabase = createClientComponentClient<Database>();
+// Retrieve environment variables for Supabase connection
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-// Functions for authentication
+// Validate that environment variables are properly set
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    "Supabase URL or anonymous key is missing. Make sure to set the NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables."
+  );
+}
+
+export const createServerSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+};
+
+// Create a single supabase client for the entire application
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+/**
+ * Functions for authentication
+ */
 export const auth = {
   // Sign up a new user
   async signUp(email: string, password: string) {

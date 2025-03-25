@@ -5,25 +5,20 @@ import { Facility } from "./facility";
 /**
  * Represents a booking for a facility
  */
-export type Booking = {
+export interface Booking {
   id: string;
-  facilityId: string;
-  userId: string;
+  facility_id: string;
+  user_id: string;
   date: string; // ISO date string
-  startTime: string; // 24-hour format (HH:MM)
-  endTime: string; // 24-hour format (HH:MM)
-  status: BookingStatus;
-  totalPrice: number;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-// From debugging
-export type ExtendedBooking = Booking & {
-  facility: Facility;
-  user: User;
-};
+  start_time: string; // 24-hour format (HH:MM)
+  end_time: string; // 24-hour format (HH:MM)
+  status: "pending" | "confirmed" | "cancelled";
+  total_price: number;
+  created_at: string;
+  updated_at: string;
+  facility?: Facility;
+  user?: User;
+}
 
 /**
  * Available booking statuses

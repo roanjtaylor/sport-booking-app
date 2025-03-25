@@ -30,54 +30,58 @@ export default function FacilityBookingsPage() {
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    async function fetchFacilityBookings() {
+    async function fetchBookingRequests() {
       try {
-        // Get current user
         const { data: { user } } = await supabase.auth.getUser();
-        
         if (!user) {
-          setError('You must be logged in to view facility bookings');
-          setIsLoading(false);
+          setError('You must be logged in to view booking requests');
           return;
         }
-        
-        // Get facilities owned by this user
-        const { data: facilities } = await supabase
+    
+        // Get facilities owned by the user
+        const { data: facilities, error: facilitiesError } = await supabase
           .from('facilities')
           .select('id')
-          .eq('owner_id', user.id);
-          
-        if (!facilities || facilities.length === 0) {
+          .eq('owner_id', user.id); // Changed from ownerId to owner_id
+    
+        if (facilitiesError) throw facilitiesError;
+        if (!facilities?.length) {
           setBookings([]);
-          setIsLoading(false);
           return;
         }
-        
+    
         const facilityIds = facilities.map(f => f.id);
-        
+    
         // Get bookings for these facilities
-        const { data: bookingsData, error: bookingsError } = await supabase
+        const { data: bookings, error: bookingsError } = await supabase
           .from('bookings')
           .select(`
             *,
-            facility:facility_id (*),
-            user:user_id (id, email)
+            facility:facility_id (
+              id,
+              name,
+              address
+            ),
+            user:user_id (
+              id,
+              email,
+              name
+            )
           `)
           .in('facility_id', facilityIds)
-          .order('created_at', { ascending: false });
-          
+          .order('date', { ascending: true });
+    
         if (bookingsError) throw bookingsError;
-        
-        setBookings(bookingsData || []);
+        setBookings(bookings || []);
       } catch (err) {
-        console.error('Error fetching facility bookings:', err);
-        setError('Failed to load facility bookings');
+        console.error('Error fetching booking requests:', err);
+        setError('Failed to load booking requests');
       } finally {
         setIsLoading(false);
       }
     }
     
-    fetchFacilityBookings();
+    fetchBookingRequests();
   }, []);
   
   const handleUpdateBookingStatus = async (bookingId: string, newStatus: 'pending' | 'confirmed' | 'cancelled') => {

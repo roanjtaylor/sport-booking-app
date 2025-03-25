@@ -87,35 +87,43 @@ export default function DashboardPage() {
    * Includes: total facilities, total bookings, and upcoming bookings
    */
   const fetchFacilityOwnerStats = async (userId: string, today: string) => {
-    // Get facilities owned by the user
-    const { data: facilities } = await supabase
-      .from('facilities')
-      .select('id')
-      .eq('ownerId', userId);
-
-    if (!facilities || facilities.length === 0) {
+    try {
+      // Get facilities owned by the user
+      const { data: facilities, error: facilitiesError } = await supabase
+        .from('facilities')
+        .select('id')
+        .eq('owner_id', userId); // Changed from ownerId to owner_id
+  
+      if (facilitiesError) throw facilitiesError;
+      
+      if (!facilities || facilities.length === 0) {
+        setStats({ facilities: 0, totalBookings: 0, upcomingBookings: 0 });
+        return;
+      }
+  
+      const facilityIds = facilities.map(f => f.id);
+      
+      // Fetch all statistics in parallel
+      const [facilitiesCount, totalBookings, upcomingBookings] = await Promise.all([
+        supabase.from('facilities').select('id', { count: 'exact' }).eq('owner_id', userId), // Changed from ownerId to owner_id
+        supabase.from('bookings').select('id', { count: 'exact' }).in('facility_id', facilityIds), // Changed from facilityId to facility_id
+        supabase.from('bookings')
+          .select('id', { count: 'exact' })
+          .in('facility_id', facilityIds) // Changed from facilityId to facility_id
+          .gte('date', today)
+          .eq('status', 'confirmed')
+      ]);
+  
+      setStats({
+        facilities: facilitiesCount.count ?? 0,
+        totalBookings: totalBookings.count ?? 0,
+        upcomingBookings: upcomingBookings.count ?? 0,
+      });
+    } catch (error) {
+      console.error('Error fetching facility owner stats:', error);
+      // Set default values in case of error
       setStats({ facilities: 0, totalBookings: 0, upcomingBookings: 0 });
-      return;
     }
-
-    const facilityIds = facilities.map(f => f.id);
-    
-    // Fetch all statistics in parallel
-    const [facilitiesCount, totalBookings, upcomingBookings] = await Promise.all([
-      supabase.from('facilities').select('id', { count: 'exact' }).eq('ownerId', userId),
-      supabase.from('bookings').select('id', { count: 'exact' }).in('facilityId', facilityIds),
-      supabase.from('bookings')
-        .select('id', { count: 'exact' })
-        .in('facilityId', facilityIds)
-        .gte('date', today)
-        .eq('status', 'confirmed')
-    ]);
-
-    setStats({
-      facilities: facilitiesCount.count ?? 0,
-      totalBookings: totalBookings.count ?? 0,
-      upcomingBookings: upcomingBookings.count ?? 0,
-    });
   };
 
   /**
@@ -123,20 +131,26 @@ export default function DashboardPage() {
    * Includes: total bookings and upcoming bookings
    */
   const fetchUserStats = async (userId: string, today: string) => {
-    const [totalBookings, upcomingBookings] = await Promise.all([
-      supabase.from('bookings').select('id', { count: 'exact' }).eq('userId', userId),
-      supabase.from('bookings')
-        .select('id', { count: 'exact' })
-        .eq('userId', userId)
-        .gte('date', today)
-        .not('status', 'eq', 'cancelled')
-    ]);
-
-    setStats({
-      facilities: 0,
-      totalBookings: totalBookings.count ?? 0,
-      upcomingBookings: upcomingBookings.count ?? 0,
-    });
+    try {
+      const [totalBookings, upcomingBookings] = await Promise.all([
+        supabase.from('bookings').select('id', { count: 'exact' }).eq('user_id', userId), // Changed from userId to user_id
+        supabase.from('bookings')
+          .select('id', { count: 'exact' })
+          .eq('user_id', userId) // Changed from userId to user_id
+          .gte('date', today)
+          .not('status', 'eq', 'cancelled')
+      ]);
+  
+      setStats({
+        facilities: 0,
+        totalBookings: totalBookings.count ?? 0,
+        upcomingBookings: upcomingBookings.count ?? 0,
+      });
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      // Set default values in case of error
+      setStats({ facilities: 0, totalBookings: 0, upcomingBookings: 0 });
+    }
   };
 
   // Handle user sign out
@@ -266,11 +280,11 @@ export default function DashboardPage() {
                 </Card>
               </Link>
               
-              <Link href="#" className="block">
+              <Link href="/dashboard/booking-requests" className="block">
                 <Card className="p-6 h-full hover:shadow-md transition">
                   <h3 className="font-medium mb-2">Booking Requests</h3>
                   <p className="text-sm text-gray-600">
-                    Manage incoming booking requests
+                    View and manage booking requests for your facilities
                   </p>
                 </Card>
               </Link>

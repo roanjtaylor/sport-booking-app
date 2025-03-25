@@ -3,8 +3,8 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { ExtendedBooking } from '../../types/booking';
 import { formatDate, formatTime, formatPrice } from '@/lib/utils';
+import { Booking } from '@/types/booking';
 
 // type BookingDetailProps = {
 //   booking: Booking & { 
@@ -17,7 +17,7 @@ import { formatDate, formatTime, formatPrice } from '@/lib/utils';
 //   isProcessing?: boolean;
 // };
 interface BookingDetailProps {
-  booking: ExtendedBooking;
+  booking: Booking;
   isOwner: boolean;
   onCancelBooking?: () => void;
   onConfirmBooking?: () => void;
@@ -80,25 +80,19 @@ export function BookingDetail({
               <div>
                 <dt className="text-gray-500">Time</dt>
                 <dd className="mt-1 text-gray-900">
-                  {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                 </dd>
               </div>
               <div>
                 <dt className="text-gray-500">Price</dt>
                 <dd className="mt-1 text-gray-900">
-                  {formatPrice(booking.totalPrice, booking.facility.currency)}
+                  {booking.facility ? formatPrice(booking.total_price, booking.facility.currency) : 'N/A'}
                 </dd>
               </div>
               <div>
                 <dt className="text-gray-500">Booking Date</dt>
-                <dd className="mt-1 text-gray-900">{formatDate(booking.createdAt)}</dd>
+                <dd className="mt-1 text-gray-900">{formatDate(booking.created_at)}</dd>
               </div>
-              {booking.notes && (
-                <div>
-                  <dt className="text-gray-500">Notes</dt>
-                  <dd className="mt-1 text-gray-900">{booking.notes}</dd>
-                </div>
-              )}
             </dl>
           </div>
           
@@ -108,12 +102,12 @@ export function BookingDetail({
             <dl className="space-y-3 text-sm">
               <div>
                 <dt className="text-gray-500">Name</dt>
-                <dd className="mt-1 text-gray-900">{booking.facility.name}</dd>
+                <dd className="mt-1 text-gray-900">{booking.facility ? booking.facility.name : 'N/A'}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Address</dt>
                 <dd className="mt-1 text-gray-900">
-                  {booking.facility.address}, {booking.facility.city}, {booking.facility.postal_code}
+                {booking.facility ? booking.facility.address : 'N/A'}, {booking.facility ? booking.facility.city : 'N/A'},{booking.facility ? booking.facility.postal_code : 'N/A'}
                 </dd>
               </div>
               <div>
@@ -126,7 +120,7 @@ export function BookingDetail({
               <div>
                 <dt className="text-gray-500">Sport Types</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
-                  {booking.facility.sport_type.map((sport) => (
+                  {booking.facility?.sportType?.map((sport: string) => (
                     <span 
                       key={sport} 
                       className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
@@ -167,7 +161,7 @@ export function BookingDetail({
           )}
           
           {booking.status === 'confirmed' && (
-            <Link href={`/facilities/${booking.facilityId}`}>
+            <Link href={`/facilities/${booking.facility_id}`}>
               <Button>
                 Book Again
               </Button>

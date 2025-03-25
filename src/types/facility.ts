@@ -8,17 +8,15 @@ export type Facility = {
   description: string;
   address: string;
   city: string;
-  postal_code: string;
+  postal_code: string; // Changed to match snake_case from database
   country: string;
-  image_url?: string;
-  owner_id: string;
-  operating_hours: OperatingHours;
-  price_per_hour: number;
+  imageUrl?: string;
+  owner_id: string; // Changed to match snake_case from database
+  operatingHours: OperatingHours;
+  price_per_hour: number; // Changed to match snake_case from database
   currency: string;
-  sport_type: SportType[];
+  sportType: string[];
   amenities: string[];
-  created_at: string;
-  updated_at: string;
 };
 
 /**

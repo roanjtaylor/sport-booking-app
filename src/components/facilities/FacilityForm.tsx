@@ -31,12 +31,14 @@ export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
   const [country, setCountry] = useState(facility?.country || '');
   const [pricePerHour, setPricePerHour] = useState(facility?.price_per_hour?.toString() || '');
   const [currency, setCurrency] = useState(facility?.currency || 'USD');
-  const [sportTypes, setSportTypes] = useState<SportType[]>(facility?.sport_type || []);
+  const [sportTypes, setSportTypes] = useState<SportType[]>(
+    (facility?.sportType as SportType[]) || []
+  );
   const [amenities, setAmenities] = useState<string[]>(facility?.amenities || []);
   
   // Operating hours state
   const [operatingHours, setOperatingHours] = useState<OperatingHours>(
-    facility?.operating_hours || {
+    facility?.operatingHours || {
       monday: { open: '09:00', close: '18:00' },
       tuesday: { open: '09:00', close: '18:00' },
       wednesday: { open: '09:00', close: '18:00' },

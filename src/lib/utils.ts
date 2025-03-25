@@ -6,17 +6,11 @@ import { OperatingHours, TimeRange } from "@/types/facility";
 /**
  * Format a date string to a human-readable format
  */
-export function formatDate(dateString: string) {
-  if (!dateString) return "";
-
+export function formatDate(dateString: string, formatString: string = "PPP") {
   try {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }).format(date);
+    if (!isValid(date)) return "Invalid date";
+    return format(date, formatString);
   } catch (error) {
     console.error("Error formatting date:", error);
     return dateString;
@@ -30,15 +24,12 @@ export function formatTime(timeString: string) {
   if (!timeString) return "";
 
   try {
-    // Split the time string into hours and minutes
-    const [hours, minutes] = timeString.split(":").map(Number);
+    // Parse the time string (assuming it's in 24-hour format)
+    const date = parse(timeString, "HH:mm", new Date());
+    if (!isValid(date)) return timeString;
 
-    // Convert to 12-hour format
-    const period = hours >= 12 ? "PM" : "AM";
-    const displayHours = hours % 12 || 12; // Convert 0 to 12 for 12 AM
-
-    // Format as "1:30 PM"
-    return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
+    // Format to 12-hour format
+    return format(date, "h:mm a");
   } catch (error) {
     console.error("Error formatting time:", error);
     return timeString;
@@ -49,10 +40,15 @@ export function formatTime(timeString: string) {
  * Create a formatted price string with currency
  */
 export function formatPrice(price: number, currency: string = "USD") {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(price);
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(price);
+  } catch (error) {
+    console.error("Error formatting price:", error);
+    return `${price} ${currency}`;
+  }
 }
 
 /**
@@ -62,7 +58,7 @@ export function generateTimeSlots(
   operatingHours: OperatingHours,
   day: keyof OperatingHours,
   durationMinutes: number = 60, // Default 1 hour slots
-  existingBookings: { startTime: string; endTime: string }[] = []
+  existingBookings: { startTime: string; endTime: string; date?: string }[] = []
 ): TimeSlot[] {
   const dayHours = operatingHours[day];
 
@@ -73,60 +69,73 @@ export function generateTimeSlots(
   const timeRange = dayHours as TimeRange;
 
   // Parse opening and closing times
-  const startTime = parse(timeRange.open, "HH:mm", new Date());
-  const endTime = parse(timeRange.close, "HH:mm", new Date());
+  try {
+    const startTime = parse(timeRange.open, "HH:mm", new Date());
+    const endTime = parse(timeRange.close, "HH:mm", new Date());
 
-  // Create time slots
-  let currentTime = startTime;
-  while (currentTime < endTime) {
-    const slotStart = format(currentTime, "HH:mm");
+    // Create time slots
+    let currentTime = new Date(startTime);
+    while (currentTime < endTime) {
+      const slotStart = format(currentTime, "HH:mm");
 
-    // Add duration minutes to the current time
-    currentTime.setMinutes(currentTime.getMinutes() + durationMinutes);
+      // Add duration minutes to the current time
+      const nextTime = new Date(currentTime);
+      nextTime.setMinutes(nextTime.getMinutes() + durationMinutes);
 
-    // If this would go beyond closing time, break
-    if (currentTime > endTime) break;
+      // If this would go beyond closing time, break
+      if (nextTime > endTime) break;
 
-    const slotEnd = format(currentTime, "HH:mm");
+      const slotEnd = format(nextTime, "HH:mm");
 
-    // Check if this slot overlaps with any existing bookings
-    const isAvailable = !existingBookings.some((booking) => {
-      const bookingStart = booking.startTime;
-      const bookingEnd = booking.endTime;
+      // Check if this slot overlaps with any existing bookings
+      const isAvailable = !existingBookings.some((booking) => {
+        const bookingStart = booking.startTime;
+        const bookingEnd = booking.endTime;
 
-      // Check for overlap
-      return (
-        (slotStart >= bookingStart && slotStart < bookingEnd) ||
-        (slotEnd > bookingStart && slotEnd <= bookingEnd) ||
-        (slotStart <= bookingStart && slotEnd >= bookingEnd)
-      );
-    });
+        // Check for overlap
+        return (
+          (slotStart >= bookingStart && slotStart < bookingEnd) ||
+          (slotEnd > bookingStart && slotEnd <= bookingEnd) ||
+          (slotStart <= bookingStart && slotEnd >= bookingEnd)
+        );
+      });
 
-    slots.push({
-      startTime: slotStart,
-      endTime: slotEnd,
-      available: isAvailable,
-    });
+      slots.push({
+        startTime: slotStart,
+        endTime: slotEnd,
+        available: isAvailable,
+      });
+
+      currentTime = nextTime;
+    }
+
+    return slots;
+  } catch (error) {
+    console.error("Error generating time slots:", error);
+    return [];
   }
-
-  return slots;
 }
 
 /**
  * Get the day of the week from a date string
  */
 export function getDayOfWeek(dateString: string): keyof OperatingHours {
-  const date = new Date(dateString);
-  const days: (keyof OperatingHours)[] = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ];
-  return days[date.getDay()];
+  try {
+    const date = new Date(dateString);
+    const days: (keyof OperatingHours)[] = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    return days[date.getDay()];
+  } catch (error) {
+    console.error("Error getting day of week:", error);
+    return "monday"; // Default to Monday on error
+  }
 }
 
 /**
@@ -136,17 +145,19 @@ export function calculateTotalPrice(
   startTime: string,
   endTime: string,
   pricePerHour: number
-) {
-  // Convert times to minutes since midnight
-  const [startHour, startMinute] = startTime.split(":").map(Number);
-  const [endHour, endMinute] = endTime.split(":").map(Number);
+): number {
+  try {
+    const start = parse(startTime, "HH:mm", new Date());
+    const end = parse(endTime, "HH:mm", new Date());
 
-  const startMinutes = startHour * 60 + startMinute;
-  const endMinutes = endHour * 60 + endMinute;
+    // Calculate duration in hours
+    const durationMs = end.getTime() - start.getTime();
+    const durationHours = durationMs / (1000 * 60 * 60);
 
-  // Calculate duration in hours
-  const durationHours = (endMinutes - startMinutes) / 60;
-
-  // Calculate total price
-  return pricePerHour * durationHours;
+    // Calculate total price
+    return durationHours * pricePerHour;
+  } catch (error) {
+    console.error("Error calculating total price:", error);
+    return pricePerHour; // Default to hourly price on error
+  }
 }

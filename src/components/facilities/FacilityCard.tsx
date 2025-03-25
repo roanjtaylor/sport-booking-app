@@ -18,9 +18,9 @@ export function FacilityCard({ facility }: FacilityCardProps) {
     <Card className="h-full flex flex-col transition-shadow hover:shadow-md">
       {/* Facility image */}
       <div className="bg-gray-200 h-48 relative">
-        {facility.image_url ? (
+        {facility.imageUrl ? (
           <img 
-            src={facility.image_url} 
+            src={facility.imageUrl} 
             alt={facility.name} 
             className="w-full h-full object-cover"
           />
@@ -38,7 +38,7 @@ export function FacilityCard({ facility }: FacilityCardProps) {
         
         {/* Sport types */}
         <div className="mb-3 flex flex-wrap gap-1">
-          {facility.sport_type.map((sport) => (
+          {facility.sportType.map((sport) => (
             <span 
               key={sport} 
               className="inline-block bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded"
