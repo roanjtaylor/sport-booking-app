@@ -60,8 +60,35 @@ export default function FacilityBookingsPage() {
           .in('facility_id', facilityIds)
           .order('date', { ascending: true });
     
-        if (bookingsError) throw bookingsError;
-        setBookings(bookingsData || []);
+          if (bookingsError) throw bookingsError;
+        
+          console.log('Retrieved bookings data:', JSON.stringify(bookingsData, null, 2));
+        
+        // Check if we have the correct property names
+        if (bookingsData && bookingsData.length > 0) {
+          console.log('First booking object keys:', Object.keys(bookingsData[0]));
+          console.log('Facilities object:', bookingsData[0].facilities);
+          console.log('Profiles object:', bookingsData[0].profiles);
+        }
+        
+        // Map the data to ensure we're handling the structure correctly
+        const formattedBookings = (bookingsData || []).map(booking => {
+          return {
+            ...booking,
+            // Map from facilities to facility for consistency
+            facility: booking.facilities || {
+              id: booking.facility_id,
+              name: 'Unknown Facility'
+            },
+            // Map from profiles to user for consistency
+            user: booking.profiles || {
+              id: booking.user_id,
+              email: 'Unknown User'
+            }
+          };
+        });
+          
+          setBookings(formattedBookings);
       } catch (err) {
         console.error('Error fetching booking requests:', err);
         setError('Failed to load booking requests');
@@ -148,7 +175,7 @@ export default function FacilityBookingsPage() {
                 {bookings.map((booking) => (
                   <tr key={booking.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {booking.facility?.name || 'Unknown Facility'}
+                      {booking.facility?.name || booking.facility?.name || 'Unknown Facility'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {booking.user?.email || 'Unknown User'}
