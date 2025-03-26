@@ -46,13 +46,13 @@ export function AuthStatus() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      router.refresh(); // Refresh the page to update server components
-      router.push('/'); // Redirect to home page
+      
+      // Force a hard refresh to clear any stale state
+      window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
-
   if (isLoading) {
     // Show nothing while loading to prevent UI flickering
     return null;

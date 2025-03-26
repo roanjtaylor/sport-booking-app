@@ -170,7 +170,13 @@ export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        throw new Error('You must be logged in to manage facilities');
+        // Instead of throwing, redirect to login
+        router.push(`/auth/login?redirect=${encodeURIComponent(
+          isEdit && facility?.id 
+            ? `/facilities/${facility.id}/edit`
+            : '/facilities/add'
+        )}`);
+        return;
       }
       
       // Prepare facility data

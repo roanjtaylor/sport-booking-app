@@ -1,5 +1,6 @@
 // src/app/facilities/[id]/edit/page.tsx
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { cookies } from 'next/headers';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { FacilityForm } from '@/components/facilities/FacilityForm';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -18,7 +19,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditFacilityPage({ params }: PageProps) {
   const { id } = params;
-  const supabase = await createServerSupabaseClient();
+  
+  // Create supabase client correctly for server components
+  const cookieStore = cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
   
   // Check if user is authenticated
   const { data: { user } } = await supabase.auth.getUser();

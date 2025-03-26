@@ -58,15 +58,7 @@ export function RegisterForm() {
       if (signUpError) throw new Error(signUpError.message);
       if (!data?.user) throw new Error('Registration failed');
       
-      // Step 2: Sign in the user immediately to get authenticated session
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (signInError) throw new Error(signInError.message);
-      
-      // Step 3: Insert profile with authenticated session
+      // Step 2: Create profile record
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -76,6 +68,14 @@ export function RegisterForm() {
         });
       
       if (profileError) throw new Error(`Failed to create profile: ${profileError.message}`);
+      
+      // Step 3: Sign in the user
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInError) throw new Error(signInError.message);
       
       // Success - redirect to dashboard
       router.push('/dashboard');
@@ -94,9 +94,7 @@ export function RegisterForm() {
   ];
 
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-2xl font-bold text-center mb-6">Create an Account</h1>
-      
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Display error message if there is one */}
       {error && (
         <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
@@ -104,62 +102,60 @@ export function RegisterForm() {
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Email address"
-          name="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        
-        <Input
-          label="Full name"
-          name="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        
-        <Select
-          label="Account type"
-          name="role"
-          options={roleOptions}
-          value={role}
-          onChange={(e) => setRole(e.target.value as UserRole)}
-          required
-        />
-        
-        <Input
-          label="Password"
-          name="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        
-        <Input
-          label="Confirm Password"
-          name="confirmPassword"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-        />
-        
-        <Button type="submit" fullWidth disabled={isLoading}>
-          {isLoading ? 'Creating account...' : 'Sign up'}
-        </Button>
-        
-        <div className="text-center text-sm text-gray-500">
-          Already have an account?{' '}
-          <Link href="/auth/login" className="text-primary-600 hover:text-primary-500">
-            Sign in
-          </Link>
-        </div>
-      </form>
-    </div>
+      <Input
+        label="Email address"
+        name="email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      
+      <Input
+        label="Full name"
+        name="name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      
+      <Select
+        label="Account type"
+        name="role"
+        options={roleOptions}
+        value={role}
+        onChange={(e) => setRole(e.target.value as UserRole)}
+        required
+      />
+      
+      <Input
+        label="Password"
+        name="password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      
+      <Input
+        label="Confirm Password"
+        name="confirmPassword"
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        required
+      />
+      
+      <Button type="submit" fullWidth disabled={isLoading}>
+        {isLoading ? 'Creating account...' : 'Sign up'}
+      </Button>
+      
+      <div className="text-center text-sm text-gray-500">
+        Already have an account?{' '}
+        <Link href="/auth/login" className="text-primary-600 hover:text-primary-500">
+          Sign in
+        </Link>
+      </div>
+    </form>
   );
 }

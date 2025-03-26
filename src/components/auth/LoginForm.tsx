@@ -2,11 +2,11 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { auth } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Login form component for user authentication
@@ -17,6 +17,8 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/dashboard';
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,16 +28,24 @@ export function LoginForm() {
 
     try {
       // Attempt to sign in with provided credentials
-      const { error } = await auth.signIn(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
       if (error) {
         throw new Error(error.message);
       }
       
-      // Redirect to dashboard on successful login
-      router.push('/dashboard');
+      if (!data || !data.user) {
+        throw new Error('Failed to sign in');
+      }
+      
+      // Redirect to dashboard or the redirect URL on successful login
+      router.push(redirectUrl);
       router.refresh();
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || 'Failed to sign in');
     } finally {
       setIsLoading(false);
