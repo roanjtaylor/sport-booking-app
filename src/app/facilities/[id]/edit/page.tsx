@@ -26,12 +26,8 @@ export default async function EditFacilityPage({ params }: PageProps) {
   
   // Check if user is authenticated
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    // Redirect to login if not authenticated
-    redirect('/auth/login?redirect=/facilities/' + id + '/edit');
-  }
   
-  // Fetch the facility data
+  // Fetch the facility data - do this before checking user to handle not found
   const { data: facility, error } = await supabase
     .from('facilities')
     .select('*')
@@ -43,10 +39,10 @@ export default async function EditFacilityPage({ params }: PageProps) {
     notFound();
   }
   
-  // Check if the current user is the owner of the facility
-  if (facility.owner_id !== user.id) {
-    // Redirect to the facility page if not the owner
-    redirect('/facilities/' + id);
+  // Now check authentication - allow the page to load but handle permissions in the form
+  if (!user) {
+    // Redirect to login if not authenticated
+    return redirect(`/auth/login?redirect=/facilities/${id}/edit`);
   }
   
   // Convert DB structure to component-friendly structure
@@ -82,8 +78,12 @@ export default async function EditFacilityPage({ params }: PageProps) {
         </p>
       </div>
       
-      {/* Pass the facility data to the form component */}
-      <FacilityForm facility={formattedFacility} isEdit={true} />
+      {/* Pass the facility data and owner check to the form component */}
+      <FacilityForm 
+        facility={formattedFacility} 
+        isEdit={true} 
+        isOwner={user.id === facility.owner_id}
+      />
     </div>
   );
 }

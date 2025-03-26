@@ -13,17 +13,30 @@ import { supabase } from '@/lib/supabase';
 type FacilityFormProps = {
   facility?: Partial<Facility>;
   isEdit?: boolean;
+  isOwner?: boolean;
 };
 
 /**
  * Form for creating or editing a facility
  */
-export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
+export function FacilityForm({ facility, isEdit = false, isOwner = false }: FacilityFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
+// Check if user has permission to edit this facility when in edit mode
+useEffect(() => {
+  if (isEdit && !isOwner) {
+    // Show error message if user doesn't own the facility
+    setError("You don't have permission to edit this facility");
+    // Optional: Redirect back to facility page after a short delay
+    setTimeout(() => {
+      router.push(`/facilities/${facility?.id}`);
+    }, 2000);
+  }
+}, [isEdit, isOwner, facility?.id, router]);
+
   // Form state
   const [name, setName] = useState(facility?.name || '');
   const [description, setDescription] = useState(facility?.description || '');
@@ -153,6 +166,12 @@ export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
+
+    // Don't proceed if not the owner in edit mode
+    if (isEdit && !isOwner) {
+      setError("You don't have permission to edit this facility");
+      return;
+    }
     
     // Validate form
     if (!validateForm()) {
@@ -244,6 +263,20 @@ export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
       setIsLoading(false);
     }
   };
+
+  // Show a permission error if in edit mode and not the owner
+  if (isEdit && !isOwner) {
+    return (
+      <Card className="p-6 text-center">
+        <div className="text-red-600 mb-4">
+          You don't have permission to edit this facility
+        </div>
+        <Button onClick={() => router.push(`/facilities/${facility?.id}`)}>
+          Return to Facility
+        </Button>
+      </Card>
+    );
+  }
   
   // Options for sport types
   const sportTypeOptions = [
@@ -257,9 +290,9 @@ export function FacilityForm({ facility, isEdit = false }: FacilityFormProps) {
   
   // Currency options
   const currencyOptions = [
+    { value: 'GBP', label: 'GBP (£)' },
     { value: 'USD', label: 'USD ($)' },
-    { value: 'EUR', label: 'EUR (€)' },
-    { value: 'GBP', label: 'GBP (£)' }
+    { value: 'EUR', label: 'EUR (€)' }
   ];
   
   return (

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { AuthenticatedLink } from '@/components/ui/AuthenticatedLink';
+import router from 'next/router';
 
 // Load the Inter font with Latin subset for optimal performance
 const inter = Inter({ subsets: ['latin'] });
@@ -36,14 +37,21 @@ export default function RootLayout({
 
     checkAuth();
 
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
+    // Subscribe to auth changes with proper cleanup
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user || null);
+    
+    // If session is null and we're not on an auth page, redirect to home
+    if (!session && 
+        !window.location.pathname.startsWith('/auth/') && 
+        window.location.pathname !== '/') {
+      router.push('/');
+    }
+  });
 
     // Clean up subscription on unmount
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+  }, [supabase.auth, router]);
 
   return (
     <html lang="en" suppressHydrationWarning>

@@ -82,27 +82,38 @@ export default function BookingRequestsPage() {
         .order('date', { ascending: true });
 
       if (bookingsError) throw bookingsError;
+
+      // If we have bookings, fetch user data for each booking
+    if (bookingsData && bookingsData.length > 0) {
+      // Get all unique user IDs
+      const userIds = [...new Set(bookingsData.map(booking => booking.user_id))];
       
-      console.log('Fetched bookings with joins:', bookingsData);
+      // Fetch user profiles in a single query
+      const { data: userProfiles, error: userError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
+        
+      if (userError) throw userError;
       
-      // Process bookings data
-      const processedBookings = (bookingsData || []).map(booking => {
-        return {
-          ...booking,
-          // Keep the facility data that was already joined in the query
-          facility: booking.facility || { 
-            id: booking.facility_id, 
-            name: 'Unknown Facility' 
-          },
-          // Keep the user data that was already joined in the query
-          user: booking.user || { 
-            id: booking.user_id, 
-            email: 'Unknown User' 
-          }
-        };
-      });
+      // Create a lookup map for quick access
+      const userMap = (userProfiles || []).reduce((map, user) => {
+        map[user.id] = user;
+        return map;
+      }, {});
+      
+      // Combine bookings with user data
+      const processedBookings = bookingsData.map(booking => ({
+        ...booking,
+        facility: booking.facility || { id: booking.facility_id, name: 'Unknown Facility' },
+        user: userMap[booking.user_id] || { id: booking.user_id }
+      }));
       
       setBookings(processedBookings);
+    } else {
+      setBookings([]);
+    }
+
     } catch (err) {
       console.error('Error fetching booking requests:', err);
       setError(err instanceof Error ? err.message : 'Failed to load booking requests');

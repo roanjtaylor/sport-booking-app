@@ -54,7 +54,7 @@ export function FacilityOwnerActions({ facilityId, ownerId }: FacilityOwnerActio
               Edit Facility
             </Button>
           </Link>
-          <Link href="/dashboard/booking-requests">
+          <Link href="/dashboard/facility-bookings">
             <Button variant="secondary">
               Manage Bookings
             </Button>

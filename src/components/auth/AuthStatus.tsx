@@ -45,12 +45,20 @@ export function AuthStatus() {
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
-      await supabase.auth.signOut();
+      
+      // Sign out from Supabase
+      await supabase.auth.signOut({ scope: 'global' });
+      
+      // Clear any persistent storage
+      localStorage.removeItem('supabase.auth.token');
       
       // Force a hard refresh to clear any stale state
-      window.location.href = '/';
+      router.push('/');
+      router.refresh();
     } catch (error) {
       console.error('Error signing out:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 

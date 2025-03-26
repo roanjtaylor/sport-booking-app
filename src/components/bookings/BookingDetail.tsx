@@ -120,14 +120,24 @@ export function BookingDetail({
               <div>
                 <dt className="text-gray-500">Sport Types</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
-                  {booking.facility?.sportType?.map((sport: string) => (
-                    <span 
-                      key={sport} 
-                      className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
-                    >
-                      {sport.charAt(0).toUpperCase() + sport.slice(1)}
-                    </span>
-                  ))}
+                {booking.facility?.sport_type ? 
+                    booking.facility.sport_type.map((sport: string) => (
+                      <span 
+                        key={sport} 
+                        className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
+                      >
+                        {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                      </span>
+                    )) : 
+                    booking.facility?.sportType?.map((sport: string) => (
+                      <span 
+                        key={sport} 
+                        className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
+                      >
+                        {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                      </span>
+                    ))
+                  }
                 </dd>
               </div>
             </dl>
