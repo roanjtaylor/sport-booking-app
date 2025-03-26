@@ -56,7 +56,10 @@ export default function FacilityBookingsPage() {
         // Get bookings for these facilities
         const { data: bookingsData, error: bookingsError } = await supabase
           .from('bookings')
-          .select('*')
+          .select(`
+            *,
+            facility:facilities(*)
+          `)
           .in('facility_id', facilityIds)
           .order('date', { ascending: true });
     
@@ -75,13 +78,12 @@ export default function FacilityBookingsPage() {
         const formattedBookings = (bookingsData || []).map(booking => {
           return {
             ...booking,
-            // Map from facilities to facility for consistency
-            facility: booking.facilities || {
+            // The data is already properly nested under 'facility' from the query
+            facility: booking.facility || {
               id: booking.facility_id,
               name: 'Unknown Facility'
             },
-            // Map from profiles to user for consistency
-            user: booking.profiles || {
+            user: booking.user || {
               id: booking.user_id,
               email: 'Unknown User'
             }

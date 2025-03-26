@@ -32,9 +32,13 @@ export default function BookingsClient() {
         
         // Fetch bookings with facility information
         const { data, error } = await supabase
-          .from('bookings').select('*')
-      .eq('user_id', user.id) // Changed from userId to user_id
-      .order('date', { ascending: true });
+          .from('bookings')
+          .select(`
+            *,
+            facility:facilities(*)
+          `)
+          .eq('user_id', user.id) // Changed from userId to user_id
+          .order('date', { ascending: true });
           
         if (error) throw error;
         

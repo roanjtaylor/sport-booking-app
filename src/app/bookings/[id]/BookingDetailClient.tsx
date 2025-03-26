@@ -43,7 +43,10 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
         // Fetch booking with related information
         const { data: bookingData, error: bookingError } = await supabase
           .from('bookings')
-          .select('*')
+          .select(`
+            *,
+            facility:facilities(*)
+          `)
           .eq('id', id)
           .single();
           

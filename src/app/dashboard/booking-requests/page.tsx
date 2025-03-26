@@ -71,10 +71,12 @@ export default function BookingRequestsPage() {
       const facilityIds = facilities.map(f => f.id);
       
       // Get bookings for these facilities with pending status
-      // Use proper join syntax to get facility and user information
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select('*')
+        .select(`
+          *,
+          facility:facilities(*)
+        `)
         .in('facility_id', facilityIds)
         .eq('status', 'pending')
         .order('date', { ascending: true });
@@ -84,36 +86,21 @@ export default function BookingRequestsPage() {
       console.log('Fetched bookings with joins:', bookingsData);
       
       // Process bookings data
-      const processedBookings = await Promise.all((bookingsData || []).map(async (booking) => {
-        // If user profile is missing, get the email directly from auth user
-        if (!booking.user || !booking.user.email) {
-          try {
-            const { data: userData } = await supabase.auth.admin.getUserById(booking.user_id);
-            return {
-              ...booking,
-              facility: booking.facility || { id: booking.facility_id, name: 'Unknown Facility' },
-              user: booking.user || { 
-                id: booking.user_id, 
-                email: userData?.user?.email || 'Unknown User',
-                name: booking.user?.name
-              }
-            };
-          } catch (err) {
-            console.error('Error fetching user data:', err);
-            return {
-              ...booking,
-              facility: booking.facility || { id: booking.facility_id, name: 'Unknown Facility' },
-              user: booking.user || { id: booking.user_id, email: 'Unknown User' }
-            };
-          }
-        }
-        
+      const processedBookings = (bookingsData || []).map(booking => {
         return {
           ...booking,
-          facility: booking.facility || { id: booking.facility_id, name: 'Unknown Facility' },
-          user: booking.user || { id: booking.user_id, email: 'Unknown User' }
+          // Keep the facility data that was already joined in the query
+          facility: booking.facility || { 
+            id: booking.facility_id, 
+            name: 'Unknown Facility' 
+          },
+          // Keep the user data that was already joined in the query
+          user: booking.user || { 
+            id: booking.user_id, 
+            email: 'Unknown User' 
+          }
         };
-      }));
+      });
       
       setBookings(processedBookings);
     } catch (err) {

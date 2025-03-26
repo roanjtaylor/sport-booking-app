@@ -102,7 +102,7 @@ export function BookingDetail({
             <dl className="space-y-3 text-sm">
               <div>
                 <dt className="text-gray-500">Name</dt>
-                <dd className="mt-1 text-gray-900">{booking.facility ? booking.facility.name : 'N/A'}</dd>
+                <dd className="mt-1 text-gray-900">{booking.facility?.name || 'N/A'}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Address</dt>

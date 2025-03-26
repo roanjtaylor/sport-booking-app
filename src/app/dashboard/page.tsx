@@ -414,29 +414,29 @@ export default function DashboardPage() {
                 </Card>
               </Link>
               
-              <Link href="/facilities/add" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-green-400">
-                  <h3 className="font-medium mb-2">Add Facility</h3>
-                  <p className="text-sm text-gray-600">
-                    List a new facility on the platform
-                  </p>
-                </Card>
-              </Link>
-              
               <Link href="/dashboard/facility-bookings" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-purple-400">
+                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-green-400">
                   <h3 className="font-medium mb-2">View Bookings</h3>
                   <p className="text-sm text-gray-600">
                     See all bookings for your facilities
                   </p>
                 </Card>
               </Link>
-              
+
               <Link href="/facilities" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-orange-400">
+                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-purple-400">
                   <h3 className="font-medium mb-2">Manage Facilities</h3>
                   <p className="text-sm text-gray-600">
                     Edit your facility information
+                  </p>
+                </Card>
+              </Link>
+
+              <Link href="/facilities/add" className="block">
+                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-orange-400">
+                  <h3 className="font-medium mb-2">Add Facility</h3>
+                  <p className="text-sm text-gray-600">
+                    List a new facility on the platform
                   </p>
                 </Card>
               </Link>
@@ -444,15 +444,6 @@ export default function DashboardPage() {
           ) : (
             // Regular User Quick Actions
             <>
-              <Link href="/facilities" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-blue-400">
-                  <h3 className="font-medium mb-2">Find a Facility</h3>
-                  <p className="text-sm text-gray-600">
-                    Browse and book available facilities
-                  </p>
-                </Card>
-              </Link>
-              
               <Link href="/bookings" className="block">
                 <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-green-400">
                   <h3 className="font-medium mb-2">Manage Bookings</h3>
@@ -462,20 +453,29 @@ export default function DashboardPage() {
                 </Card>
               </Link>
               
+              <Link href="/bookings?tab=upcoming" className="block">
+                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-blue-400">
+                  <h3 className="font-medium mb-2">Upcoming Bookings</h3>
+                  <p className="text-sm text-gray-600">
+                    Check your schedule and bookings
+                  </p>
+                </Card>
+              </Link>
+
+              <Link href="/facilities" className="block">
+                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-orange-400">
+                  <h3 className="font-medium mb-2">Find a Facility</h3>
+                  <p className="text-sm text-gray-600">
+                    Browse and book available facilities
+                  </p>
+                </Card>
+              </Link>
+              
               <Link href="/profile" className="block">
                 <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-purple-400">
                   <h3 className="font-medium mb-2">Your Profile</h3>
                   <p className="text-sm text-gray-600">
                     Update your personal information
-                  </p>
-                </Card>
-              </Link>
-              
-              <Link href="/bookings?tab=upcoming" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-orange-400">
-                  <h3 className="font-medium mb-2">Upcoming Bookings</h3>
-                  <p className="text-sm text-gray-600">
-                    Check your schedule and bookings
                   </p>
                 </Card>
               </Link>
