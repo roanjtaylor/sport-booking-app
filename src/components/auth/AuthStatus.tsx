@@ -44,8 +44,8 @@ export function AuthStatus() {
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      setIsLoading(true);
+      await supabase.auth.signOut();
       
       // Force a hard refresh to clear any stale state
       window.location.href = '/';
@@ -53,6 +53,7 @@ export function AuthStatus() {
       console.error('Error signing out:', error);
     }
   };
+
   if (isLoading) {
     // Show nothing while loading to prevent UI flickering
     return null;
