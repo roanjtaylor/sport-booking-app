@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { formatDate, formatTime } from '@/lib/utils';
+import Link from 'next/link';
 
 interface Booking {
   id: string;
@@ -14,11 +15,11 @@ interface Booking {
   start_time: string;
   end_time: string;
   notes?: string;
-  facility: {
+  facility?: {
     id: string;
     name: string;
   };
-  user: {
+  user?: {
     id: string;
     email: string;
   };
@@ -42,7 +43,7 @@ export default function FacilityBookingsPage() {
         const { data: facilities, error: facilitiesError } = await supabase
           .from('facilities')
           .select('id')
-          .eq('owner_id', user.id); // Changed from ownerId to owner_id
+          .eq('owner_id', user.id);
     
         if (facilitiesError) throw facilitiesError;
         if (!facilities?.length) {
@@ -53,26 +54,14 @@ export default function FacilityBookingsPage() {
         const facilityIds = facilities.map(f => f.id);
     
         // Get bookings for these facilities
-        const { data: bookings, error: bookingsError } = await supabase
+        const { data: bookingsData, error: bookingsError } = await supabase
           .from('bookings')
-          .select(`
-            *,
-            facility:facility_id (
-              id,
-              name,
-              address
-            ),
-            user:user_id (
-              id,
-              email,
-              name
-            )
-          `)
+          .select('*')
           .in('facility_id', facilityIds)
           .order('date', { ascending: true });
     
         if (bookingsError) throw bookingsError;
-        setBookings(bookings || []);
+        setBookings(bookingsData || []);
       } catch (err) {
         console.error('Error fetching booking requests:', err);
         setError('Failed to load booking requests');
@@ -109,7 +98,14 @@ export default function FacilityBookingsPage() {
   };
   
   if (isLoading) {
-    return <div>Loading facility bookings...</div>;
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading facility bookings...</p>
+        </div>
+      </div>
+    );
   }
   
   if (error) {
@@ -123,66 +119,87 @@ export default function FacilityBookingsPage() {
   
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Facility Booking Requests</h1>
+      <div className="mb-8 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Facility Bookings</h1>
+        <Link href="/dashboard">
+          <Button variant="outline">Back to Dashboard</Button>
+        </Link>
+      </div>
       
       {bookings.length === 0 ? (
         <Card className="p-6 text-center">
           <p>No bookings found for your facilities.</p>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {bookings.map(booking => (
-            <Card key={booking.id} className="p-4">
-              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                <div>
-                  <h3 className="font-semibold text-lg">{booking.facility.name}</h3>
-                  <p className="text-gray-600">{formatDate(booking.date)}</p>
-                  <p className="text-gray-600">
-                    {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-                  </p>
-                  <p className="text-gray-600">
-                    Booked by: {booking.user.email}
-                  </p>
-                  {booking.notes && (
-                    <p className="text-gray-600 mt-2">
-                      <span className="font-medium">Notes:</span> {booking.notes}
-                    </p>
-                  )}
-                </div>
-                
-                <div className="flex flex-col items-end">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : 
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                  </span>
-                  
-                  <div className="mt-3 space-y-2">
-                    {booking.status === 'pending' && (
-                      <>
-                        <Button 
-                          size="sm"
-                          onClick={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
-                        >
-                          Approve
-                        </Button>
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUpdateBookingStatus(booking.id, 'cancelled')}
-                        >
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facility</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booked By</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {bookings.map((booking) => (
+                  <tr key={booking.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {booking.facility?.name || 'Unknown Facility'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {booking.user?.email || 'Unknown User'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(booking.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${booking.status === 'confirmed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : booking.status === 'pending' 
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'}`}>
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      {booking.status === 'pending' && (
+                        <div className="flex justify-end space-x-2">
+                          <Button 
+                            variant="primary" 
+                            size="sm"
+                            onClick={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
+                          >
+                            Approve
+                          </Button>
+                          <Button 
+                            variant="danger" 
+                            size="sm"
+                            onClick={() => handleUpdateBookingStatus(booking.id, 'cancelled')}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                      {booking.status !== 'pending' && (
+                        <Link href={`/bookings/${booking.id}`}>
+                          <Button variant="outline" size="sm">View Details</Button>
+                        </Link>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
+import { formatDate, formatTime } from '@/lib/utils';
 
 interface Booking {
   id: string;
@@ -18,12 +19,12 @@ interface Booking {
   total_price: number;
   notes?: string;
   created_at: string;
-  facility: {
+  facility?: {
     id: string;
     name: string;
-    [key: string]: any;
+    address?: string;
   };
-  user: {
+  user?: {
     id: string;
     email: string;
     name?: string;
@@ -68,27 +69,16 @@ export default function BookingRequestsPage() {
       
       const facilityIds = facilities.map(f => f.id);
       
-      // Get bookings for these facilities
-      const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        facility:facility_id (
-          id,
-          name,
-          address
-        ),
-        user:user_id (
-          id,
-          email,
-          name
-        )
-      `)
-      .in('facility_id', facilityIds)
-      .order('date', { ascending: true });
+      // Get bookings for these facilities with pending status
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('*')
+        .in('facility_id', facilityIds)
+        .eq('status', 'pending')
+        .order('date', { ascending: true });
 
       if (bookingsError) throw bookingsError;
-      setBookings(bookings || []);
+      setBookings(bookingsData || []);
     } catch (err) {
       console.error('Error fetching booking requests:', err);
       setError(err instanceof Error ? err.message : 'Failed to load booking requests');
@@ -163,32 +153,6 @@ export default function BookingRequestsPage() {
     }
   }
 
-  // Format date for display
-  function formatDate(dateStr: string) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  }
-
-  // Format time for display
-  function formatTime(timeStr: string) {
-    // Assuming timeStr is in format "HH:MM"
-    const [hours, minutes] = timeStr.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours, 10));
-    date.setMinutes(parseInt(minutes, 10));
-    
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  }
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -216,77 +180,93 @@ export default function BookingRequestsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+      <div className="mb-8 flex justify-between items-center">
+        <div>
           <h1 className="text-3xl font-bold">Booking Requests</h1>
-          <Link href="/dashboard">
-            <Button variant="outline">Back to Dashboard</Button>
-          </Link>
+          <p className="text-gray-600 mt-2">
+            Manage pending booking requests for your facilities
+          </p>
         </div>
-        <p className="text-gray-600 mt-2">
-          Manage booking requests for your facilities
-        </p>
+        <Link href="/dashboard">
+          <Button variant="outline">Back to Dashboard</Button>
+        </Link>
       </div>
       
       {bookings.length === 0 ? (
         <Card className="p-6 text-center">
           <h2 className="text-xl font-semibold mb-2">No booking requests</h2>
-          <p className="text-gray-600 mb-6">You don't have any booking requests for your facilities yet.</p>
+          <p className="text-gray-600 mb-6">You don't have any pending booking requests for your facilities.</p>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {bookings.map(booking => (
-            <Card key={booking.id} className="overflow-hidden">
-              <div className="p-6">
-                <div className="flex flex-col md:flex-row justify-between">
-                  <div>
-                    <div className="flex items-center mb-2">
-                      <h2 className="text-xl font-bold mr-3">{booking.facility.name}</h2>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                        booking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                      </span>
-                    </div>
-                    
-                    <div className="text-gray-600 space-y-1">
-                      <p><span className="font-medium">Date:</span> {formatDate(booking.date)}</p>
-                      <p>
-                        <span className="font-medium">Time:</span> {formatTime(booking.start_time)} to {formatTime(booking.end_time)}
-                      </p>
-                      <p><span className="font-medium">Booked by:</span> {booking.user.name || booking.user.email}</p>
-                      <p><span className="font-medium">Price:</span> ${booking.total_price.toFixed(2)}</p>
-                      {booking.notes && (
-                        <p><span className="font-medium">Notes:</span> {booking.notes}</p>
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facility</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booked By</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {bookings.map((booking) => (
+                  <tr key={booking.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {booking.facility?.name || 'Unknown Facility'}
+                      </div>
+                      {booking.facility?.address && (
+                        <div className="text-xs text-gray-500">
+                          {booking.facility.address}
+                        </div>
                       )}
-                    </div>
-                  </div>
-                  
-                  {booking.status === 'pending' && (
-                    <div className="mt-4 md:mt-0 flex flex-col space-y-2">
-                      <Button 
-                        onClick={() => handleApproveBooking(booking.id)}
-                        disabled={isProcessing}
-                      >
-                        Approve Booking
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => handleRejectBooking(booking.id)}
-                        disabled={isProcessing}
-                      >
-                        Reject Booking
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {booking.user?.name || booking.user?.email || 'Unknown User'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(booking.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ${booking.total_price.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button 
+                          variant="primary" 
+                          size="sm"
+                          onClick={() => handleApproveBooking(booking.id)}
+                          disabled={isProcessing}
+                        >
+                          Approve
+                        </Button>
+                        <Button 
+                          variant="danger" 
+                          size="sm"
+                          onClick={() => handleRejectBooking(booking.id)}
+                          disabled={isProcessing}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                      {booking.notes && (
+                        <div className="text-xs text-gray-500 mt-2 text-left">
+                          <span className="font-semibold">Notes:</span> {booking.notes}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
     </div>
   );

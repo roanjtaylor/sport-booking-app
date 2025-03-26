@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { supabase } from '@/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { User, AuthChangeEvent } from '@supabase/supabase-js';
 
@@ -11,6 +11,7 @@ export function AuthStatus() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
     // Check authentication state when component mounts
@@ -39,7 +40,7 @@ export function AuthStatus() {
     };
     
     checkAuth();
-  }, []);
+  }, [supabase.auth, router]);
 
   const handleSignOut = async () => {
     try {

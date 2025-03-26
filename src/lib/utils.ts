@@ -123,13 +123,13 @@ export function getDayOfWeek(dateString: string): keyof OperatingHours {
   try {
     const date = new Date(dateString);
     const days: (keyof OperatingHours)[] = [
-      "sunday",
       "monday",
       "tuesday",
       "wednesday",
       "thursday",
       "friday",
       "saturday",
+      "sunday",
     ];
     return days[date.getDay()];
   } catch (error) {

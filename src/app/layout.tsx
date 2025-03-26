@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { AuthStatus } from '@/components/auth/AuthStatus';
 import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { AuthenticatedLink } from '@/components/ui/AuthenticatedLink';
 
 // Load the Inter font with Latin subset for optimal performance
@@ -23,6 +23,8 @@ export default function RootLayout({
 }) {
   // Track authentication state
   const [user, setUser] = useState<User | null>(null);
+  // Create the Supabase client specifically for client components
+  const supabase = createClientComponentClient();
 
   // Set up auth listener on component mount
   useEffect(() => {
@@ -41,11 +43,11 @@ export default function RootLayout({
 
     // Clean up subscription on unmount
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase.auth]);
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen flex flex-col`}>
+      <body className={`${inter.className} min-h-screen flex flex-col`} suppressHydrationWarning>
         {/* Header with navigation */}
         <header className="bg-white shadow-sm sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

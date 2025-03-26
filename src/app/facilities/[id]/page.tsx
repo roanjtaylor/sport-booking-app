@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { formatTime } from '@/lib/utils';
-import { createServerSupabaseClient } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import BookingFormWrapper from '@/components/bookings/BookingFormWrapper';
-import { Facility } from '@/types/facility'; // Import the Facility type
+import { FacilityOwnerActions } from '@/components/facilities/FacilityOwnerActions';
+import { Facility } from '@/types/facility';
 
-// Define the expected params type properly
+// Define the expected params type
 type Props = {
   params: {
     id: string
@@ -55,6 +56,8 @@ type DBBooking = {
 /**
  * Page component for displaying a single facility with booking functionality
  */
+export const dynamic = 'force-dynamic';
+
 export default async function FacilityDetailPage({ params }: Props) {
   // Important: We create the Supabase client here properly
   const supabase = await createServerSupabaseClient();
@@ -87,12 +90,12 @@ export default async function FacilityDetailPage({ params }: Props) {
     description: facility.description,
     address: facility.address,
     city: facility.city,
-    postal_code: facility.postal_code, // Use snake_case to match DB field
+    postal_code: facility.postal_code,
     country: facility.country,
     imageUrl: facility.image_url,
-    owner_id: facility.owner_id, // Use snake_case to match DB field
+    owner_id: facility.owner_id,
     operatingHours: facility.operating_hours,
-    price_per_hour: facility.price_per_hour, // Use snake_case to match DB field
+    price_per_hour: facility.price_per_hour,
     currency: facility.currency,
     sportType: facility.sport_type,
     amenities: facility.amenities || [],
@@ -220,6 +223,9 @@ export default async function FacilityDetailPage({ params }: Props) {
               </div>
             </div>
           </Card>
+
+          {/* Owner Actions */}
+          <FacilityOwnerActions facilityId={formattedFacility.id} ownerId={formattedFacility.owner_id} />
         </div>
         
         {/* Booking sidebar - takes up 1/3 of the width on medium+ screens */}
