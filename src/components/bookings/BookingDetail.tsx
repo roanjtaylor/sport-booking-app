@@ -118,7 +118,7 @@ export function BookingDetail({
                 </dd>
               </div>
               <div>
-                <dt className="text-gray-500">Sport Types</dt>
+                <dt className="text-gray-500">Game tags</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
                 {booking.facility?.sport_type ? 
                     booking.facility.sport_type.map((sport: string) => (

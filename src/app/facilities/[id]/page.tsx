@@ -191,7 +191,7 @@ export default async function FacilityDetailPage({ params }: Props) {
               <h2 className="text-xl font-semibold mb-4">Additional Information</h2>
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-medium mb-1">Sport Types</h3>
+                  <h3 className="font-medium mb-1">Game tags</h3>
                   <div className="flex flex-wrap gap-1">
                     {formattedFacility.sportType.map((sport) => (
                       <span 
@@ -208,7 +208,7 @@ export default async function FacilityDetailPage({ params }: Props) {
                   <h3 className="font-medium mb-1">Price</h3>
                   <p className="text-gray-700">
                     <span className="text-2xl font-semibold text-primary-600">
-                      ${formattedFacility.price_per_hour}
+                     £{formattedFacility.price_per_hour}
                     </span>
                     <span className="text-gray-500"> / hour</span>
                   </p>

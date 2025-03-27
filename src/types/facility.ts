@@ -45,8 +45,8 @@ export type TimeRange = {
  */
 export type SportType =
   | "football"
-  | "basketball"
-  | "tennis"
-  | "volleyball"
-  | "badminton"
-  | "other";
+  | "indoors"
+  | "outdoors"
+  | "11 aside"
+  | "7 aside"
+  | "5 aside";

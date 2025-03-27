@@ -208,7 +208,7 @@ const maxDateString = maxDate.toISOString().split('T')[0];
                 </p>
                 <p className="font-medium mt-2">
                   <span className="text-gray-500">Total Price:</span> {' '}
-                  {formatPrice(totalPrice, facility.currency || 'USD')}
+                  {formatPrice(totalPrice, facility?.currency || 'USD')}
                 </p>
               </div>
             </div>

@@ -208,7 +208,7 @@ useEffect(() => {
         country,
         image_url: imageUrl,
         operating_hours: operatingHours,
-        price_per_hour: parseFloat(pricePerHour),
+        price_per_hour: Number(parseFloat(pricePerHour)),
         currency,
         sport_type: sportTypes,
         amenities,
@@ -281,11 +281,11 @@ useEffect(() => {
   // Options for sport types
   const sportTypeOptions = [
     { value: 'football', label: 'Football' },
-    { value: 'basketball', label: 'Basketball' },
-    { value: 'tennis', label: 'Tennis' },
-    { value: 'volleyball', label: 'Volleyball' },
-    { value: 'badminton', label: 'Badminton' },
-    { value: 'other', label: 'Other' }
+    { value: 'indoors', label: 'Indoors' },
+    { value: 'outdoors', label: 'Outdoors' },
+    { value: '11 aside', label: '11 aside' },
+    { value: '7 aside', label: '7 aside' },
+    { value: '5 aside', label: '5 aside' }
   ];
   
   // Currency options
@@ -413,8 +413,8 @@ useEffect(() => {
               value={pricePerHour}
               onChange={(e) => setPricePerHour(e.target.value)}
               required
-              min="0.01"
-              step="0.01"
+              min="0"
+              step="1"
               error={formErrors.pricePerHour}
             />
             
@@ -433,7 +433,7 @@ useEffect(() => {
       {/* Sports Types Section */}
       <Card className="overflow-hidden">
         <div className="p-6">
-          <h2 className="text-lg font-medium mb-4">Sport Types</h2>
+          <h2 className="text-lg font-medium mb-4">Game Tags</h2>
           
           {formErrors.sportTypes && (
             <p className="mb-3 text-sm text-red-600">{formErrors.sportTypes}</p>

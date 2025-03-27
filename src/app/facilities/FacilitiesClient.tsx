@@ -142,7 +142,7 @@ export default function FacilitiesClient({
                   {/* Price and booking button */}
                   <div className="mt-auto flex justify-between items-center">
                     <span className="font-medium text-primary-600">
-                      ${facility.price_per_hour}/hour
+                      £{facility.price_per_hour}/hour
                     </span>
                     <Link href={`/facilities/${facility.id}`}>
                       <Button variant="primary" size="sm">
