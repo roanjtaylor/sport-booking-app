@@ -10,20 +10,16 @@ import { Lobby } from '@/types/lobby';
 
 type LobbyListProps = {
   lobbies: Lobby[];
-  facilityId?: string; // For filtering lobbies by facility
+  onJoinLobby?: (lobbyId: string) => Promise<void>;
+  isLoading?: boolean;
 };
 
 /**
- * Component for displaying a list of available lobbies
+ * Component for displaying a list of available lobbies for a facility
  */
-export function LobbyList({ lobbies, facilityId }: LobbyListProps) {
-  // Filter lobbies by facility if facilityId is provided
-  const filteredLobbies = facilityId
-    ? lobbies.filter(lobby => lobby.facility_id === facilityId)
-    : lobbies;
-
+export function LobbyList({ lobbies, onJoinLobby, isLoading = false }: LobbyListProps) {
   // If no lobbies are found, display a message
-  if (filteredLobbies.length === 0) {
+  if (!lobbies || lobbies.length === 0) {
     return (
       <div className="text-center py-8">
         <h3 className="text-lg font-medium text-gray-900 mb-2">No open lobbies found</h3>
@@ -34,7 +30,7 @@ export function LobbyList({ lobbies, facilityId }: LobbyListProps) {
 
   return (
     <div className="space-y-4">
-      {filteredLobbies.map((lobby) => (
+      {lobbies.map((lobby) => (
         <Card key={lobby.id} className="overflow-hidden">
           <div className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row justify-between">
@@ -53,6 +49,9 @@ export function LobbyList({ lobbies, facilityId }: LobbyListProps) {
                   <p>
                     <span className="font-medium">Time:</span> {formatTime(lobby.start_time)} - {formatTime(lobby.end_time)}
                   </p>
+                  <p>
+                    <span className="font-medium">Created by:</span> {lobby.creator?.email || 'Unknown'}
+                  </p>
                   {lobby.notes && (
                     <p>
                       <span className="font-medium">Notes:</span> {lobby.notes}
@@ -63,6 +62,15 @@ export function LobbyList({ lobbies, facilityId }: LobbyListProps) {
               
               {/* Lobby actions */}
               <div className="flex flex-col space-y-2">
+                {onJoinLobby && (
+                  <Button 
+                    onClick={() => onJoinLobby(lobby.id)} 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Processing...' : 'Join Lobby'}
+                  </Button>
+                )}
+                
                 <Link href={`/lobbies/${lobby.id}`}>
                   <Button variant="outline" fullWidth size="sm">
                     View Details

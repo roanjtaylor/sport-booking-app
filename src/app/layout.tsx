@@ -77,6 +77,12 @@ export default function RootLayout({
                   >
                     Browse Facilities
                   </Link>
+                  <Link 
+  href="/lobbies" 
+  className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+>
+  Game Lobbies
+</Link>
                   <AuthenticatedLink
                     href="/bookings"
                     className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"

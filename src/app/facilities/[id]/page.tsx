@@ -244,34 +244,6 @@ console.error('Error fetching lobbies:', lobbiesError);
         
         {/* Booking sidebar - takes up 1/3 of the width on medium+ screens */}
         <div>
-          
-        {/* Open Lobbies Section */}
-<Card className="mt-8">
-  <div className="p-6">
-    <h2 className="text-xl font-semibold mb-4">Open Game Lobbies</h2>
-    <div className="mb-4">
-      <p className="text-gray-600">
-        Join an existing lobby or create your own. Game lobbies allow you to find other players to share the booking.
-      </p>
-    </div>
-    
-    {/* Render lobbies if there are any */}
-    {facilityLobbies && facilityLobbies.length > 0 ? (
-      <LobbyList lobbies={facilityLobbies} facilityId={id} />
-    ) : (
-      <div className="text-center py-4">
-        <p className="text-gray-500">No open lobbies found</p>
-      </div>
-    )}
-    
-    {/* Button to create a new lobby - this won't be functional yet */}
-    <div className="mt-4 text-center">
-      <Button>
-        Create New Lobby
-      </Button>
-    </div>
-  </div>
-</Card>
           <Card className="sticky top-24">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Book this facility</h2>
