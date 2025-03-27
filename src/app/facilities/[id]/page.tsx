@@ -9,6 +9,7 @@ import { notFound } from 'next/navigation';
 import BookingFormWrapper from '@/components/bookings/BookingFormWrapper';
 import { FacilityOwnerActions } from '@/components/facilities/FacilityOwnerActions';
 import { Facility } from '@/types/facility';
+import { LobbyList } from '@/components/lobbies/LobbyList';
 
 // Define the expected params type
 type Props = {
@@ -82,6 +83,19 @@ export default async function FacilityDetailPage({ params }: Props) {
     .eq('facility_id', id)
     .in('status', ['confirmed', 'pending'])
     .returns<DBBooking[]>();
+
+    // Fetch open lobbies for this facility
+const { data: facilityLobbies, error: lobbiesError } = await supabase
+.from('lobbies')
+.select('*')
+.eq('facility_id', id)
+.eq('status', 'open')
+.order('created_at', { ascending: true });
+
+if (lobbiesError) {
+console.error('Error fetching lobbies:', lobbiesError);
+// Continue anyway, we'll handle this gracefully in the component
+}
 
   // Convert DB structure to component-friendly structure that matches Facility type
   const formattedFacility: Facility = {
@@ -230,6 +244,34 @@ export default async function FacilityDetailPage({ params }: Props) {
         
         {/* Booking sidebar - takes up 1/3 of the width on medium+ screens */}
         <div>
+          
+        {/* Open Lobbies Section */}
+<Card className="mt-8">
+  <div className="p-6">
+    <h2 className="text-xl font-semibold mb-4">Open Game Lobbies</h2>
+    <div className="mb-4">
+      <p className="text-gray-600">
+        Join an existing lobby or create your own. Game lobbies allow you to find other players to share the booking.
+      </p>
+    </div>
+    
+    {/* Render lobbies if there are any */}
+    {facilityLobbies && facilityLobbies.length > 0 ? (
+      <LobbyList lobbies={facilityLobbies} facilityId={id} />
+    ) : (
+      <div className="text-center py-4">
+        <p className="text-gray-500">No open lobbies found</p>
+      </div>
+    )}
+    
+    {/* Button to create a new lobby - this won't be functional yet */}
+    <div className="mt-4 text-center">
+      <Button>
+        Create New Lobby
+      </Button>
+    </div>
+  </div>
+</Card>
           <Card className="sticky top-24">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Book this facility</h2>
