@@ -80,6 +80,7 @@ export interface Database {
           status: string;
           total_price: number;
           notes: string | null;
+          lobby_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -93,6 +94,7 @@ export interface Database {
           status: string;
           total_price: number;
           notes?: string | null;
+          lobby_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -106,6 +108,7 @@ export interface Database {
           status?: string;
           total_price?: number;
           notes?: string | null;
+          lobby_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -131,6 +134,70 @@ export interface Database {
           role?: string;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      lobbies: {
+        Row: {
+          id: string;
+          facility_id: string;
+          creator_id: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          min_players: number;
+          current_players: number;
+          status: string;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          facility_id: string;
+          creator_id: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          min_players: number;
+          current_players?: number;
+          status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          facility_id?: string;
+          creator_id?: string;
+          date?: string;
+          start_time?: string;
+          end_time?: string;
+          min_players?: number;
+          current_players?: number;
+          status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      lobby_participants: {
+        Row: {
+          id: string;
+          lobby_id: string;
+          user_id: string;
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          lobby_id: string;
+          user_id: string;
+          joined_at?: string;
+        };
+        Update: {
+          id?: string;
+          lobby_id?: string;
+          user_id?: string;
+          joined_at?: string;
         };
       };
     };
