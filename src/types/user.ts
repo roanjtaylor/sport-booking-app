@@ -14,4 +14,4 @@ export type User = {
 /**
  * Available user roles in the system
  */
-export type UserRole = "user" | "facility_owner" | "admin";
+export type UserRole = "user" | "facility_owner";

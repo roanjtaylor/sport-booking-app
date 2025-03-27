@@ -18,7 +18,7 @@ export default function FacilitiesClient({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sportTypes, setSportTypes] = useState<string[]>([
-    'football', 'basketball', 'tennis', 'volleyball', 'badminton', 'other'
+    'Football', 'outdoors', 'indoors', '11 aside', '7 aside', '5 aside'
   ]);
   
   const handleFilter = async (filters: { search: string; sportType: string; priceSort: string }) => {
