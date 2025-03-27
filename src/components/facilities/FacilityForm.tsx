@@ -52,7 +52,8 @@ useEffect(() => {
   const [amenities, setAmenities] = useState<string[]>(facility?.amenities || []);
   const [imageUrl, setImageUrl] = useState(facility?.imageUrl || '');
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
-  
+  const [minPlayers, setMinPlayers] = useState(facility?.min_players?.toString() || '10');
+
   // Operating hours state
   const [operatingHours, setOperatingHours] = useState<OperatingHours>(
     facility?.operatingHours || {
@@ -133,6 +134,12 @@ useEffect(() => {
     if (sportTypes.length === 0) {
       errors.sportTypes = 'At least one sport type must be selected';
     }
+
+    if (!minPlayers.trim()) {
+      errors.minPlayers = 'Minimum players is required';
+    } else if (isNaN(parseInt(minPlayers)) || parseInt(minPlayers) < 2) {
+      errors.minPlayers = 'Minimum players must be at least 2';
+    }
     
     // Validate operating hours
     let hasOpenDay = false;
@@ -211,6 +218,7 @@ useEffect(() => {
         price_per_hour: Number(parseFloat(pricePerHour)),
         currency,
         sport_type: sportTypes,
+        min_players: Number(parseInt(minPlayers)),
         amenities,
         owner_id: user.id,
         updated_at: new Date().toISOString()
@@ -426,7 +434,23 @@ useEffect(() => {
               onChange={(e) => setCurrency(e.target.value)}
               required
             />
+            <Input
+  label="Minimum Players for Lobby"
+  name="minPlayers"
+  id="minPlayers"
+  type="number"
+  value={minPlayers}
+  onChange={(e) => setMinPlayers(e.target.value)}
+  required
+  min="2"
+  step="1"
+  error={formErrors.minPlayers}
+/>
           </div>
+          <p className="text-xs text-gray-500 mt-1">
+  This is the minimum number of players needed to form a complete team for this facility.
+  Players can create lobbies that others can join until this number is reached.
+</p>
         </div>
       </Card>
       

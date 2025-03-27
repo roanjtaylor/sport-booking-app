@@ -25,6 +25,7 @@ export interface Database {
           price_per_hour: number;
           currency: string;
           sport_type: string[];
+          min_players: number | null;
           amenities: string[] | null;
           created_at: string;
           updated_at: string;
@@ -43,6 +44,7 @@ export interface Database {
           price_per_hour: number;
           currency: string;
           sport_type: string[];
+          min_players?: number | null;
           amenities?: string[] | null;
           created_at?: string;
           updated_at?: string;
@@ -61,6 +63,7 @@ export interface Database {
           price_per_hour?: number;
           currency?: string;
           sport_type?: string[];
+          min_players?: number | null;
           amenities?: string[] | null;
           created_at?: string;
           updated_at?: string;
