@@ -1,135 +1,92 @@
-# SportBooking MVP
+# SportBooking Platform
 
-A platform for sports facility booking that allows users to find and book sports facilities, and enables facility owners to list their venues and manage bookings.
+## TL;DR:
 
-## Features
+This project aims to gamify the sport booking process, like EA Sports FC but connecting users to real games & people instead of virtual ones.
 
-### User Features
+## -
 
-- Browse and search for sports facilities
-- View facility details, including amenities and operating hours
-- Make bookings for specific dates and time slots
-- Manage and view booking history
-- User authentication (sign up, login, profile management)
+A Web App that aims to perfect modern sport booking systems\* by bringing together the public through matchmaking lobbies, maximising game time.
 
-### Facility Owner Features
+\*(namely football for now, to dominate the vertical before expansion.)
 
-- List facilities with detailed information
+## Overview
+
+SportBooking is a full-stack web application designed to address inefficiencies in sports facility bookings by connecting players and facility owners through an intuitive platform. The system allows users to:
+
+- Browse and book sports facilities
+- Create or join game lobbies when they don't have enough players
+- Manage bookings and facility schedules
+- Connect with other players for team sports
+
+## Key Features
+
+### For Players
+
+- Discover and book sports facilities
+- Join existing game lobbies or create new ones
+- View upcoming and past bookings
+- Receive matches based on skill level and availability
+
+### For Facility Owners
+
+- List and manage sports facilities
 - Set operating hours and pricing
-- Manage and confirm bookings
-- View booking history and statistics
+- Approve or reject booking requests
+- Track facility usage and maximise revenue
 
-## Tech Stack
+### Matchmaking System (currently being developed)
 
-- **Frontend**: Next.js, TypeScript, Tailwind CSS
-- **Backend**: Supabase (authentication, database, storage)
-- **Deployment**: Vercel (recommended)
+- Smart lobby system will match individual players or small groups
+- Players can join lobbies until minimum player requirements are met
+- Automatic conversion of filled lobbies into confirmed bookings
+- Helps maximise facility utilisation and player participation
 
-## Prerequisites
+## Technology Stack
 
-- Node.js (v14 or higher)
-- npm or yarn
-- Supabase account
+### Frontend
 
-## Setup Instructions
+- **Next.js** - Backbone for server-side processing
+- **React** - Components
+- **Tailwind CSS** - Styling
+- **TypeScript** - Type-safe JS
 
-### 1. Clone the repository
+### Backend
 
-```bash
-git clone [your-repository-url]
-cd sport-booking-app
-```
+- **Supabase** - BaaS platform
+  - Authentication
+  - PostgreSQL database
+  - Realtime subscriptions
+  - Storage
 
-### 2. Install dependencies
+### Key Dependencies
 
-```bash
-npm install
-# or
-yarn install
-```
+- **date-fns** - Date utility library
+- **@supabase/auth-helpers-nextjs** - Authentication utilities for Next.js
+- **@supabase/supabase-js** - Supabase client library
 
-### 3. Set up Supabase
+## Architecture
 
-1. Create a new project on [Supabase](https://supabase.io)
-2. Set up the database schema using the SQL from `database-schema.sql`
-3. Configure authentication (enable email/password sign-up)
-
-### 4. Environment Variables
-
-Create a `.env.local` file in the root directory with the following variables:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-NEXT_PUBLIC_APP_NAME=SportBooking
-```
-
-### 5. Run the development server
-
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to see the application.
-
-## Project Structure
-
-```
-sport-booking-app/
-├── public/                    # Static assets
-├── src/                       # Source code
-│   ├── app/                   # Next.js App Router
-│   │   ├── api/               # API routes
-│   │   ├── auth/              # Authentication pages
-│   │   ├── bookings/          # Booking pages
-│   │   ├── dashboard/         # User dashboard
-│   │   ├── facilities/        # Facility pages
-│   │   ├── globals.css        # Global styles
-│   │   ├── layout.tsx         # Root layout
-│   │   └── page.tsx           # Homepage
-│   ├── components/            # Reusable components
-│   ├── lib/                   # Utility functions
-│   └── types/                 # TypeScript type definitions
-├── .env.local                 # Environment variables
-├── tailwind.config.js         # Tailwind CSS configuration
-└── tsconfig.json              # TypeScript configuration
-```
+- Server components.
+- Client components.
+- Type-safe data models.
+- Responsive design.
 
 ## Database Schema
 
-The application uses three main tables:
+The database includes the following key tables:
 
-1. **profiles** - User profile information, linked to Supabase Auth
-2. **facilities** - Sports facility information (name, location, price, etc.)
-3. **bookings** - Booking records linking users to facilities
+- **facilities** - Facility information
+- **bookings** - Booking records
+- **lobbies** - Matchmaking
+- **lobby_participants** - Players in lobbies
+- **profiles** - User information
 
-Detailed schema can be found in the `database-schema.sql` file.
+## Future Improvements
 
-## Deployment
-
-The application can be easily deployed on Vercel:
-
-1. Push your code to a Git repository (GitHub, GitLab, etc.)
-2. Create a new project on [Vercel](https://vercel.com)
-3. Import your repository
-4. Configure environment variables (same as `.env.local`)
-5. Deploy
-
-## Future Enhancements
-
-- User ratings and reviews for facilities
-- Advanced search and filtering
+- Mobile application using React Native
+- Advanced matchmaking with machine learning
+- In-app chat for lobby participants
 - Payment processing integration
-- Mobile app versions
-- Matchmaking functionality for players to join incomplete teams
-- AI-powered recommendations for facilities and time slots
-
-## Contributing
-
-Contributions, issues, and feature requests are welcome!
-
-## License
-
-This project is [MIT](LICENSE) licensed.
+- Social features to connect with other players
+- Ratings and reviews for facilities
