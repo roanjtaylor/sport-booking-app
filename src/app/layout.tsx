@@ -45,7 +45,7 @@ export default function RootLayout({
     if (!session && 
         !window.location.pathname.startsWith('/auth/') && 
         window.location.pathname !== '/') {
-      router.push('/');
+      window.location.href = '/';
     }
   });
 
@@ -77,12 +77,12 @@ export default function RootLayout({
                   >
                     Browse Facilities
                   </Link>
-                  <Link 
+                  <AuthenticatedLink 
   href="/lobbies" 
   className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
 >
   Game Lobbies
-</Link>
+</AuthenticatedLink>
                   <AuthenticatedLink
                     href="/bookings"
                     className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
@@ -127,7 +127,7 @@ export default function RootLayout({
             <div className="md:flex md:items-center md:justify-between">
               <div className="mt-8 md:mt-0 md:order-1">
                 <p className="text-center text-sm text-gray-500">
-                  &copy; {new Date().getFullYear()} SportBooking. All rights reserved.
+                  &copy; {new Date().getFullYear()} SportBooking. Ain't got no rights right now, but maybe soon...
                 </p>
               </div>
             </div>

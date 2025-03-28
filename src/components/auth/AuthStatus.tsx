@@ -49,12 +49,18 @@ export function AuthStatus() {
       // Sign out from Supabase
       await supabase.auth.signOut({ scope: 'global' });
       
-      // Clear any persistent storage
-      localStorage.removeItem('supabase.auth.token');
-      
-      // Force a hard refresh to clear any stale state
-      router.push('/');
-      router.refresh();
+      // Clear all storage, not just the token
+      localStorage.clear();
+      sessionStorage.clear();
+    
+      // Clear cookies by setting past expiration date
+      document.cookie.split(";").forEach((cookie) => {
+        const name = cookie.split("=")[0].trim();
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      });
+
+      // Force a complete page reload rather than client-side navigation
+      window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {
