@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { formatTime, getDayOfWeek, generateTimeSlots } from '@/lib/utils';
+import { formatDate, formatTime, getDayOfWeek, generateTimeSlots } from '@/lib/utils';
 import { TimeSlot } from '@/types/booking';
 import { Facility } from '@/types/facility';
 import { BookingTypeSelector, BookingType } from '@/components/bookings/BookingTypeSelector';

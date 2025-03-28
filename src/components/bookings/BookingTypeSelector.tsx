@@ -24,7 +24,7 @@ export function BookingTypeSelector({
     <div className="mb-6">
       <h2 className="text-lg font-medium mb-3">Select Booking Type</h2>
       
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="flex flex-col gap-4">
         {/* Full Booking Option */}
         <Card 
           className={`overflow-hidden cursor-pointer transition ${
