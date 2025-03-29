@@ -9,7 +9,7 @@ export interface Booking {
   id: string;
   facility_id: string;
   user_id: string;
-  date: string; // ISO date string
+  date: string;
   start_time: string; // 24-hour format (HH:MM)
   end_time: string; // 24-hour format (HH:MM)
   status: "pending" | "confirmed" | "cancelled";

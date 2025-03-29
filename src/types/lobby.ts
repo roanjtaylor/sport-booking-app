@@ -14,7 +14,7 @@ export interface Lobby {
   id: string;
   facility_id: string;
   creator_id: string;
-  date: string; // ISO date string
+  date: string;
   start_time: string; // 24-hour format (HH:MM)
   end_time: string; // 24-hour format (HH:MM)
   min_players: number;

@@ -19,6 +19,8 @@ type LobbyDetailClientProps = {
  */
 export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
   const router = useRouter();
+
+  // State variables
   const [currentLobby, setCurrentLobby] = useState<Lobby>(lobby);
   const [isCreator, setIsCreator] = useState(false);
   const [isParticipant, setIsParticipant] = useState(false);
@@ -84,27 +86,27 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       
       // Get updated lobby and participants
       const { data: updatedParticipants, error: participantsError } = await supabase
-  .from('lobby_participants')
-  .select('*')
-  .eq('lobby_id', lobby.id);
+        .from('lobby_participants')
+        .select('*')
+        .eq('lobby_id', lobby.id);
   
-if (participantsError) throw participantsError;
+      if (participantsError) throw participantsError;
 
-// Fetch user details for all participants
-const participantsWithUsers = await Promise.all(
-  (updatedParticipants || []).map(async (participant) => {
-    const { data: userData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', participant.user_id)
-      .single();
+      // Fetch user details for all participants
+      const participantsWithUsers = await Promise.all(
+        (updatedParticipants || []).map(async (participant) => {
+          const { data: userData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', participant.user_id)
+            .single();
       
-    return {
-      ...participant,
-      user: userData
-    };
-  })
-);
+          return {
+            ...participant,
+            user: userData
+          };
+        })
+      );
 
       // Update participant count
       const newParticipantCount = participantsWithUsers?.length || 0;
@@ -203,6 +205,7 @@ const participantsWithUsers = await Promise.all(
       
       // Update lobby with new participant count
       const newParticipantCount = participants?.length || 0;
+
       const { error: updateError } = await supabase
         .from('lobbies')
         .update({ 

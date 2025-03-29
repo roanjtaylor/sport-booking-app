@@ -186,8 +186,6 @@ export default function DashboardPage() {
         ...booking,
         facility: booking.facility || { name: 'Unknown' }
       }));
-        
-      setPendingRequests(safeRequests);
       
     } catch (error) {
       console.error('Error fetching facility owner data:', error);
@@ -246,8 +244,6 @@ export default function DashboardPage() {
         facility: booking.facility || { name: 'Unknown' }
       }));
       
-      setRecentBookings(safeBookings);
-      
       // Also fetch some recommended facilities
       const { data: facilities } = await supabase
         .from('facilities')
@@ -284,7 +280,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Loading state UI
+  // Loading state UI- animation
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -311,7 +307,7 @@ export default function DashboardPage() {
     );
   }
 
-  // Determine if we're showing the facility owner or regular user dashboard
+  // Determine whether to show facility owner or regular user dashboard
   const isFacilityOwner = profile?.role === 'facility_owner';
 
   return (
