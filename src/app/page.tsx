@@ -115,7 +115,7 @@ export default async function HomePage() {
                   {facility.description}
                 </p>
                 <div className="flex justify-between items-center">
-                  <span className="text-primary-600 font-medium">${facility.price}/hour</span>
+                  <span className="text-primary-600 font-medium">£{facility.price}/hour</span>
                   <Link href={`/facilities/${facility.id}`}>
                     <Button variant="primary" size="sm">Book Now</Button>
                   </Link>

@@ -467,7 +467,7 @@ export default function DashboardPage() {
                 </Card>
               </Link>
               
-              <Link href="/profile" className="block">
+              <Link href="/dashboard/settings" className="block">
                 <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-purple-400">
                   <h3 className="font-medium mb-2">Your Profile</h3>
                   <p className="text-sm text-gray-600">

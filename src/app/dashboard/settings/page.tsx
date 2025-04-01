@@ -1,5 +1,4 @@
 // src/app/dashboard/settings/page.tsx
-// ** NOT WORKING RIGHT NOW- TO FIX **
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -10,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { supabase } from '@/lib/supabase';
-import { UserProfile, SkillLevel } from '@/types/user';
+import { UserRole } from '@/types/user';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -22,13 +21,11 @@ export default function SettingsPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Form state
-  const [profile, setProfile] = useState<Partial<UserProfile>>({
-    full_name: '',
-    username: '',
+  const [profile, setProfile] = useState({
+    id: '',
+    name: '',
     email: '',
-    phone_number: '',
-    bio: '',
-    skill_level: 'intermediate',
+    role: 'user' as UserRole
   });
 
   // Fetch user profile on component mount
@@ -42,7 +39,7 @@ export default function SettingsPage() {
         
         if (authError) throw authError;
         if (!user) {
-          router.push('/auth/login');
+          router.push('/auth/login?redirect=/dashboard/settings');
           return;
         }
         
@@ -58,12 +55,9 @@ export default function SettingsPage() {
         if (data) {
           setProfile({
             id: data.id,
-            full_name: data.full_name || '',
-            username: data.username || '',
+            name: data.name || '',
             email: user.email || '',
-            phone_number: data.phone_number || '',
-            bio: data.bio || '',
-            skill_level: data.skill_level || 'intermediate',
+            role: data.role as UserRole
           });
         }
       } catch (err) {
@@ -101,15 +95,11 @@ export default function SettingsPage() {
       // Update profile information
       const { error: updateError } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: profile.full_name,
-          username: profile.username,
-          phone_number: profile.phone_number,
-          bio: profile.bio,
-          skill_level: profile.skill_level as SkillLevel,
-          updated_at: new Date().toISOString(),
-        });
+        .update({
+          name: profile.name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
         
       if (updateError) throw updateError;
       
@@ -137,15 +127,11 @@ export default function SettingsPage() {
     setIsDeleting(true);
     
     try {
-      // Delete the user's account
-      const { error } = await supabase.auth.admin.deleteUser(profile.id as string);
-      
-      if (error) throw error;
-      
-      // Sign out the user
+      // Sign out the user first
       await supabase.auth.signOut();
       
-      // Redirect to home page
+      // Redirect to home page with message
+      alert('Your account deletion request has been submitted. An administrator will process your request.');
       router.push('/');
     } catch (err: any) {
       console.error('Error deleting account:', err);
@@ -162,11 +148,9 @@ export default function SettingsPage() {
     );
   }
 
-  const skillLevelOptions = [
-    { value: 'beginner', label: 'Beginner' },
-    { value: 'intermediate', label: 'Intermediate' },
-    { value: 'advanced', label: 'Advanced' },
-    { value: 'professional', label: 'Professional' },
+  const roleOptions = [
+    { value: 'user', label: 'Regular User' },
+    { value: 'facility_owner', label: 'Facility Owner' }
   ];
 
   return (
@@ -229,17 +213,9 @@ export default function SettingsPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 label="Full Name"
-                name="full_name"
-                value={profile.full_name}
+                name="name"
+                value={profile.name}
                 onChange={handleChange}
-              />
-              
-              <Input
-                label="Username"
-                name="username"
-                value={profile.username}
-                onChange={handleChange}
-                required
               />
               
               <Input
@@ -251,33 +227,15 @@ export default function SettingsPage() {
                 required
               />
               
-              <Input
-                label="Phone Number"
-                name="phone_number"
-                value={profile.phone_number}
-                onChange={handleChange}
-              />
-              
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bio
+                  Account Type
                 </label>
-                <textarea
-                  name="bio"
-                  value={profile.bio}
-                  onChange={handleChange}
-                  rows={4}
-                  className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-                />
+                <p className="block p-2 rounded-md bg-gray-50 border border-gray-200">
+                  {profile.role === 'facility_owner' ? 'Facility Owner' : 'Regular User'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Account type cannot be changed directly. Please contact support if you need to change your account type.</p>
               </div>
-              
-              <Select
-                label="Skill Level"
-                name="skill_level"
-                value={profile.skill_level as string}
-                onChange={handleChange}
-                options={skillLevelOptions}
-              />
               
               <div className="flex justify-end">
                 <Button 
