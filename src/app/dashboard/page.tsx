@@ -186,7 +186,6 @@ export default function DashboardPage() {
         ...booking,
         facility: booking.facility || { name: 'Unknown' }
       }));
-      
     } catch (error) {
       console.error('Error fetching facility owner data:', error);
       // Set default values in case of error
@@ -359,126 +358,84 @@ export default function DashboardPage() {
             </Card>
           </>
         ) : (
-          // Regular User Statistics
+          // Regular User Main Action Cards (Updated)
           <>
-            <Card className="p-6 border-l-4 border-green-500">
-              <h3 className="text-lg font-medium mb-2">Upcoming Bookings</h3>
-              <p className="text-3xl font-bold text-primary-600">{stats.upcomingBookings}</p>
-              <div className="mt-4">
-                <Link href="/bookings?tab=upcoming">
-                  <Button variant="outline" size="sm">View Bookings</Button>
-                </Link>
-              </div>
-            </Card>
+            <Link href="/bookings" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-green-500">
+                <h3 className="text-lg font-medium mb-2">Manage Bookings</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  View and manage your upcoming bookings
+                </p>
+                <Button variant="outline" size="sm">Bookings</Button>
+              </Card>
+            </Link>
             
-            <Card className="p-6 border-l-4 border-blue-500">
-              <h3 className="text-lg font-medium mb-2">Total Bookings</h3>
-              <p className="text-3xl font-bold text-primary-600">{stats.totalBookings}</p>
-              <div className="mt-4">
-                <Link href="/bookings?tab=all">
-                  <Button variant="outline" size="sm">View History</Button>
-                </Link>
-              </div>
-            </Card>
+            <Link href="/facilities" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-orange-500">
+                <h3 className="text-lg font-medium mb-2">Find Facilities</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Browse and book available sports facilities
+                </p>
+                <Button variant="outline" size="sm">Facilities</Button>
+              </Card>
+            </Link>
             
-            <Card className="p-6 border-l-4 border-orange-500">
-              <h3 className="text-lg font-medium mb-2">Find Facilities</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Book your next sports session now
-              </p>
-              <Link href="/facilities">
-                <Button variant="primary" size="sm">Browse Facilities</Button>
-              </Link>
-            </Card>
+            <Link href="/dashboard/settings" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-purple-500">
+                <h3 className="text-lg font-medium mb-2">Profile Settings</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Update your personal information and preferences
+                </p>
+                <Button variant="outline" size="sm">Settings</Button>
+              </Card>
+            </Link>
           </>
         )}
       </div>
       
-      {/* Quick actions grid */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {isFacilityOwner ? (
-            // Facility Owner Quick Actions
-            <>
-              <Link href="/dashboard/booking-requests" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-blue-400">
-                  <h3 className="font-medium mb-2">Booking Requests</h3>
-                  <p className="text-sm text-gray-600">
-                    Approve or decline booking requests
-                  </p>
-                </Card>
-              </Link>
-              
-              <Link href="/dashboard/facility-bookings" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-green-400">
-                  <h3 className="font-medium mb-2">View Bookings</h3>
-                  <p className="text-sm text-gray-600">
-                    See all bookings for your facilities
-                  </p>
-                </Card>
-              </Link>
+      {/* Facility owner quick actions (retained only for facility owners) */}
+      {isFacilityOwner && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link href="/dashboard/booking-requests" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-blue-400">
+                <h3 className="font-medium mb-2">Booking Requests</h3>
+                <p className="text-sm text-gray-600">
+                  Approve or decline booking requests
+                </p>
+              </Card>
+            </Link>
+            
+            <Link href="/dashboard/facility-bookings" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-green-400">
+                <h3 className="font-medium mb-2">View Bookings</h3>
+                <p className="text-sm text-gray-600">
+                  See all bookings for your facilities
+                </p>
+              </Card>
+            </Link>
 
-              <Link href="/facilities" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-purple-400">
-                  <h3 className="font-medium mb-2">Manage Facilities</h3>
-                  <p className="text-sm text-gray-600">
-                    Edit your facility information
-                  </p>
-                </Card>
-              </Link>
+            <Link href="/facilities" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-purple-400">
+                <h3 className="font-medium mb-2">Manage Facilities</h3>
+                <p className="text-sm text-gray-600">
+                  Edit your facility information
+                </p>
+              </Card>
+            </Link>
 
-              <Link href="/facilities/add" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-orange-400">
-                  <h3 className="font-medium mb-2">Add Facility</h3>
-                  <p className="text-sm text-gray-600">
-                    List a new facility on the platform
-                  </p>
-                </Card>
-              </Link>
-            </>
-          ) : (
-            // Regular User Quick Actions
-            <>
-              <Link href="/bookings" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-green-400">
-                  <h3 className="font-medium mb-2">Manage Bookings</h3>
-                  <p className="text-sm text-gray-600">
-                    View and manage your existing bookings
-                  </p>
-                </Card>
-              </Link>
-              
-              <Link href="/bookings?tab=upcoming" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-blue-400">
-                  <h3 className="font-medium mb-2">Upcoming Bookings</h3>
-                  <p className="text-sm text-gray-600">
-                    Check your schedule and bookings
-                  </p>
-                </Card>
-              </Link>
-
-              <Link href="/facilities" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-orange-400">
-                  <h3 className="font-medium mb-2">Find a Facility</h3>
-                  <p className="text-sm text-gray-600">
-                    Browse and book available facilities
-                  </p>
-                </Card>
-              </Link>
-              
-              <Link href="/dashboard/settings" className="block">
-                <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-purple-400">
-                  <h3 className="font-medium mb-2">Your Profile</h3>
-                  <p className="text-sm text-gray-600">
-                    Update your personal information
-                  </p>
-                </Card>
-              </Link>
-            </>
-          )}
+            <Link href="/facilities/add" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-orange-400">
+                <h3 className="font-medium mb-2">Add Facility</h3>
+                <p className="text-sm text-gray-600">
+                  List a new facility on the platform
+                </p>
+              </Card>
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Recent activity section - different for each user type */}
       {isFacilityOwner ? (
