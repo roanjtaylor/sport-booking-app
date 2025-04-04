@@ -540,9 +540,14 @@ export default function DashboardPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Your Facilities</h2>
-            <Link href="/facilities/add">
-              <Button variant="outline" size="sm">Add New</Button>
-            </Link>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+                <Link href="/facilities/add">
+                  <Button variant="outline" size="sm">Add Facility</Button>
+                </Link>
+                <Link href="/dashboard/facilities" className="block">
+                  <Button variant="outline" size="sm">Manage Facilities</Button>
+                </Link>
+              </div>
           </div>
           
           <div className="grid md:grid-cols-3 gap-4">
