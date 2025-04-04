@@ -330,7 +330,7 @@ export default function DashboardPage() {
               <h3 className="text-lg font-medium mb-2">Pending Requests</h3>
               <p className="text-3xl font-bold text-primary-600">{stats.pendingRequests}</p>
               <div className="mt-4">
-                <Link href="/dashboard/booking-requests">
+                <Link href="/dashboard/facility-bookings">
                   <Button variant="outline" size="sm">View Requests</Button>
                 </Link>
               </div>
@@ -405,7 +405,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Recent Booking Requests</h2>
-            <Link href="/dashboard/booking-requests">
+            <Link href="/dashboard/facility-bookings">
               <Button variant="outline" size="sm">View All</Button>
             </Link>
           </div>
@@ -437,7 +437,7 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <Link href={`/dashboard/booking-requests#${booking.id}`}>
+                          <Link href={`/dashboard/facility-bookings#${booking.id}`}>
                             <Button variant="outline" size="sm">Review</Button>
                           </Link>
                         </td>

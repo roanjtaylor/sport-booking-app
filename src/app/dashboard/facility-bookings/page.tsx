@@ -27,80 +27,71 @@ interface Booking {
 
 export default function FacilityBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [pendingBookings, setPendingBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
   
   useEffect(() => {
-    async function fetchBookingRequests() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setError('You must be logged in to view booking requests');
-          return;
-        }
-    
-        // Get facilities owned by the user
-        const { data: facilities, error: facilitiesError } = await supabase
-          .from('facilities')
-          .select('id')
-          .eq('owner_id', user.id);
-    
-        if (facilitiesError) throw facilitiesError;
-        if (!facilities?.length) {
-          setBookings([]);
-          return;
-        }
-    
-        const facilityIds = facilities.map(f => f.id);
-    
-        // Get bookings for these facilities
-        const { data: bookingsData, error: bookingsError } = await supabase
-          .from('bookings')
-          .select(`
-            *,
-            facility:facilities(*)
-          `)
-          .in('facility_id', facilityIds)
-          .order('date', { ascending: true });
-    
-          if (bookingsError) throw bookingsError;
-        
-          console.log('Retrieved bookings data:', JSON.stringify(bookingsData, null, 2));
-        
-        // Check if we have the correct property names
-        if (bookingsData && bookingsData.length > 0) {
-          console.log('First booking object keys:', Object.keys(bookingsData[0]));
-          console.log('Facilities object:', bookingsData[0].facilities);
-          console.log('Profiles object:', bookingsData[0].profiles);
-        }
-        
-        // Map the data to ensure we're handling the structure correctly
-        const formattedBookings = (bookingsData || []).map(booking => {
-          return {
-            ...booking,
-            // The data is already properly nested under 'facility' from the query
-            facility: booking.facility || {
-              id: booking.facility_id,
-              name: 'Unknown Facility'
-            },
-            user: booking.user || {
-              id: booking.user_id,
-              email: 'Unknown User'
-            }
-          };
-        });
-          
-          setBookings(formattedBookings);
-      } catch (err) {
-        console.error('Error fetching booking requests:', err);
-        setError('Failed to load booking requests');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
-    fetchBookingRequests();
+    fetchBookings();
   }, []);
+
+  async function fetchBookings() {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('You must be logged in to view booking details');
+        return;
+      }
+  
+      // Get facilities owned by the user
+      const { data: facilities, error: facilitiesError } = await supabase
+        .from('facilities')
+        .select('id')
+        .eq('owner_id', user.id);
+  
+      if (facilitiesError) throw facilitiesError;
+      if (!facilities?.length) {
+        setBookings([]);
+        setPendingBookings([]);
+        return;
+      }
+  
+      const facilityIds = facilities.map(f => f.id);
+  
+      // Get all bookings for these facilities
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          facility:facilities(*)
+        `)
+        .in('facility_id', facilityIds)
+        .order('date', { ascending: true });
+  
+      if (bookingsError) throw bookingsError;
+      
+      // Process bookings to ensure we have facility and user info
+      const processedBookings = (bookingsData || []).map(booking => ({
+        ...booking,
+        facility: booking.facility || { id: booking.facility_id, name: 'Unknown Facility' },
+        user: booking.user || { id: booking.user_id, email: 'Unknown User' }
+      }));
+      
+      setBookings(processedBookings);
+      
+      // Filter pending bookings for the pending tab
+      setPendingBookings(processedBookings.filter(booking => booking.status === 'pending'));
+    } catch (err) {
+      console.error('Error fetching bookings:', err);
+      setError('Failed to load bookings');
+    } finally {
+      setIsLoading(false);
+    }
+  }
   
   const handleUpdateBookingStatus = async (bookingId: string, newStatus: 'pending' | 'confirmed' | 'cancelled') => {
     try {
@@ -115,11 +106,17 @@ export default function FacilityBookingsPage() {
       if (error) throw error;
       
       // Update local state
-      setBookings(bookings.map(booking => 
+      const updatedBookings = bookings.map(booking => 
         booking.id === bookingId 
           ? { ...booking, status: newStatus } 
           : booking
-      ));
+      );
+      
+      setBookings(updatedBookings);
+      setPendingBookings(updatedBookings.filter(booking => booking.status === 'pending'));
+
+      // Show confirmation
+      alert(`Booking ${newStatus === 'confirmed' ? 'approved' : 'rejected'} successfully`);
     } catch (err) {
       console.error(`Error updating booking status:`, err);
       alert('Failed to update booking status');
@@ -145,6 +142,8 @@ export default function FacilityBookingsPage() {
       </Card>
     );
   }
+
+  const displayBookings = activeTab === 'all' ? bookings : pendingBookings;
   
   return (
     <div>
@@ -155,9 +154,39 @@ export default function FacilityBookingsPage() {
         </Link>
       </div>
       
-      {bookings.length === 0 ? (
+      {/* Tabs for filtering bookings */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'all'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            All Bookings
+          </button>
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'pending'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Pending Requests {pendingBookings.length > 0 && `(${pendingBookings.length})`}
+          </button>
+        </nav>
+      </div>
+      
+      {displayBookings.length === 0 ? (
         <Card className="p-6 text-center">
-          <p>No bookings found for your facilities.</p>
+          <p>
+            {activeTab === 'all' 
+              ? "No bookings found for your facilities." 
+              : "No pending booking requests at this time."}
+          </p>
         </Card>
       ) : (
         <Card>
@@ -174,10 +203,10 @@ export default function FacilityBookingsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {bookings.map((booking) => (
+                {displayBookings.map((booking) => (
                   <tr key={booking.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {booking.facility?.name || booking.facility?.name || 'Unknown Facility'}
+                      {booking.facility?.name || 'Unknown Facility'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {booking.user?.email || 'Unknown User'}
