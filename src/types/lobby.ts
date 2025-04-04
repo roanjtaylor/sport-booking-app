@@ -38,6 +38,7 @@ export interface LobbyParticipant {
   id: string;
   lobby_id: string;
   user_id: string;
+  participant_email?: string;
   joined_at: string;
 
   // Populated via joins

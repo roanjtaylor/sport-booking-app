@@ -416,27 +416,27 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
           <div className="bg-gray-50 rounded-md p-4">
             {currentLobby.participants && currentLobby.participants.length > 0 ? (
               <ul className="divide-y divide-gray-200">
-                {currentLobby.participants.map((participant) => (
-                  <li key={participant.id} className="py-2 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mr-3">
-                        {participant.user?.email?.[0].toUpperCase() || '?'}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {participant.user?.email || 'Unknown User'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {participant.user_id === currentLobby.creator_id ? 'Creator' : 'Participant'}
-                        </p>
-                      </div>
+              {currentLobby.participants.map((participant) => (
+                <li key={participant.id} className="py-2 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="h-8 w-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mr-3">
+                      {(participant.participant_email || participant.user?.email || 'Unknown')[0].toUpperCase()}
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Joined {formatDate(participant.joined_at, 'PPp')}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {participant.participant_email || participant.user?.email || 'Unknown User'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {participant.user_id === currentLobby.creator_id ? 'Creator' : 'Participant'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Joined {formatDate(participant.joined_at, 'PPp')}
+                  </p>
+                </li>
+              ))}
+            </ul>
             ) : (
               <p className="text-gray-500 text-center py-2">No participants yet</p>
             )}

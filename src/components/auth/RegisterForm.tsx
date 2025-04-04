@@ -63,6 +63,7 @@ export function RegisterForm() {
         .from('profiles')
         .insert({
           id: data.user.id,
+          email,
           name,
           role
         });

@@ -218,6 +218,7 @@ const handleJoinLobby = async (lobbyId: string) => {
       .insert({
         lobby_id: lobbyId,
         user_id: user.id,
+        participant_email: user.email,
       });
       
     if (participantError) throw participantError;
