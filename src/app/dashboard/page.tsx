@@ -326,25 +326,15 @@ export default function DashboardPage() {
         {isFacilityOwner ? (
           // Facility Owner Statistics
           <>
-            <Card className="p-6 border-l-4 border-blue-500">
-              <h3 className="text-lg font-medium mb-2">Pending Requests</h3>
-              <p className="text-3xl font-bold text-primary-600">{stats.pendingRequests}</p>
-              <div className="mt-4">
-                <Link href="/dashboard/facility-bookings">
-                  <Button variant="outline" size="sm">View Requests</Button>
-                </Link>
-              </div>
-            </Card>
-            
+          <Link href="/dashboard/facility-bookings">
             <Card className="p-6 border-l-4 border-green-500">
               <h3 className="text-lg font-medium mb-2">Upcoming Bookings</h3>
               <p className="text-3xl font-bold text-primary-600">{stats.upcomingBookings}</p>
               <div className="mt-4">
-                <Link href="/dashboard/facility-bookings">
                   <Button variant="outline" size="sm">View Bookings</Button>
-                </Link>
               </div>
             </Card>
+            </Link>
             
             <Card className="p-6 border-l-4 border-orange-500">
               <h3 className="text-lg font-medium mb-2">Your Facilities</h3>
@@ -362,6 +352,16 @@ export default function DashboardPage() {
               </div>
               </div>
             </Card>
+
+            <Link href="/dashboard/settings" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-purple-500">
+                <h3 className="text-lg font-medium mb-2">Profile Settings</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Update your personal information and preferences
+                </p>
+                <Button variant="outline" size="sm">Settings</Button>
+              </Card>
+            </Link>
           </>
         ) : (
           // Regular User Main Action Cards (Updated)
