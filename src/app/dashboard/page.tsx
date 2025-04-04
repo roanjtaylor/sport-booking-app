@@ -346,9 +346,10 @@ export default function DashboardPage() {
               </div>
             </Card>
             
-            <Card className="p-6 border-l-4 border-purple-500">
+            <Card className="p-6 border-l-4 border-orange-500">
               <h3 className="text-lg font-medium mb-2">Your Facilities</h3>
               <p className="text-3xl font-bold text-primary-600">{stats.facilities}</p>
+              <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
               <div className="mt-4">
                 <Link href="/facilities/add">
                   <Button variant="outline" size="sm">Add Facility</Button>
@@ -358,6 +359,7 @@ export default function DashboardPage() {
                 <Link href="/facilities" className="block">
                   <Button variant="outline" size="sm">Manage Facilities</Button>
                 </Link>
+              </div>
               </div>
             </Card>
           </>
