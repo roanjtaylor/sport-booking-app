@@ -180,21 +180,21 @@ console.error('Error fetching lobbies:', lobbiesError);
                 
                 {/* Operating hours */}
                 <div>
-                  <h3 className="font-medium mb-2">Operating Hours</h3>
-                  <ul className="space-y-1">
-                    {Object.entries(formattedFacility.operatingHours).map(([day, hours]) => (
-                      <li key={day} className="flex justify-between text-gray-700">
-                        <span className="capitalize">{day}:</span>
-                        <span>
-                          {hours
-                            ? `${formatTime(hours.open)} - ${formatTime(hours.close)}`
-                            : 'Closed'
-                          }
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+  <h3 className="font-medium mb-2">Operating Hours</h3>
+  <ul className="space-y-1">
+    {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+      <li key={day} className="flex justify-between text-gray-700">
+        <span className="capitalize">{day}:</span>
+        <span>
+          {formattedFacility.operatingHours[day]
+            ? `${formatTime(formattedFacility.operatingHours[day].open)} - ${formatTime(formattedFacility.operatingHours[day].close)}`
+            : 'Closed'
+          }
+        </span>
+      </li>
+    ))}
+  </ul>
+</div>
               </div>
             </div>
           </Card>
