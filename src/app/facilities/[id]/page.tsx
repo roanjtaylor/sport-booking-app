@@ -229,13 +229,6 @@ console.error('Error fetching lobbies:', lobbiesError);
                     <span className="text-gray-500"> / hour</span>
                   </p>
                 </div>
-                
-                <div>
-                  <h3 className="font-medium mb-1">Location</h3>
-                  <div className="bg-gray-200 h-48 rounded flex items-center justify-center">
-                    <span className="text-gray-400">Map would go here</span>
-                  </div>
-                </div>
               </div>
             </div>
           </Card>

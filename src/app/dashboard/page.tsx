@@ -346,7 +346,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
               <div className='mt-4'>
-                <Link href="/facilities" className="block">
+                <Link href="/dashboard/facilities" className="block">
                   <Button variant="outline" size="sm">Manage Facilities</Button>
                 </Link>
               </div>
