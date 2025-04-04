@@ -396,14 +396,24 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
               <div>
                 <dt className="text-gray-500">Game Tags</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
-                  {currentLobby.facility?.sportType?.map((sport) => (
-                    <span 
-                      key={sport} 
-                      className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
-                    >
-                      {sport.charAt(0).toUpperCase() + sport.slice(1)}
-                    </span>
-                  ))}
+                  {currentLobby.facility?.sport_type ? 
+                    currentLobby.facility.sport_type.map((sport: string) => (
+                      <span 
+                        key={sport} 
+                        className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
+                      >
+                        {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                      </span>
+                    )) : 
+                    currentLobby.facility?.sportType?.map((sport: string) => (
+                      <span 
+                        key={sport} 
+                        className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
+                      >
+                        {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                      </span>
+                    ))
+                  }
                 </dd>
               </div>
             </dl>
