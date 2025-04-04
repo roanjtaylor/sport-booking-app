@@ -213,16 +213,8 @@ export default function DashboardPage() {
           .not('status', 'eq', 'cancelled'),
         supabase.from('bookings')
           .select(`
-            id, 
-            facility_id, 
-            date, 
-            start_time, 
-            end_time, 
-            status,
-            facility:facility_id (
-              id,
-              name
-            )
+            *,
+            facility:facilities(*)
           `)
           .eq('user_id', userId)
           .gte('date', today)
@@ -237,11 +229,14 @@ export default function DashboardPage() {
         upcomingBookings: upcomingBookings.count ?? 0,
       });
       
-      // Ensure facility property exists on each booking
+      // Process and set the recent bookings
       const safeBookings = (recentBookingsData.data || []).map(booking => ({
         ...booking,
         facility: booking.facility || { name: 'Unknown' }
       }));
+
+      // Set the recentBookings state
+      setRecentBookings(safeBookings);
       
       // Also fetch some recommended facilities
       const { data: facilities } = await supabase
