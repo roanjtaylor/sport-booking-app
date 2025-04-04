@@ -474,6 +474,7 @@ const handleJoinLobby = async (lobbyId: string) => {
                 .insert({
                   facility_id: facility.id,
                   creator_id: user.id,
+                  creator_email: user.email,
                   date,
                   start_time: selectedSlot.startTime,
                   end_time: selectedSlot.endTime,

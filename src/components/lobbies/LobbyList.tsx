@@ -50,7 +50,7 @@ export function LobbyList({ lobbies, onJoinLobby, isLoading = false }: LobbyList
                     <span className="font-medium">Time:</span> {formatTime(lobby.start_time)} - {formatTime(lobby.end_time)}
                   </p>
                   <p>
-                    <span className="font-medium">Created by:</span> {lobby.creator?.email || 'Unknown'}
+                    <span className="font-medium">Created by:</span> {lobby.creator_email || 'Unknown'}
                   </p>
                   {lobby.notes && (
                     <p>

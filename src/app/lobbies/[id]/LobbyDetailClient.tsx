@@ -351,7 +351,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
               )}
               <div>
                 <dt className="text-gray-500">Created By</dt>
-                <dd className="mt-1 text-gray-900">{currentLobby.creator?.email || 'Unknown'}</dd>
+                <dd className="mt-1 text-gray-900">{currentLobby.creator_email || currentLobby.creator?.email || 'Unknown'}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Created At</dt>

@@ -40,18 +40,6 @@ export default async function LobbyDetailPage({ params }: PageProps) {
     console.error('Error fetching lobby:', error);
     notFound();
   }
-
-  // Fetch the creator info separately
-const { data: creator, error: creatorError } = await supabase
-.from('profiles')
-.select('*')
-.eq('id', lobby.creator_id)
-.single();
-
-if (creatorError) {
-console.error('Error fetching creator:', creatorError);
-// Continue anyway to show what we have
-}
   
   // Fetch participants for this lobby
   const { data: participants, error: participantsError } = await supabase
@@ -80,7 +68,6 @@ if (participants) {
   // Add participants to the lobby object
   const lobbyWithParticipants = {
     ...lobby,
-    creator: creator || null,
     participants: participantsWithUsers || []
   };
 
