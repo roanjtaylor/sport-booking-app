@@ -6,16 +6,6 @@ import { Card } from '@/components/ui/Card';
 import { formatDate, formatTime, formatPrice } from '@/lib/utils';
 import { Booking } from '@/types/booking';
 
-// type BookingDetailProps = {
-//   booking: Booking & { 
-//     facility: Facility;
-//     user: User;
-//   };
-//   isOwner: boolean;
-//   onCancelBooking?: () => void;
-//   onConfirmBooking?: () => void;
-//   isProcessing?: boolean;
-// };
 interface BookingDetailProps {
   booking: Booking;
   isOwner: boolean;
@@ -111,12 +101,11 @@ export function BookingDetail({
                 </dd>
               </div>
               <div>
-                <dt className="text-gray-500">Contact</dt>
-                <dd className="mt-1 text-gray-900">
-                  {/* In a real app, you would have contact information */}
-                  Example: +1 234-567-8900
-                </dd>
-              </div>
+  <dt className="text-gray-500">Contact</dt>
+  <dd className="mt-1 text-gray-900">
+    {booking.facility?.owner_email || 'Contact information not available'}
+  </dd>
+</div>
               <div>
                 <dt className="text-gray-500">Game tags</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">

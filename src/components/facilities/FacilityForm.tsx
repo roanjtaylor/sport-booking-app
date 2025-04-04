@@ -221,6 +221,7 @@ useEffect(() => {
         min_players: Number(parseInt(minPlayers)),
         amenities,
         owner_id: user.id,
+        owner_email: user.email,
         updated_at: new Date().toISOString()
       };
       

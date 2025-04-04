@@ -29,6 +29,7 @@ type DBFacility = {
   country: string;
   image_url?: string;
   owner_id: string;
+  owner_email: string;
   operating_hours: {
     monday: { open: string; close: string } | null;
     tuesday: { open: string; close: string } | null;
@@ -108,6 +109,7 @@ console.error('Error fetching lobbies:', lobbiesError);
     country: facility.country,
     imageUrl: facility.image_url,
     owner_id: facility.owner_id,
+    owner_email: facility.owner_email,
     operatingHours: facility.operating_hours,
     price_per_hour: facility.price_per_hour,
     currency: facility.currency,

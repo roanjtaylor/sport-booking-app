@@ -12,6 +12,7 @@ export type Facility = {
   country: string;
   imageUrl?: string;
   owner_id: string; // Changed to match snake_case from database
+  owner_email: string; // Changed to match snake_case from database
   operatingHours: OperatingHours;
   price_per_hour: number; // Changed to match snake_case from database
   currency: string;

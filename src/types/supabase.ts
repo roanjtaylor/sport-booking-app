@@ -21,6 +21,7 @@ export interface Database {
           country: string;
           image_url: string | null;
           owner_id: string;
+          owner_email: string | null;
           operating_hours: Json;
           price_per_hour: number;
           currency: string;
@@ -40,6 +41,7 @@ export interface Database {
           country: string;
           image_url?: string | null;
           owner_id: string;
+          owner_email?: string | null;
           operating_hours: Json;
           price_per_hour: number;
           currency: string;
@@ -59,6 +61,7 @@ export interface Database {
           country?: string;
           image_url?: string | null;
           owner_id?: string;
+          owner_email?: string | null;
           operating_hours?: Json;
           price_per_hour?: number;
           currency?: string;
