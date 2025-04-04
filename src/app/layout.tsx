@@ -26,6 +26,13 @@ export default function RootLayout({
   const [user, setUser] = useState<User | null>(null);
   // Create the Supabase client specifically for client components
   const supabase = createClientComponentClient();
+  // Add state for mobile menu visibility
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
 
   // Set up auth listener on component mount
   useEffect(() => {
@@ -38,16 +45,16 @@ export default function RootLayout({
     checkAuth();
 
     // Subscribe to auth changes with proper cleanup
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    setUser(session?.user || null);
-    
-    // If session is null and we're not on an auth page, redirect to home
-    if (!session && 
-        !window.location.pathname.startsWith('/auth/') && 
-        window.location.pathname !== '/') {
-      window.location.href = '/';
-    }
-  });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      
+      // If session is null and we're not on an auth page, redirect to home
+      if (!session && 
+          !window.location.pathname.startsWith('/auth/') && 
+          window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
+    });
 
     // Clean up subscription on unmount
     return () => subscription.unsubscribe();
@@ -77,17 +84,17 @@ export default function RootLayout({
                   >
                     Browse Facilities
                   </Link>
-                  <AuthenticatedLink 
-  href="/lobbies" 
-  className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
->
-  Game Lobbies
-</AuthenticatedLink>
                   <AuthenticatedLink
                     href="/bookings"
                     className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
                   >
                     Bookings
+                  </AuthenticatedLink>
+                  <AuthenticatedLink 
+                    href="/lobbies" 
+                    className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                  >
+                    Game Lobbies
                   </AuthenticatedLink>
                 </nav>
               </div>
@@ -103,6 +110,7 @@ export default function RootLayout({
                   type="button"
                   className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
                   aria-expanded="false"
+                  onClick={toggleMobileMenu}
                 >
                   <span className="sr-only">Open main menu</span>
                   <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -111,6 +119,46 @@ export default function RootLayout({
                 </button>
               </div>
             </div>
+            
+            {/* Mobile menu, show/hide based on menu state */}
+            {isMobileMenuOpen && (
+              <div className="md:hidden">
+                <div className="pt-2 pb-3 space-y-1">
+                  <Link 
+                    href="/facilities" 
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Browse Facilities
+                  </Link>
+                  {user && (
+                    <>
+                      <Link 
+                        href="/dashboard" 
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <Link 
+                        href="/bookings" 
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Bookings
+                      </Link>
+                      <Link 
+                        href="/lobbies" 
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Game Lobbies
+                      </Link>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </header>
         
