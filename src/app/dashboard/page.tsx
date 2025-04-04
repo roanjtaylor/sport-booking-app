@@ -186,6 +186,10 @@ export default function DashboardPage() {
         ...booking,
         facility: booking.facility || { name: 'Unknown' }
       }));
+
+      // Set the pendingRequests state
+      setPendingRequests(safeRequests);
+
     } catch (error) {
       console.error('Error fetching facility owner data:', error);
       // Set default values in case of error
@@ -350,6 +354,11 @@ export default function DashboardPage() {
                   <Button variant="outline" size="sm">Add Facility</Button>
                 </Link>
               </div>
+              <div className='mt-4'>
+                <Link href="/facilities" className="block">
+                  <Button variant="outline" size="sm">Manage Facilities</Button>
+                </Link>
+              </div>
             </Card>
           </>
         ) : (
@@ -387,50 +396,6 @@ export default function DashboardPage() {
           </>
         )}
       </div>
-      
-      {/* Facility owner quick actions (retained only for facility owners) */}
-      {isFacilityOwner && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link href="/dashboard/booking-requests" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-blue-400">
-                <h3 className="font-medium mb-2">Booking Requests</h3>
-                <p className="text-sm text-gray-600">
-                  Approve or decline booking requests
-                </p>
-              </Card>
-            </Link>
-            
-            <Link href="/dashboard/facility-bookings" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-green-400">
-                <h3 className="font-medium mb-2">View Bookings</h3>
-                <p className="text-sm text-gray-600">
-                  See all bookings for your facilities
-                </p>
-              </Card>
-            </Link>
-
-            <Link href="/facilities" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-purple-400">
-                <h3 className="font-medium mb-2">Manage Facilities</h3>
-                <p className="text-sm text-gray-600">
-                  Edit your facility information
-                </p>
-              </Card>
-            </Link>
-
-            <Link href="/facilities/add" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-t-2 border-orange-400">
-                <h3 className="font-medium mb-2">Add Facility</h3>
-                <p className="text-sm text-gray-600">
-                  List a new facility on the platform
-                </p>
-              </Card>
-            </Link>
-          </div>
-        </div>
-      )}
       
       {/* Recent activity section - different for each user type */}
       {isFacilityOwner ? (
