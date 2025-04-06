@@ -88,13 +88,13 @@ export default function RootLayout({
                     href="/bookings"
                     className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
                   >
-                    Bookings
+                    My Bookings
                   </AuthenticatedLink>
                   <AuthenticatedLink 
                     href="/lobbies" 
                     className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
                   >
-                    Game Lobbies
+                    Open Lobbies
                   </AuthenticatedLink>
                 </nav>
               </div>
@@ -134,25 +134,18 @@ export default function RootLayout({
                   {user && (
                     <>
                       <Link 
-                        href="/dashboard" 
-                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Dashboard
-                      </Link>
-                      <Link 
                         href="/bookings" 
                         className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        Bookings
+                        My Bookings
                       </Link>
                       <Link 
                         href="/lobbies" 
                         className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        Game Lobbies
+                        Open Lobbies
                       </Link>
                     </>
                   )}
