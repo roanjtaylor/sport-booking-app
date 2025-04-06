@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { formatTime } from '@/lib/utils';
+import { formatPrice, formatTime } from '@/lib/utils';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import BookingFormWrapper from '@/components/bookings/BookingFormWrapper';
@@ -224,7 +224,7 @@ console.error('Error fetching lobbies:', lobbiesError);
                   <h3 className="font-medium mb-1">Price</h3>
                   <p className="text-gray-700">
                     <span className="text-2xl font-semibold text-primary-600">
-                     £{formattedFacility.price_per_hour}
+                      {formatPrice(formattedFacility.price_per_hour, formattedFacility.currency)}
                     </span>
                     <span className="text-gray-500"> / hour</span>
                   </p>

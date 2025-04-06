@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { formatDate, formatTime, getDayOfWeek, generateTimeSlots } from '@/lib/utils';
+import { formatDate, formatTime, getDayOfWeek, generateTimeSlots, formatPrice } from '@/lib/utils';
 import { TimeSlot } from '@/types/booking';
 import { Facility } from '@/types/facility';
 import { BookingTypeSelector, BookingType } from '@/components/bookings/BookingTypeSelector';
@@ -398,11 +398,11 @@ const handleJoinLobby = async (lobbyId: string) => {
               <div className="bg-gray-50 p-4 rounded">
                 <div className="flex justify-between text-sm mb-1">
                   <span>Price per hour</span>
-                  <span>${facility.price_per_hour}</span>
+                  <span>{formatPrice(facility.price_per_hour, facility.currency)}</span>
                 </div>
                 <div className="flex justify-between font-medium">
                   <span>Total</span>
-                  <span>${facility.price_per_hour}</span>
+                  <span>{formatPrice(facility.price_per_hour, facility.currency)}</span>
                 </div>
               </div>
             </>
@@ -586,7 +586,7 @@ const handleJoinLobby = async (lobbyId: string) => {
                   <p><span className="text-gray-600">Date:</span> {formatDate(date)}</p>
                   <p><span className="text-gray-600">Time:</span> {formatTime(selectedSlot.startTime)} - {formatTime(selectedSlot.endTime)}</p>
                   <p><span className="text-gray-600">Players needed:</span> {minPlayers}</p>
-                  <p><span className="text-gray-600">Price per player:</span> Approximately £{(facility.price_per_hour / minPlayers).toFixed(2)}</p>
+                  <p><span className="text-gray-600">Price per player:</span> Approximately {formatPrice((facility.price_per_hour / minPlayers), facility.currency)}</p>
                 </div>
               </div>
             )}

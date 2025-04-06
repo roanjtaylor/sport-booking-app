@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { FacilityFilters } from '@/components/facilities/FacilityFilters';
 import { supabase } from '@/lib/supabase';
 import { Facility } from '@/types/facility';
+import { formatPrice } from '@/lib/utils';
 
 export default function FacilitiesClient({ 
   initialFacilities 
@@ -142,7 +143,7 @@ export default function FacilitiesClient({
                   {/* Price and booking button */}
                   <div className="mt-auto flex justify-between items-center">
                     <span className="font-medium text-primary-600">
-                      £{facility.price_per_hour}/hour
+                    {formatPrice(facility.price_per_hour, facility.currency)}/hour
                     </span>
                     <Link href={`/facilities/${facility.id}`}>
                       <Button variant="primary" size="sm">

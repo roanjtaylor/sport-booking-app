@@ -42,7 +42,6 @@ export function formatTime(timeString: string) {
 export function formatPrice(price: number, currency: string = "USD") {
   try {
     return new Intl.NumberFormat("en-US", {
-      // POSSIBLE ERROR BUG
       style: "currency",
       currency,
     }).format(price);
