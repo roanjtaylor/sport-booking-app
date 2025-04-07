@@ -40,6 +40,10 @@ export function BookingDetail({
     }
   };
 
+  const isLobbyBooking = (booking: Booking) => {
+    return !!booking.lobby_id || (booking.notes && booking.notes.includes('lobby'));
+  };
+
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-gray-200 bg-gray-50 px-4 py-5 sm:px-6">
@@ -83,6 +87,20 @@ export function BookingDetail({
                 <dt className="text-gray-500">Booking Date</dt>
                 <dd className="mt-1 text-gray-900">{formatDate(booking.created_at)}</dd>
               </div>
+              {/* Add lobby information if applicable */}
+              {isLobbyBooking(booking) && (
+                <div>
+                  <dt className="text-gray-500">Booking Type</dt>
+                  <dd className="mt-1 text-gray-900 flex items-center">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                      Group Booking
+                    </span>
+                    {booking.notes && booking.notes.includes('players') && 
+                      booking.notes.split(' - ')[1]
+                    }
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
           

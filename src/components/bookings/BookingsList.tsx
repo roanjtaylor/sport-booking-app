@@ -49,13 +49,17 @@ export function BookingsList({ bookings, showFacilityInfo = true }: BookingsList
         }
     };
 
+    const isLobbyBooking = (booking: Booking) => {
+      return !!booking.lobby_id || (booking.notes && booking.notes.includes('lobby'));
+    };
+
           return (
     <div className="space-y-4">
       {bookings.map((booking) => (
         <Card key={booking.id} className="overflow-hidden">
           <div className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row justify-between">
-              {/* Booking details, adjusted for snake_case field names */}
+              {/* Booking details */}
               <div className="mb-4 sm:mb-0">
                 <div className="flex items-center mb-2">
                   <h3 className="text-lg font-medium text-gray-900 mr-3">
@@ -64,6 +68,13 @@ export function BookingsList({ bookings, showFacilityInfo = true }: BookingsList
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(booking.status)}`}>
                     {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                   </span>
+
+                  {/* Add lobby badge */}
+                  {isLobbyBooking(booking) && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Group Booking
+                    </span>
+                  )}
                 </div>
                 
                 <div className="text-sm text-gray-500 space-y-1">

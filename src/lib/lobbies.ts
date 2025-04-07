@@ -80,7 +80,7 @@ export async function joinLobby(lobbyId: string, userId: string) {
 
   if (participantError) throw participantError;
 
-  // Get the current participants count
+  // Get lobby details and participant count
   const { data: participants, error: countError } = await supabase
     .from("lobby_participants")
     .select("id")
@@ -88,23 +88,29 @@ export async function joinLobby(lobbyId: string, userId: string) {
 
   if (countError) throw countError;
 
-  // Update the lobby with the new participant count
-  const { data, error } = await supabase
+  // Get the lobby details
+  const { data: lobby, error: lobbyError } = await supabase
     .from("lobbies")
-    .update({
-      current_players: participants?.length || 0,
-      updated_at: new Date().toISOString(),
-    })
+    .select("*")
     .eq("id", lobbyId)
-    .select()
     .single();
 
-  if (error) throw error;
+  if (lobbyError) throw lobbyError;
+
+  const newPlayerCount = participants?.length || 0;
+  let bookingId = null;
+
+  // Update lobby with new participant count
+  const updateData: any = {
+    current_players: newPlayerCount,
+    updated_at: new Date().toISOString(),
+  };
 
   // Check if the lobby is now filled
-  const lobby = data as Lobby;
-  if (lobby.current_players >= lobby.min_players) {
-    // Fetch necessary data for booking
+  if (newPlayerCount >= lobby.min_players) {
+    updateData.status = "filled";
+
+    // Fetch facility data for pricing
     const { data: facility, error: facilityError } = await supabase
       .from("facilities")
       .select("price_per_hour")
@@ -114,35 +120,48 @@ export async function joinLobby(lobbyId: string, userId: string) {
     if (facilityError) throw facilityError;
 
     // Create a booking from this lobby
-    const { error: bookingError } = await supabase.from("bookings").insert({
-      facility_id: lobby.facility_id,
-      user_id: lobby.creator_id, // Creator is responsible for the booking
-      date: lobby.date,
-      start_time: lobby.start_time,
-      end_time: lobby.end_time,
-      status: "pending",
-      total_price: facility.price_per_hour,
-      notes: `Group booking from lobby ${lobbyId}`,
-      lobby_id: lobbyId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    const { data: bookingData, error: bookingError } = await supabase
+      .from("bookings")
+      .insert({
+        facility_id: lobby.facility_id,
+        user_id: lobby.creator_id, // Creator is responsible for the booking
+        date: lobby.date,
+        start_time: lobby.start_time,
+        end_time: lobby.end_time,
+        status: "pending",
+        total_price: facility.price_per_hour,
+        notes: `Group booking from lobby ${lobbyId} - ${newPlayerCount} players`,
+        lobby_id: lobbyId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
     if (bookingError) throw bookingError;
 
-    // Update lobby status to filled
-    const { error: updateError } = await supabase
-      .from("lobbies")
-      .update({
-        status: "filled",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", lobbyId);
-
-    if (updateError) throw updateError;
+    if (bookingData) {
+      bookingId = bookingData.id;
+    }
   }
 
-  return lobby;
+  // Update the lobby
+  const { error: updateError } = await supabase
+    .from("lobbies")
+    .update(updateData)
+    .eq("id", lobbyId);
+
+  if (updateError) throw updateError;
+
+  // Return updated lobby and booking ID if created
+  return {
+    lobby: {
+      ...lobby,
+      current_players: newPlayerCount,
+      status: newPlayerCount >= lobby.min_players ? "filled" : "open",
+    },
+    bookingId,
+  };
 }
 
 /**

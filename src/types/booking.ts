@@ -12,12 +12,15 @@ export interface Booking {
   date: string;
   start_time: string; // 24-hour format (HH:MM)
   end_time: string; // 24-hour format (HH:MM)
-  status: "pending" | "confirmed" | "cancelled";
+  status: BookingStatus;
   total_price: number;
+  notes?: string;
   created_at: string;
   updated_at: string;
   facility?: Facility;
   user?: User;
+  lobby_id?: string; // Reference to the lobby this booking was created from
+  isLobbyParticipant?: boolean; // Flag to indicate if the current user is just a participant (not the booking creator)
 }
 
 /**

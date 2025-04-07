@@ -1,6 +1,7 @@
 // src/types/lobby.ts
 import { User } from "@supabase/supabase-js";
 import { Facility } from "./facility";
+import { Booking } from "./booking";
 
 /**
  * Status options for a lobby
@@ -29,6 +30,7 @@ export interface Lobby {
   facility?: Facility;
   creator?: User;
   participants?: LobbyParticipant[];
+  booking?: Booking; // Reference to the booking created when the lobby is filled
 }
 
 /**
@@ -42,5 +44,17 @@ export interface LobbyParticipant {
   joined_at: string;
 
   // Populated via joins
-  user?: User;
+  user?: {
+    id: string;
+    email?: string;
+    name?: string;
+  };
+}
+
+/**
+ * Response from joining a lobby
+ */
+export interface JoinLobbyResponse {
+  lobby: Lobby;
+  bookingId?: string; // Will be present if the lobby was filled and a booking was created
 }

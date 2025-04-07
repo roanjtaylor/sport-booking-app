@@ -30,19 +30,58 @@ export default function BookingsClient() {
           return;
         }
         
-        // Fetch bookings with facility information
-        const { data, error } = await supabase
+        // First fetch direct bookings
+        const { data: directBookings, error: directBookingsError } = await supabase
           .from('bookings')
           .select(`
             *,
             facility:facilities(*)
           `)
-          .eq('user_id', user.id) // Changed from userId to user_id
+          .eq('user_id', user.id)
           .order('date', { ascending: true });
           
-        if (error) throw error;
+        if (directBookingsError) throw directBookingsError;
         
-        setBookings(data || []);
+        // Then fetch lobby bookings where user is a participant
+        const { data: lobbyParticipations, error: lobbyError } = await supabase
+          .from('lobby_participants')
+          .select('lobby_id')
+          .eq('user_id', user.id);
+          
+        if (lobbyError) throw lobbyError;
+        
+        // If user is part of any lobbies, fetch related bookings
+        let lobbyBookings: any[] = [];
+        if (lobbyParticipations && lobbyParticipations.length > 0) {
+          const lobbyIds = lobbyParticipations.map(p => p.lobby_id);
+          
+          const { data: bookingsFromLobbies, error: lobbyBookingsError } = await supabase
+            .from('bookings')
+            .select(`
+              *,
+              facility:facilities(*)
+            `)
+            .in('lobby_id', lobbyIds)
+            .order('date', { ascending: true });
+            
+          if (lobbyBookingsError) throw lobbyBookingsError;
+          
+          lobbyBookings = bookingsFromLobbies || [];
+        }
+        
+        // Combine both types of bookings, removing duplicates
+        const allBookings = [...(directBookings || [])];
+        
+        // Add lobby bookings that aren't already in the list (to avoid duplicates)
+        lobbyBookings.forEach(lobbyBooking => {
+          if (!allBookings.some(b => b.id === lobbyBooking.id)) {
+            // Mark that this is a lobby booking the user participated in
+            lobbyBooking.isLobbyParticipant = true;
+            allBookings.push(lobbyBooking);
+          }
+        });
+        
+        setBookings(allBookings);
       } catch (err) {
         console.error('Error fetching bookings:', err);
         setError('Failed to load bookings');
@@ -50,7 +89,7 @@ export default function BookingsClient() {
         setIsLoading(false);
       }
     }
-
+  
     fetchBookings();
   }, []);
 

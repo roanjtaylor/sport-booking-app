@@ -144,6 +144,7 @@ export interface Database {
           id: string;
           facility_id: string;
           creator_id: string;
+          creator_email: string | null;
           date: string;
           start_time: string;
           end_time: string;
@@ -158,6 +159,7 @@ export interface Database {
           id?: string;
           facility_id: string;
           creator_id: string;
+          creator_email?: string | null;
           date: string;
           start_time: string;
           end_time: string;
@@ -172,6 +174,7 @@ export interface Database {
           id?: string;
           facility_id?: string;
           creator_id?: string;
+          creator_email?: string | null;
           date?: string;
           start_time?: string;
           end_time?: string;
@@ -188,24 +191,43 @@ export interface Database {
           id: string;
           lobby_id: string;
           user_id: string;
+          participant_email: string | null;
           joined_at: string;
         };
         Insert: {
           id?: string;
           lobby_id: string;
           user_id: string;
+          participant_email?: string | null;
           joined_at?: string;
         };
         Update: {
           id?: string;
           lobby_id?: string;
           user_id?: string;
+          participant_email?: string | null;
           joined_at?: string;
         };
       };
     };
     Views: {
-      [_ in never]: never;
+      user_bookings: {
+        Row: {
+          id: string;
+          facility_id: string;
+          user_id: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          status: string;
+          total_price: number;
+          notes: string | null;
+          lobby_id: string | null;
+          created_at: string;
+          updated_at: string;
+          is_participant: boolean;
+        };
+      };
     };
     Functions: {
       [_ in never]: never;

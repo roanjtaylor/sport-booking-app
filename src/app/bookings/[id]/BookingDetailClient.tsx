@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { Booking } from '@/types/booking';
 import { Facility } from '@/types/facility';
+import { LobbyParticipants } from '@/components/bookings/LobbyParticipants';
 
 interface BookingDetailClientProps {
   id: string;
@@ -175,6 +176,7 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
   }
 
   return booking ? (
+    <>
     <BookingDetail
       booking={booking}
       isOwner={isOwner}
@@ -182,5 +184,11 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
       onConfirmBooking={booking.status === 'pending' && isOwner ? handleConfirmBooking : undefined}
       isProcessing={isProcessing}
     />
+    
+    {/* Add lobby participants section if it's a lobby booking */}
+    {booking.lobby_id && (
+      <LobbyParticipants lobbyId={booking.lobby_id} />
+    )}
+  </>
   ) : null;
 }
