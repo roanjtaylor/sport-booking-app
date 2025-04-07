@@ -20,15 +20,32 @@ export function LobbyParticipants({ lobbyId }: LobbyParticipantsProps) {
       try {
         setIsLoading(true);
         
-        // Fetch participants for this lobby
-        const { data, error } = await supabase
+        // First, fetch just the participants without trying to join with profiles
+        const { data: participantsData, error: participantsError } = await supabase
           .from('lobby_participants')
-          .select('*, user:profiles(*)')
+          .select('*')
           .eq('lobby_id', lobbyId);
           
-        if (error) throw error;
+        if (participantsError) throw participantsError;
         
-        setParticipants(data || []);
+        // Then fetch profile data for each participant separately
+        const participantsWithProfiles = await Promise.all(
+          (participantsData || []).map(async (participant) => {
+            // Get profile data for this user_id
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', participant.user_id)
+              .single();
+              
+            return {
+              ...participant,
+              user: profileData || { email: 'Unknown' }
+            };
+          })
+        );
+        
+        setParticipants(participantsWithProfiles);
       } catch (err) {
         console.error('Error fetching lobby participants:', err);
         setError('Failed to load participants');
@@ -42,6 +59,7 @@ export function LobbyParticipants({ lobbyId }: LobbyParticipantsProps) {
     }
   }, [lobbyId]);
 
+  // Rest of the component remains the same
   if (isLoading) {
     return <div className="text-center py-4">Loading participants...</div>;
   }
