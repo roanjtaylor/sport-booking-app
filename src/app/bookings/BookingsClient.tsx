@@ -80,6 +80,19 @@ export default function BookingsClient() {
             allBookings.push(lobbyBooking);
           }
         });
+
+        // Ensure ordered by date and time
+        allBookings.sort((a, b) => {
+          // First compare by date
+          if (a.date < b.date) return -1;
+          if (a.date > b.date) return 1;
+          
+          // If same date, compare by start time
+          if (a.start_time < b.start_time) return -1;
+          if (a.start_time > b.start_time) return 1;
+          
+          return 0;
+        });
         
         setBookings(allBookings);
       } catch (err) {
