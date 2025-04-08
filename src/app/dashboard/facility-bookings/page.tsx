@@ -68,12 +68,30 @@ export default function FacilityBookingsPage() {
   
       if (bookingsError) throw bookingsError;
       
-      // Process bookings to ensure we have facility and user info
-      const processedBookings = (bookingsData || []).map(booking => ({
+      // Fetch user emails for each booking
+    const processedBookings = await Promise.all((bookingsData || []).map(async booking => {
+      // Fetch user email from auth.users or profiles table
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('email, name')
+        .eq('id', booking.user_id)
+        .single();
+      
+      if (userError) {
+        console.log(`Error fetching user for booking ${booking.id}:`, userError);
+        return {
+          ...booking,
+          facility: booking.facility || { id: booking.facility_id, name: 'Unknown Facility' },
+          user: { id: booking.user_id, email: 'Unknown User' }
+        };
+      }
+      
+      return {
         ...booking,
         facility: booking.facility || { id: booking.facility_id, name: 'Unknown Facility' },
-        user: booking.user || { id: booking.user_id, email: 'Unknown User' }
-      }));
+        user: userData || { id: booking.user_id, email: 'Unknown User' }
+      };
+    }));
       
       setBookings(processedBookings);
       setFilteredBookings(processedBookings);
@@ -152,8 +170,8 @@ export default function FacilityBookingsPage() {
     // Apply date range filter
     if (dateRange) {
       const today = new Date();
-      let startDate: Date;
-      let endDate: Date;
+      let startDate: Date | undefined = undefined;
+      let endDate: Date | undefined = undefined;
       
       if (dateRange === 'today') {
         startDate = today;
@@ -166,7 +184,7 @@ export default function FacilityBookingsPage() {
         endDate = endOfMonth(today);
       }
       
-      if (startDate && endDate) {
+      if (startDate !== undefined && endDate !== undefined) {
         const formattedStartDate = format(startDate, 'yyyy-MM-dd');
         const formattedEndDate = format(endDate, 'yyyy-MM-dd');
         
