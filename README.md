@@ -1,92 +1,38 @@
-# SportBooking Platform
+# SportBooking
 
-## TL;DR:
+Sports facility booking platform with innovative team matchmaking.
 
-This project aims to gamify the sport booking process, like EA Sports FC but connecting users to real games & people instead of virtual ones.
+## What it is
 
-## -
+SportBooking improves how players book sports facilities by solving the "partial team" problem. Traditional booking systems force you to reserve full bookings regardless of group size, paying full price for unused spots. This lobby system allows individuals and small groups to join forces, enabling more affordable and flexible access to sports venues.
 
-A Web App that aims to perfect modern sport booking systems\* by bringing together the public through matchmaking lobbies, maximising game time.
+## Tech Stack
 
-\*(namely football for now, to dominate the vertical before expansion.)
-
-## Overview
-
-SportBooking is a full-stack web application designed to address inefficiencies in sports facility bookings by connecting players and facility owners through an intuitive platform. The system allows users to:
-
-- Browse and book sports facilities
-- Create or join game lobbies when they don't have enough players
-- Manage bookings and facility schedules
-- Connect with other players for team sports
+- **Frontend:** React, Next.js, Tailwind CSS
+- **Backend:** Supabase
 
 ## Key Features
 
 ### For Players
 
-- Discover and book sports facilities
-- Join existing game lobbies or create new ones
-- View upcoming and past bookings
-- Receive matches based on skill level and availability
+- Full bookings, or join existing lobbies
+- Create lobbies others can join to share costs
+- Manage bookings through personalised dashboard
+- Real-time booking status updates
 
 ### For Facility Owners
 
-- List and manage sports facilities
-- Set operating hours and pricing
-- Approve or reject booking requests
-- Track facility usage and maximise revenue
+- List and manage multiple facilities
+- Manage bookings, approve/reject requests
+- Customise availability settings for facilities
 
-### Matchmaking System (currently being developed)
+### Platform
 
-- Smart lobby system will match individual players or small groups
-- Players can join lobbies until minimum player requirements are met
-- Automatic conversion of filled lobbies into confirmed bookings
-- Helps maximise facility utilisation and player participation
+- Secure authentication and user profiles
+- Responsive design for all devices on a browser
+- Efficient search and filtering
+- Interactive time slot selection
 
-## Technology Stack
+## Suggestions or questions?
 
-### Frontend
-
-- **Next.js** - Backbone for server-side processing
-- **React** - Components
-- **Tailwind CSS** - Styling
-- **TypeScript** - Type-safe JS
-
-### Backend
-
-- **Supabase** - BaaS platform
-  - Authentication
-  - PostgreSQL database
-  - Realtime subscriptions
-  - Storage
-
-### Key Dependencies
-
-- **date-fns** - Date utility library
-- **@supabase/auth-helpers-nextjs** - Authentication utilities for Next.js
-- **@supabase/supabase-js** - Supabase client library
-
-## Architecture
-
-- Server components.
-- Client components.
-- Type-safe data models.
-- Responsive design.
-
-## Database Schema
-
-The database includes the following key tables:
-
-- **facilities** - Facility information
-- **bookings** - Booking records
-- **lobbies** - Matchmaking
-- **lobby_participants** - Players in lobbies
-- **profiles** - User information
-
-## Future Improvements
-
-- Mobile application using React Native
-- Advanced matchmaking with machine learning
-- In-app chat for lobby participants
-- Payment processing integration
-- Social features to connect with other players
-- Ratings and reviews for facilities
+Email me: roanjtaylor@gmail.com
