@@ -1,6 +1,6 @@
 // src/lib/supabase.ts
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/supabase"; // Import this once you generate it
+import type { Database } from "@/types/supabase";
 
 // Retrieve environment variables for Supabase connection
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
