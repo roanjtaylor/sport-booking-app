@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
 import { OnboardingTimeline } from "@/components/onboarding/OnboardingTimeline";
 import { supabase } from "@/lib/supabase";
+import { formatPrice } from "@/lib/utils";
+import { Facility } from "@/types/facility";
 
 /**
  * Home page component with improved onboarding experience
@@ -14,6 +16,9 @@ import { supabase } from "@/lib/supabase";
 export default function HomePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [facilitiesLoading, setFacilitiesLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Check if user is authenticated and redirect to dashboard if so
   useEffect(() => {
@@ -34,6 +39,55 @@ export default function HomePage() {
 
     checkAuth();
   }, [router]);
+
+  // Fetch featured facilities from database
+  useEffect(() => {
+    async function fetchFeaturedFacilities() {
+      try {
+        setFacilitiesLoading(true);
+
+        // Query 3 facilities ordered by most recent
+        const { data, error } = await supabase
+          .from("facilities")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(3);
+
+        if (error) throw error;
+
+        // Convert to our Facility type
+        const formattedFacilities: Facility[] = (data || []).map(
+          (facility) => ({
+            id: facility.id,
+            name: facility.name,
+            description: facility.description,
+            address: facility.address,
+            city: facility.city,
+            postal_code: facility.postal_code,
+            country: facility.country,
+            imageUrl: facility.image_url,
+            owner_id: facility.owner_id,
+            owner_email: facility.owner_email,
+            operatingHours: facility.operating_hours,
+            price_per_hour: facility.price_per_hour,
+            currency: facility.currency,
+            sportType: facility.sport_type,
+            amenities: facility.amenities || [],
+            min_players: facility.min_players,
+          })
+        );
+
+        setFacilities(formattedFacilities);
+      } catch (err) {
+        console.error("Error fetching facilities:", err);
+        setError("Failed to load facilities");
+      } finally {
+        setFacilitiesLoading(false);
+      }
+    }
+
+    fetchFeaturedFacilities();
+  }, []);
 
   // Timeline steps for the onboarding process
   const timelineSteps = [
@@ -73,8 +127,6 @@ export default function HomePage() {
 
   return (
     <div className="-mt-8 -mx-4 sm:-mx-6 lg:-mx-8">
-      {" "}
-      {/* Remove default padding */}
       {/* Full-screen hero section with interactive timeline (no padding) */}
       <section className="min-h-screen flex flex-col justify-center px-4 sm:px-6 lg:px-8 pb-16">
         {/* Interactive onboarding timeline */}
@@ -94,64 +146,95 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                id: 1,
-                name: "Downtown Football Field",
-                address: "123 Main St, City",
-                description:
-                  "A well-maintained football field in the heart of downtown.",
-                price: 30,
-              },
-              {
-                id: 2,
-                name: "Westside Tennis Courts",
-                address: "456 Park Ave, City",
-                description:
-                  "Professional tennis courts with excellent lighting and facilities.",
-                price: 25,
-              },
-              {
-                id: 3,
-                name: "Eastside Basketball Court",
-                address: "789 Oak St, City",
-                description:
-                  "Indoor basketball court with high-quality flooring and equipment.",
-                price: 20,
-              },
-            ].map((facility) => (
-              <Card
-                key={facility.id}
-                className="transition-shadow hover:shadow-lg"
-              >
-                <div className="bg-gray-200 h-48 flex items-center justify-center">
-                  <span className="text-gray-400">Facility Image</span>
-                </div>
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold mb-1">
-                    {facility.name}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-2">
-                    {facility.address}
-                  </p>
-                  <p className="text-gray-700 text-sm mb-3 line-clamp-2">
-                    {facility.description}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-primary-600 font-medium">
-                      £{facility.price}/hour
-                    </span>
-                    <Link href={`/facilities/${facility.id}`}>
-                      <Button variant="primary" size="sm">
-                        Book Now
-                      </Button>
-                    </Link>
+          {facilitiesLoading ? (
+            // Loading state for facilities
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((placeholder) => (
+                <Card key={placeholder} className="animate-pulse">
+                  <div className="bg-gray-200 h-48"></div>
+                  <div className="p-4">
+                    <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
+                    <div className="flex justify-between items-center">
+                      <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+                      <div className="h-10 bg-gray-200 rounded w-1/4"></div>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          ) : error ? (
+            // Error state
+            <div className="bg-red-50 text-red-700 p-4 rounded-md">{error}</div>
+          ) : facilities.length === 0 ? (
+            // Empty state
+            <div className="text-center py-10">
+              <p className="text-gray-500">
+                No facilities found. Check back soon!
+              </p>
+            </div>
+          ) : (
+            // Display actual facilities from database
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {facilities.map((facility) => (
+                <Card
+                  key={facility.id}
+                  className="transition-shadow hover:shadow-lg"
+                >
+                  <div className="bg-gray-200 h-48 flex items-center justify-center">
+                    {facility.imageUrl ? (
+                      <img
+                        src={facility.imageUrl}
+                        alt={facility.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-400">Facility Image</span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold mb-1">
+                      {facility.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-2">
+                      {facility.address}, {facility.city}
+                    </p>
+
+                    {/* Sport types */}
+                    <div className="mb-3 flex flex-wrap gap-1">
+                      {facility.sportType.map((sport) => (
+                        <span
+                          key={sport}
+                          className="inline-block bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded"
+                        >
+                          {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                        </span>
+                      ))}
+                    </div>
+
+                    <p className="text-gray-700 text-sm mb-3 line-clamp-2">
+                      {facility.description}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-primary-600 font-medium">
+                        {formatPrice(
+                          facility.price_per_hour,
+                          facility.currency
+                        )}
+                        /hour
+                      </span>
+                      <Link href={`/facilities/${facility.id}`}>
+                        <Button variant="primary" size="sm">
+                          Book Now
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Testimonials section */}
