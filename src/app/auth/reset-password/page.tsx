@@ -1,5 +1,5 @@
 // src/app/auth/reset-password/page.tsx
-import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
+import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 
 /**
  * Page component for password reset functionality
@@ -14,7 +14,7 @@ export default function ResetPasswordPage() {
           Enter your email to receive a password reset link
         </p>
       </div>
-      
+
       {/* The ResetPasswordForm component handles all password reset logic */}
       <ResetPasswordForm />
     </div>

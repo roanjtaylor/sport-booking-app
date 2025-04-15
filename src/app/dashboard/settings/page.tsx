@@ -1,15 +1,15 @@
 // src/app/dashboard/settings/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { supabase } from '@/lib/supabase';
-import { UserRole } from '@/types/user';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { supabase } from "@/lib/supabase";
+import { UserRole } from "@/types/user";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -22,10 +22,10 @@ export default function SettingsPage() {
 
   // Form state
   const [profile, setProfile] = useState({
-    id: '',
-    name: '',
-    email: '',
-    role: 'user' as UserRole
+    id: "",
+    name: "",
+    email: "",
+    role: "user" as UserRole,
   });
 
   // Fetch user profile on component mount
@@ -33,36 +33,39 @@ export default function SettingsPage() {
     async function fetchUserProfile() {
       try {
         setIsLoading(true);
-        
+
         // Get current authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
         if (authError) throw authError;
         if (!user) {
-          router.push('/auth/login?redirect=/dashboard/settings');
+          router.push("/auth/login?redirect=/dashboard/settings");
           return;
         }
-        
+
         // Get profile data from profiles table
         const { data, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
           .single();
-          
+
         if (profileError) throw profileError;
-        
+
         if (data) {
           setProfile({
             id: data.id,
-            name: data.name || '',
-            email: user.email || '',
-            role: data.role as UserRole
+            name: data.name || "",
+            email: user.email || "",
+            role: data.role as UserRole,
           });
         }
       } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError('Failed to load your profile information');
+        console.error("Error fetching profile:", err);
+        setError("Failed to load your profile information");
       } finally {
         setIsLoading(false);
       }
@@ -72,9 +75,13 @@ export default function SettingsPage() {
   }, [router]);
 
   // Handle form input changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
-    setProfile(prev => ({ ...prev, [name]: value }));
+    setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
   // Handle form submission
@@ -83,39 +90,41 @@ export default function SettingsPage() {
     setError(null);
     setSuccessMessage(null);
     setIsSaving(true);
-    
+
     try {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
-        throw new Error('You must be logged in to update your profile');
+        throw new Error("You must be logged in to update your profile");
       }
-      
+
       // Update profile information
       const { error: updateError } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           name: profile.name,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', user.id);
-        
+        .eq("id", user.id);
+
       if (updateError) throw updateError;
-      
+
       // If email has changed, update auth email
       if (profile.email !== user.email) {
         const { error: emailError } = await supabase.auth.updateUser({
           email: profile.email,
         });
-        
+
         if (emailError) throw emailError;
       }
-      
-      setSuccessMessage('Profile updated successfully');
+
+      setSuccessMessage("Profile updated successfully");
     } catch (err: any) {
-      console.error('Error updating profile:', err);
-      setError(err.message || 'Failed to update profile');
+      console.error("Error updating profile:", err);
+      setError(err.message || "Failed to update profile");
     } finally {
       setIsSaving(false);
     }
@@ -125,17 +134,19 @@ export default function SettingsPage() {
   const handleDeleteAccount = async () => {
     setError(null);
     setIsDeleting(true);
-    
+
     try {
       // Sign out the user first
       await supabase.auth.signOut();
-      
+
       // Redirect to home page with message
-      alert('Your account deletion request has been submitted. An administrator will process your request.');
-      router.push('/');
+      alert(
+        "Your account deletion request has been submitted. An administrator will process your request."
+      );
+      router.push("/");
     } catch (err: any) {
-      console.error('Error deleting account:', err);
-      setError(err.message || 'Failed to delete account');
+      console.error("Error deleting account:", err);
+      setError(err.message || "Failed to delete account");
       setIsDeleting(false);
     }
   };
@@ -149,21 +160,23 @@ export default function SettingsPage() {
   }
 
   const roleOptions = [
-    { value: 'user', label: 'Regular User' },
-    { value: 'facility_owner', label: 'Facility Owner' }
+    { value: "user", label: "Regular User" },
+    { value: "facility_owner", label: "Facility Owner" },
   ];
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           className="text-primary-600 hover:underline inline-flex items-center"
         >
           ← Back to Dashboard
         </Link>
         <h1 className="text-3xl font-bold mt-2">Account Settings</h1>
-        <p className="text-gray-600">Manage your profile and account preferences</p>
+        <p className="text-gray-600">
+          Manage your profile and account preferences
+        </p>
       </div>
 
       {error && (
@@ -177,7 +190,7 @@ export default function SettingsPage() {
           {successMessage}
         </div>
       )}
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Sidebar navigation */}
         <div className="md:col-span-1">
@@ -185,16 +198,16 @@ export default function SettingsPage() {
             <nav>
               <ul className="space-y-1">
                 <li>
-                  <a 
-                    href="#profile" 
+                  <a
+                    href="#profile"
                     className="block px-4 py-2 rounded-md text-primary-600 bg-primary-50 font-medium"
                   >
                     Profile Information
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#account" 
+                  <a
+                    href="#account"
                     className="block px-4 py-2 rounded-md text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   >
                     Account Management
@@ -204,7 +217,7 @@ export default function SettingsPage() {
             </nav>
           </Card>
         </div>
-        
+
         {/* Main content */}
         <div className="md:col-span-2 space-y-8">
           {/* Profile Information Section */}
@@ -217,7 +230,7 @@ export default function SettingsPage() {
                 value={profile.name}
                 onChange={handleChange}
               />
-              
+
               <Input
                 label="Email Address"
                 name="email"
@@ -226,32 +239,34 @@ export default function SettingsPage() {
                 onChange={handleChange}
                 required
               />
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Account Type
                 </label>
                 <p className="block p-2 rounded-md bg-gray-50 border border-gray-200">
-                  {profile.role === 'facility_owner' ? 'Facility Owner' : 'Regular User'}
+                  {profile.role === "facility_owner"
+                    ? "Facility Owner"
+                    : "Regular User"}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Account type cannot be changed directly. Please contact support if you need to change your account type.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Account type cannot be changed directly. Please contact
+                  support if you need to change your account type.
+                </p>
               </div>
-              
+
               <div className="flex justify-end">
-                <Button 
-                  type="submit" 
-                  disabled={isSaving}
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </form>
           </Card>
-          
+
           {/* Account Management Section */}
           <Card id="account" className="p-6">
             <h2 className="text-xl font-semibold mb-4">Account Management</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-medium mb-2">Change Password</h3>
@@ -259,22 +274,23 @@ export default function SettingsPage() {
                   Update your password for increased security
                 </p>
                 <Link href="/auth/reset-password">
-                  <Button variant="secondary">
-                    Change Password
-                  </Button>
+                  <Button variant="secondary">Change Password</Button>
                 </Link>
               </div>
-              
+
               <hr className="my-6" />
-              
+
               <div>
-                <h3 className="text-lg font-medium mb-2 text-red-600">Delete Account</h3>
+                <h3 className="text-lg font-medium mb-2 text-red-600">
+                  Delete Account
+                </h3>
                 <p className="text-gray-600 mb-4">
-                  Permanently delete your account and all associated data. This action cannot be undone.
+                  Permanently delete your account and all associated data. This
+                  action cannot be undone.
                 </p>
-                
+
                 {!showDeleteConfirm ? (
-                  <Button 
+                  <Button
                     variant="danger"
                     onClick={() => setShowDeleteConfirm(true)}
                   >
@@ -283,17 +299,18 @@ export default function SettingsPage() {
                 ) : (
                   <div className="bg-red-50 p-4 rounded-md">
                     <p className="text-red-700 font-medium mb-4">
-                      Are you absolutely sure you want to delete your account? This action cannot be undone.
+                      Are you absolutely sure you want to delete your account?
+                      This action cannot be undone.
                     </p>
                     <div className="flex space-x-4">
-                      <Button 
+                      <Button
                         variant="danger"
                         onClick={handleDeleteAccount}
                         disabled={isDeleting}
                       >
-                        {isDeleting ? 'Deleting...' : 'Yes, Delete My Account'}
+                        {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
                       </Button>
-                      <Button 
+                      <Button
                         variant="secondary"
                         onClick={() => setShowDeleteConfirm(false)}
                       >

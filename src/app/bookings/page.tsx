@@ -1,7 +1,7 @@
 // src/app/bookings/page.tsx
-import { Suspense } from 'react';
-import BookingsClient from './BookingsClient';
-import { Card } from '@/components/ui/Card';
+import { Suspense } from "react";
+import BookingsClient from "./BookingsClient";
+import { Card } from "@/components/ui/Card";
 
 /**
  * Server component for the bookings page
@@ -16,15 +16,17 @@ export default function BookingsPage() {
           Manage all your facility bookings in one place
         </p>
       </div>
-      
-      <Suspense fallback={
-        <div className="flex justify-center items-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading your bookings...</p>
+
+      <Suspense
+        fallback={
+          <div className="flex justify-center items-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading your bookings...</p>
+            </div>
           </div>
-        </div>
-      }>
+        }
+      >
         <BookingsClient />
       </Suspense>
     </div>

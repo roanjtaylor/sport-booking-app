@@ -1,6 +1,6 @@
 // src/app/facilities/add/page.tsx
-import { FacilityForm } from '@/components/facilities/FacilityForm';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { FacilityForm } from "@/components/facilities/FacilityForm";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 /**
  * Page component for adding a new facility
@@ -15,7 +15,7 @@ export default function AddFacilityPage() {
           List your sports facility on our platform to reach more customers.
         </p>
       </div>
-      
+
       {/* The FacilityForm component handles all the form logic */}
       <FacilityForm />
     </div>

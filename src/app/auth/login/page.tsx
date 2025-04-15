@@ -1,5 +1,5 @@
 // src/app/auth/login/page.tsx
-import { LoginForm } from '@/components/auth/LoginForm';
+import { LoginForm } from "@/components/auth/LoginForm";
 
 /**
  * Page component for user login
@@ -13,7 +13,7 @@ export default function LoginPage() {
           Sign in to your account to manage your bookings
         </p>
       </div>
-      
+
       {/* The LoginForm component handles all authentication logic */}
       <LoginForm />
     </div>

@@ -1,5 +1,5 @@
 // src/app/auth/register/page.tsx
-import { RegisterForm } from '@/components/auth/RegisterForm';
+import { RegisterForm } from "@/components/auth/RegisterForm";
 
 /**
  * Page component for user registration
@@ -13,7 +13,7 @@ export default function RegisterPage() {
           Join us to book sports facilities or list your own
         </p>
       </div>
-      
+
       {/* The RegisterForm component handles all registration logic */}
       <RegisterForm />
     </div>

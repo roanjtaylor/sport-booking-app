@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
 // src/app/bookings/[id]/BookingDetailClient.tsx
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { BookingDetail } from '@/components/bookings/BookingDetail';
-import { supabase } from '@/lib/supabase';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import Link from 'next/link';
-import { Booking } from '@/types/booking';
-import { Facility } from '@/types/facility';
-import { LobbyParticipants } from '@/components/bookings/LobbyParticipants';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { BookingDetail } from "@/components/bookings/BookingDetail";
+import { supabase } from "@/lib/supabase";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { Booking } from "@/types/booking";
+import { Facility } from "@/types/facility";
+import { LobbyParticipants } from "@/components/bookings/LobbyParticipants";
 
 interface BookingDetailClientProps {
   id: string;
@@ -21,7 +21,7 @@ interface BookingDetailClientProps {
  */
 export default function BookingDetailClient({ id }: BookingDetailClientProps) {
   const router = useRouter();
-  
+
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,41 +33,45 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
     async function fetchBookingDetails() {
       try {
         // Check if user is authenticated
-        const { data: { user } } = await supabase.auth.getUser();
-        
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
         if (!user) {
-          setError('You must be logged in to view booking details');
+          setError("You must be logged in to view booking details");
           setIsLoading(false);
           return;
         }
-        
+
         // Fetch booking with related information
         const { data: bookingData, error: bookingError } = await supabase
-          .from('bookings')
-          .select(`
+          .from("bookings")
+          .select(
+            `
             *,
             facility:facilities(*)
-          `)
-          .eq('id', id)
+          `
+          )
+          .eq("id", id)
           .single();
-          
+
         if (bookingError) throw bookingError;
-        
+
         if (!bookingData) {
-          setError('Booking not found');
+          setError("Booking not found");
           setIsLoading(false);
           return;
         }
-        
+
         // Check if user owns the booking or facility
         const isBookingOwner = bookingData.user_id === user.id;
         const isFacilityOwner = bookingData.facility?.owner_id === user.id;
-        
+
         setBooking(bookingData);
         setIsOwner(isBookingOwner || isFacilityOwner);
       } catch (err) {
-        console.error('Error fetching booking details:', err);
-        setError('Failed to load booking details');
+        console.error("Error fetching booking details:", err);
+        setError("Failed to load booking details");
       } finally {
         setIsLoading(false);
       }
@@ -78,35 +82,39 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
 
   // Handle booking cancellation
   const handleCancelBooking = async () => {
-    if (!confirm('Are you sure you want to cancel this booking?')) {
+    if (!confirm("Are you sure you want to cancel this booking?")) {
       return;
     }
-    
+
     setIsProcessing(true);
-    
+
     try {
       const { error } = await supabase
-        .from('bookings')
-        .update({ 
-          status: 'cancelled',
-          updated_at: new Date().toISOString()  // Fix: changed from updatedAt to updated_at
+        .from("bookings")
+        .update({
+          status: "cancelled",
+          updated_at: new Date().toISOString(), // Fix: changed from updatedAt to updated_at
         })
-        .eq('id', id);
-        
+        .eq("id", id);
+
       if (error) throw error;
-      
+
       // Update local state
-      setBooking(prev => prev ? {
-        ...prev,
-        status: 'cancelled',
-        updated_at: new Date().toISOString()
-      } : null);
-      
+      setBooking((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "cancelled",
+              updated_at: new Date().toISOString(),
+            }
+          : null
+      );
+
       // Show success message (could use a toast notification in a real app)
-      alert('Booking cancelled successfully');
+      alert("Booking cancelled successfully");
     } catch (err) {
-      console.error('Error cancelling booking:', err);
-      alert('Failed to cancel booking');
+      console.error("Error cancelling booking:", err);
+      alert("Failed to cancel booking");
     } finally {
       setIsProcessing(false);
     }
@@ -116,30 +124,34 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
   const handleConfirmBooking = async () => {
     if (!booking) return;
     setIsProcessing(true);
-    
+
     try {
       const { error } = await supabase
-        .from('bookings')
-        .update({ 
-          status: 'confirmed',
-          updated_at: new Date().toISOString()  // Fix: changed from updatedAt to updated_at
+        .from("bookings")
+        .update({
+          status: "confirmed",
+          updated_at: new Date().toISOString(), // Fix: changed from updatedAt to updated_at
         })
-        .eq('id', id);
-        
+        .eq("id", id);
+
       if (error) throw error;
-      
+
       // Update local state
-      setBooking(prev => prev ? {
-        ...prev,
-        status: 'confirmed',
-        updated_at: new Date().toISOString()
-      } : null);
-      
+      setBooking((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "confirmed",
+              updated_at: new Date().toISOString(),
+            }
+          : null
+      );
+
       // Show success message (could use a toast notification in a real app)
-      alert('Booking confirmed successfully');
+      alert("Booking confirmed successfully");
     } catch (err) {
-      console.error('Error confirming booking:', err);
-      alert('Failed to confirm booking');
+      console.error("Error confirming booking:", err);
+      alert("Failed to confirm booking");
     } finally {
       setIsProcessing(false);
     }
@@ -177,18 +189,22 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
 
   return booking ? (
     <>
-    <BookingDetail
-      booking={booking}
-      isOwner={isOwner}
-      onCancelBooking={booking.status === 'pending' ? handleCancelBooking : undefined}
-      onConfirmBooking={booking.status === 'pending' && isOwner ? handleConfirmBooking : undefined}
-      isProcessing={isProcessing}
-    />
-    
-    {/* Add lobby participants section if it's a lobby booking */}
-    {booking.lobby_id && (
-      <LobbyParticipants lobbyId={booking.lobby_id} />
-    )}
-  </>
+      <BookingDetail
+        booking={booking}
+        isOwner={isOwner}
+        onCancelBooking={
+          booking.status === "pending" ? handleCancelBooking : undefined
+        }
+        onConfirmBooking={
+          booking.status === "pending" && isOwner
+            ? handleConfirmBooking
+            : undefined
+        }
+        isProcessing={isProcessing}
+      />
+
+      {/* Add lobby participants section if it's a lobby booking */}
+      {booking.lobby_id && <LobbyParticipants lobbyId={booking.lobby_id} />}
+    </>
   ) : null;
 }
