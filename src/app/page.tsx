@@ -247,14 +247,14 @@ export default function HomePage() {
               {
                 quote:
                   "This platform has made booking football pitches so much easier. No more phone calls or visiting in person!",
-                name: "Alex Johnson",
-                title: "Football Team Captain",
+                name: "John Doe",
+                title: "Example Reviewer",
               },
               {
                 quote:
                   "As a facility owner, I've seen a 30% increase in bookings since joining this platform. Highly recommended!",
-                name: "Sarah Lee",
-                title: "Sports Center Owner",
+                name: "Jane Smith",
+                title: "Example Reviewer",
               },
             ].map((testimonial, index) => (
               <div key={index} className="bg-white p-6 rounded-lg shadow">
