@@ -1,23 +1,34 @@
-"use client";
-
 // src/components/discover/MapView.tsx
 import { useState, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+// import L from "leaflet";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
-import { Facility } from "@/types/facility";
+import Link from "next/link";
+import { formatPrice } from "@/lib/utils";
 
-/**
- * Map View component for the Discover page
- * Displays facilities on an interactive map
- * Note: This is a placeholder that will be expanded with actual mapping functionality
- */
 export default function MapView() {
-  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [facilities, setFacilities] = useState([]);
+  const [selectedFacility, setSelectedFacility] = useState(null);
+  const [mapCenter, setMapCenter] = useState([51.509865, -0.118092]); // London default
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
-  // Fetch facilities data when component mounts
+  // Fix Leaflet marker icons
+  useEffect(() => {
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl:
+        "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+      shadowUrl:
+        "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+    });
+  }, []);
+
+  // Fetch facilities
   useEffect(() => {
     async function fetchFacilities() {
       try {
@@ -27,34 +38,20 @@ export default function MapView() {
         const { data, error: facilitiesError } = await supabase
           .from("facilities")
           .select("*")
-          .order("created_at", { ascending: false });
+          .not("latitude", "is", null)
+          .not("longitude", "is", null);
 
         if (facilitiesError) throw facilitiesError;
+        setFacilities(data || []);
 
-        // Format facilities data
-        const formattedFacilities: Facility[] = (data || []).map(
-          (facility) => ({
-            id: facility.id,
-            name: facility.name,
-            description: facility.description,
-            address: facility.address,
-            city: facility.city,
-            postal_code: facility.postal_code,
-            country: facility.country,
-            imageUrl: facility.image_url,
-            owner_id: facility.owner_id,
-            owner_email: facility.owner_email,
-            operatingHours: facility.operating_hours,
-            price_per_hour: facility.price_per_hour,
-            currency: facility.currency,
-            sportType: facility.sport_type,
-            amenities: facility.amenities || [],
-            // For now, we'll need to extract coordinates from the address
-            // This will be replaced with actual lat/lng data later
-          })
-        );
-
-        setFacilities(formattedFacilities);
+        // Center map on facilities if any exist
+        if (data && data.length > 0) {
+          const avgLat =
+            data.reduce((sum, f) => sum + f.latitude, 0) / data.length;
+          const avgLng =
+            data.reduce((sum, f) => sum + f.longitude, 0) / data.length;
+          setMapCenter([avgLat, avgLng]);
+        }
       } catch (err) {
         console.error("Error fetching facilities:", err);
         setError("Failed to load facilities data");
@@ -66,19 +63,15 @@ export default function MapView() {
     fetchFacilities();
   }, []);
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading facilities map...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading map...</p>
       </div>
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <Card className="p-6 text-center">
@@ -89,66 +82,69 @@ export default function MapView() {
   }
 
   return (
-    <Card className="p-6">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold mb-2">Map View</h2>
-        <p className="text-gray-600">
-          This feature will display {facilities.length} facilities on an
-          interactive map.
-        </p>
-      </div>
-
-      {/* Placeholder for map implementation */}
-      <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
-        <div className="text-center p-6">
-          <p className="text-lg font-medium mb-2">
-            Map Implementation Coming Soon
-          </p>
-          <p className="text-gray-600 mb-4">
-            This feature will require updating the database to store facility
-            coordinates and implementing a map library like Google Maps or
-            MapBox.
-          </p>
-          <div className="bg-white p-4 rounded shadow-sm mb-4 max-w-lg mx-auto">
-            <p className="font-medium mb-2">Planned Implementation:</p>
-            <ul className="text-left text-sm list-disc pl-5 space-y-1">
-              <li>Update facility schema to store latitude/longitude</li>
-              <li>Modify facility forms to capture location data</li>
-              <li>Implement geocoding for existing addresses</li>
-              <li>Add interactive map with facility markers</li>
-              <li>Enable popup details when clicking facility markers</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* List of facilities that would appear on the map */}
-      <div className="mt-6">
-        <h3 className="text-lg font-medium mb-3">Available Facilities</h3>
-        <div className="bg-white rounded-lg border border-gray-200">
-          <ul className="divide-y divide-gray-200">
-            {facilities.slice(0, 5).map((facility) => (
-              <li key={facility.id} className="p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">{facility.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {facility.address}, {facility.city}
+    <Card className="overflow-hidden">
+      <div className="h-[70vh] w-full relative">
+        <MapContainer
+          center={mapCenter}
+          zoom={11}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {facilities.map((facility) => (
+            <Marker
+              key={facility.id}
+              position={[facility.latitude, facility.longitude]}
+              eventHandlers={{
+                click: () => {
+                  setSelectedFacility(facility);
+                },
+              }}
+            >
+              {selectedFacility && selectedFacility.id === facility.id && (
+                <Popup onClose={() => setSelectedFacility(null)}>
+                  <div className="p-2 max-w-xs">
+                    <h3 className="font-medium text-lg mb-1">
+                      {facility.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-2">
+                      {facility.address}
                     </p>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {facility.sport_type.slice(0, 2).map((sport) => (
+                        <span
+                          key={sport}
+                          className="bg-primary-100 text-primary-800 text-xs px-2 py-0.5 rounded-full"
+                        >
+                          {sport}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="font-medium text-primary-600 mb-2">
+                      {formatPrice(facility.price_per_hour, facility.currency)}
+                    </p>
+                    <Link href={`/facilities/${facility.id}`}>
+                      <Button variant="primary" size="sm" fullWidth>
+                        View Facility
+                      </Button>
+                    </Link>
                   </div>
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
-                </div>
-              </li>
-            ))}
-            {facilities.length > 5 && (
-              <li className="p-4 text-center text-gray-500">
-                + {facilities.length - 5} more facilities
-              </li>
-            )}
-          </ul>
-        </div>
+                </Popup>
+              )}
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
+
+      <div className="p-4 bg-white border-t border-gray-200">
+        <p className="text-sm text-gray-600">
+          Showing {facilities.length} facilities on the map
+          {facilities.length === 0 && (
+            <span> - Add coordinates to your facilities to see them here</span>
+          )}
+        </p>
       </div>
     </Card>
   );

@@ -408,9 +408,9 @@ export default function DashboardPage() {
           <>
             <Link href="/bookings" className="block">
               <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-green-500">
-                <h3 className="text-lg font-medium mb-2">Manage Bookings</h3>
+                <h3 className="text-lg font-medium mb-2">My Bookings</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  View and manage your upcoming bookings
+                  View and manage your bookings
                 </p>
                 <Button variant="outline" size="sm">
                   Bookings
@@ -422,7 +422,7 @@ export default function DashboardPage() {
               <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-orange-500">
                 <h3 className="text-lg font-medium mb-2">Discover</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Find facilities and join lobbies through interactive views
+                  Find facilities and lobbies
                 </p>
                 <Button variant="outline" size="sm">
                   Explore

@@ -19,6 +19,8 @@ export type Facility = {
   sportType: string[];
   amenities: string[];
   min_players: number; // Minimum number of players needed for a lobby booking
+  latitude?: number;
+  longitude?: number;
 };
 
 /**
