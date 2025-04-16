@@ -139,7 +139,7 @@ export default function HomePage() {
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-3xl font-bold">Featured Facilities</h2>
             <Link
-              href="/facilities"
+              href="/discover"
               className="text-primary-600 hover:text-primary-700"
             >
               View All →

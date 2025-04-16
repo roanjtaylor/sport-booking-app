@@ -131,7 +131,7 @@ export default async function FacilityDetailPage({ params }: Props) {
       {/* Back to facilities link */}
       <div className="mb-6">
         <Link
-          href="/facilities"
+          href="/discover"
           className="text-primary-600 hover:underline inline-flex items-center"
         >
           ← Back to Facilities

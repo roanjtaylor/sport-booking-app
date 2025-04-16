@@ -418,14 +418,14 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/facilities" className="block">
+            <Link href="/discover" className="block">
               <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-orange-500">
-                <h3 className="text-lg font-medium mb-2">Find Facilities</h3>
+                <h3 className="text-lg font-medium mb-2">Discover</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Browse and book available sports facilities
+                  Find facilities and join lobbies through interactive views
                 </p>
                 <Button variant="outline" size="sm">
-                  Facilities
+                  Explore
                 </Button>
               </Card>
             </Link>

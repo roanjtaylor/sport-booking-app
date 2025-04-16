@@ -116,10 +116,10 @@ export default function RootLayout({
                 </div>
                 <nav className="hidden md:ml-6 md:flex md:space-x-8 items-center">
                   <Link
-                    href="/facilities"
+                    href="/discover"
                     className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
                   >
-                    Browse Facilities
+                    Discover
                   </Link>
                   <AuthenticatedLink
                     href="/bookings"
@@ -173,11 +173,11 @@ export default function RootLayout({
               <div className="md:hidden">
                 <div className="pt-2 pb-3 space-y-1">
                   <Link
-                    href="/facilities"
+                    href="/discover"
                     className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    Browse Facilities
+                    Discover
                   </Link>
                   {user && (
                     <>

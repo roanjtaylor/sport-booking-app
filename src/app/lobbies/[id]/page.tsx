@@ -77,7 +77,7 @@ export default async function LobbyDetailPage({ params }: PageProps) {
       <div>
         <div className="mb-8">
           <Link
-            href="/lobbies"
+            href="/discover"
             className="text-primary-600 hover:underline inline-flex items-center"
           >
             ← Back to Lobbies
