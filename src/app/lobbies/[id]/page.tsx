@@ -7,9 +7,11 @@ import { notFound } from "next/navigation";
 import LobbyDetailClient from "./LobbyDetailClient";
 
 interface PageProps {
-  params: {
-    id: string;
-  };
+  params:
+    | Promise<{
+        id: string;
+      }>
+    | { id: string };
 }
 
 /**
@@ -18,7 +20,9 @@ interface PageProps {
 export const dynamic = "force-dynamic";
 
 export default async function LobbyDetailPage({ params }: PageProps) {
-  const { id } = params;
+  // Handle params as a potential Promise
+  const resolvedParams = "then" in params ? await params : params;
+  const id = resolvedParams.id;
 
   if (!id) {
     notFound();

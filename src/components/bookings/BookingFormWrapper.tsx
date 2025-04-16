@@ -19,6 +19,7 @@ import {
 } from "@/components/bookings/BookingTypeSelector";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { Lobby } from "@/types/lobby";
+import { joinLobby } from "@/lib/lobbies";
 
 // Props type for the BookingFormWrapper component
 type BookingFormWrapperProps = {
@@ -226,95 +227,17 @@ export default function BookingFormWrapper({
       } = await supabase.auth.getUser();
 
       if (!user) {
-        // If no user is logged in, redirect to login page
         router.push(`/auth/login?redirect=/facilities/${facility.id}`);
         return;
       }
 
-      // Check if the user is already a participant in this lobby
-      const { data: existingParticipant, error: checkError } = await supabase
-        .from("lobby_participants")
-        .select("id")
-        .eq("lobby_id", lobbyId)
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const result = await joinLobby(lobbyId, user.id, user.email || "");
 
-      if (checkError) throw checkError;
-
-      if (existingParticipant) {
-        throw new Error("You are already part of this lobby");
-      }
-
-      // Add the user as a participant
-      const { error: participantError } = await supabase
-        .from("lobby_participants")
-        .insert({
-          lobby_id: lobbyId,
-          user_id: user.id,
-          participant_email: user.email,
-        });
-
-      if (participantError) throw participantError;
-
-      // Count the current participants
-      const { data: participants, error: countError } = await supabase
-        .from("lobby_participants")
-        .select("id")
-        .eq("lobby_id", lobbyId);
-
-      if (countError) throw countError;
-
-      const newPlayerCount = participants?.length || 0;
-
-      // Get the lobby details - first get the original lobby information
-      const { data: lobbyData, error: lobbyError } = await supabase
-        .from("lobbies")
-        .select("*")
-        .eq("id", lobbyId)
-        .single();
-
-      if (lobbyError) throw lobbyError;
-
-      // Update the current players count
-      const { error: updateError } = await supabase
-        .from("lobbies")
-        .update({
-          current_players: newPlayerCount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", lobbyId);
-
-      if (updateError) throw updateError;
-
-      // Check if this was the last player needed
-      if (newPlayerCount >= lobbyData.min_players) {
-        // Create a booking from this lobby
-        const { error: bookingError } = await supabase.from("bookings").insert({
-          facility_id: lobbyData.facility_id, // Use the lobby's facility_id instead of the current one
-          user_id: lobbyData.creator_id, // Creator is responsible for the booking
-          date: lobbyData.date,
-          start_time: lobbyData.start_time,
-          end_time: lobbyData.end_time,
-          status: "pending",
-          total_price: facility.price_per_hour,
-          notes: `Group booking from lobby: ${lobbyId}`,
-          lobby_id: lobbyId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-
-        if (bookingError) throw bookingError;
-
-        // Mark the lobby as filled
-        const { error: filledError } = await supabase
-          .from("lobbies")
-          .update({
-            status: "filled",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", lobbyId);
-
-        if (filledError) throw filledError;
+      // Success - refresh or redirect
+      if (result.isFull) {
+        alert(
+          "Congratulations! The lobby is now full and a booking has been created."
+        );
       }
 
       // Redirect to the lobby detail page

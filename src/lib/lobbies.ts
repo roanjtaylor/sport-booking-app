@@ -73,7 +73,11 @@ export async function createLobby(
 /**
  * Join an existing lobby or join waiting list if full
  */
-export async function joinLobby(lobbyId: string, userId: string) {
+export async function joinLobby(
+  lobbyId: string,
+  userId: string,
+  userEmail: string
+) {
   try {
     // Get the lobby details first
     const { data: lobby, error: lobbyError } = await supabase
@@ -84,76 +88,84 @@ export async function joinLobby(lobbyId: string, userId: string) {
 
     if (lobbyError) throw lobbyError;
 
-    // Check if lobby is full
-    const isFull = lobby.current_players >= lobby.min_players;
+    // Check if the user is already a participant
+    const { data: existingParticipant, error: checkError } = await supabase
+      .from("lobby_participants")
+      .select("id")
+      .eq("lobby_id", lobbyId)
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    // Add the user as a participant (active or waiting)
-    let waitingPosition = null;
-
-    if (isFull) {
-      // Get current waiting count to determine position
-      waitingPosition = (lobby.waiting_count || 0) + 1;
-
-      // Update waiting count on lobby
-      await supabase
-        .from("lobbies")
-        .update({
-          waiting_count: waitingPosition,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", lobbyId);
+    if (checkError) throw checkError;
+    if (existingParticipant) {
+      throw new Error("You are already part of this lobby");
     }
 
-    // Insert participant record
+    // Add the user as a participant
     const { error: participantError } = await supabase
       .from("lobby_participants")
       .insert({
         lobby_id: lobbyId,
         user_id: userId,
-        is_waiting: isFull,
-        waiting_position: waitingPosition,
+        participant_email: userEmail,
       });
 
     if (participantError) throw participantError;
 
-    // If not full, increment current players
-    if (!isFull) {
-      const newPlayerCount = lobby.current_players + 1;
-      let bookingId = null;
+    // Get accurate count of participants
+    const { count, error: countError } = await supabase
+      .from("lobby_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("lobby_id", lobbyId);
 
-      // Update lobby with new player count
-      const updateData: any = {
-        current_players: newPlayerCount,
+    if (countError) throw countError;
+
+    // Update the lobby with the correct count and status
+    const newCount = count || 0;
+    const isFull = newCount >= lobby.min_players;
+
+    const { error: updateError } = await supabase
+      .from("lobbies")
+      .update({
+        current_players: newCount,
+        status: isFull ? "filled" : "open",
         updated_at: new Date().toISOString(),
-      };
+      })
+      .eq("id", lobbyId);
 
-      // Check if this filled the lobby
-      if (newPlayerCount >= lobby.min_players) {
-        updateData.status = "filled";
+    if (updateError) throw updateError;
 
-        // Create a booking as in your existing code
-        bookingId = await createBookingFromFilledLobby(lobby);
-      }
+    // If the lobby is now full, create a booking
+    let bookingId = null;
+    if (isFull && lobby.status !== "filled") {
+      const { data: booking, error: bookingError } = await supabase
+        .from("bookings")
+        .insert({
+          facility_id: lobby.facility_id,
+          user_id: lobby.creator_id,
+          date: lobby.date,
+          start_time: lobby.start_time,
+          end_time: lobby.end_time,
+          status: "pending",
+          total_price: lobby.price_per_hour || 0, // You may need to fetch this
+          notes: `Group booking from lobby: ${lobbyId}`,
+          lobby_id: lobbyId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-      await supabase.from("lobbies").update(updateData).eq("id", lobbyId);
-
-      return {
-        lobby: {
-          ...lobby,
-          current_players: newPlayerCount,
-          status: newPlayerCount >= lobby.min_players ? "filled" : "open",
-        },
-        bookingId,
-        isWaiting: false,
-      };
-    } else {
-      // Return waiting info
-      return {
-        lobby,
-        isWaiting: true,
-        waitingPosition,
-      };
+      if (bookingError) throw bookingError;
+      bookingId = booking?.id;
     }
+
+    return {
+      success: true,
+      bookingId,
+      isFull,
+      newCount,
+    };
   } catch (error) {
     console.error("Error joining lobby:", error);
     throw error;

@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { Lobby, LobbyParticipant } from "@/types/lobby";
 import { formatDate, formatTime, formatPrice } from "@/lib/utils";
 import Link from "next/link";
+import { joinLobby } from "@/lib/lobbies";
 
 type LobbyDetailClientProps = {
   lobby: Lobby;
@@ -61,6 +62,15 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
   // Fetch complete lobby data including waiting list
   const fetchLobbyData = async (currentUserId: string) => {
     try {
+      // Get fresh lobby data directly from the database
+      const { data: freshLobby, error: lobbyError } = await supabase
+        .from("lobbies")
+        .select("*")
+        .eq("id", lobby.id)
+        .single();
+
+      if (lobbyError) throw lobbyError;
+
       // Fetch lobby participants
       const { data: participantsData, error: participantsError } =
         await supabase
@@ -101,7 +111,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
 
       setWaitingList(waitingParticipants);
       setCurrentLobby({
-        ...lobby,
+        ...freshLobby,
         participants: activeParticipants,
       });
     } catch (err) {
@@ -128,82 +138,14 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         return;
       }
 
-      // Check if lobby is full
-      const isFull = currentLobby.current_players >= currentLobby.min_players;
+      // Use the centralized joinLobby function
+      const userEmail = user?.email || "";
+      const result = await joinLobby(lobby.id, userId, userEmail);
 
-      if (isFull) {
-        // Get current waiting count to determine position
-        const { data: lobbyData } = await supabase
-          .from("lobbies")
-          .select("waiting_count")
-          .eq("id", lobby.id)
-          .single();
-
-        const waitingPosition = (lobbyData?.waiting_count || 0) + 1;
-
-        // Add to waiting list
-        const { error: participantError } = await supabase
-          .from("lobby_participants")
-          .insert({
-            lobby_id: lobby.id,
-            user_id: userId,
-            is_waiting: true,
-            waiting_position: waitingPosition,
-          });
-
-        if (participantError) throw participantError;
-
-        // Update waiting count on lobby
-        await supabase
-          .from("lobbies")
-          .update({
-            waiting_count: waitingPosition,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", lobby.id);
-
-        // Update local state
-        setIsWaiting(true);
-        setWaitingPosition(waitingPosition);
-
+      if (result.isFull) {
         alert(
-          `The lobby is full. You've been added to the waiting list at position ${waitingPosition}.`
+          "Congratulations! The lobby is now full and a booking has been created."
         );
-      } else {
-        // Regular join as active participant
-        const { error: participantError } = await supabase
-          .from("lobby_participants")
-          .insert({
-            lobby_id: lobby.id,
-            user_id: userId,
-            is_waiting: false,
-          });
-
-        if (participantError) throw participantError;
-
-        // Update participant count
-        const newParticipantCount = currentLobby.current_players + 1;
-        const { error: updateError } = await supabase
-          .from("lobbies")
-          .update({
-            current_players: newParticipantCount,
-            updated_at: new Date().toISOString(),
-            status:
-              newParticipantCount >= currentLobby.min_players
-                ? "filled"
-                : "open",
-          })
-          .eq("id", lobby.id);
-
-        if (updateError) throw updateError;
-
-        // If this was the last player needed, create a booking
-        if (newParticipantCount >= currentLobby.min_players) {
-          await createBookingFromFilledLobby();
-        }
-
-        // Update local state
-        setIsParticipant(true);
       }
 
       // Refresh the page to show updated data
