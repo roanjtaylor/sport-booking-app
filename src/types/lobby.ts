@@ -26,6 +26,10 @@ export interface Lobby {
   created_at: string;
   updated_at: string;
 
+  initial_group_size: number; // Number of players already committed
+  waiting_count: number; // Number of users on waiting list
+  group_name?: string; // Optional name for the group
+
   // These are populated via joins
   facility?: Facility;
   creator?: User;
@@ -42,6 +46,8 @@ export interface LobbyParticipant {
   user_id: string;
   participant_email?: string;
   joined_at: string;
+  is_waiting: boolean; // Whether participant is on waiting list
+  waiting_position?: number; // Position in waiting list (if applicable)
 
   // Populated via joins
   user?: {

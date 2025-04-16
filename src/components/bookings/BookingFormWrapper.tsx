@@ -59,6 +59,9 @@ export default function BookingFormWrapper({
   const [isLoadingLobbies, setIsLoadingLobbies] = useState(false);
   const [isJoiningLobby, setIsJoiningLobby] = useState(false);
 
+  const [initialGroupSize, setInitialGroupSize] = useState(1);
+  const [groupName, setGroupName] = useState("");
+
   // Get min players from facility or default to 10
   const minPlayers = facility.min_players || 10;
 
@@ -518,8 +521,10 @@ export default function BookingFormWrapper({
                     start_time: selectedSlot.startTime,
                     end_time: selectedSlot.endTime,
                     min_players: minPlayers,
-                    current_players: 1, // Creator is the first player
-                    status: "open",
+                    current_players: initialGroupSize, // Use the initial group size
+                    initial_group_size: initialGroupSize,
+                    group_name: groupName || null,
+                    status: initialGroupSize >= minPlayers ? "filled" : "open",
                     notes: notes || null,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
@@ -605,6 +610,36 @@ export default function BookingFormWrapper({
                 )}
               </div>
             )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                How many players do you already have?
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={minPlayers - 1}
+                value={initialGroupSize}
+                onChange={(e) => setInitialGroupSize(parseInt(e.target.value))}
+                className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Include yourself and friends who are committed to playing
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Group Name (optional)
+              </label>
+              <input
+                type="text"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                placeholder="e.g. 'Tuesday Regulars'"
+                className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
 
             {/* Notes field */}
             {selectedSlot && (

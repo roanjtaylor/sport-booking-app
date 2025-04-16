@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
-import { Lobby } from "@/types/lobby";
+import { Lobby, LobbyParticipant } from "@/types/lobby";
 import { formatDate, formatTime, formatPrice } from "@/lib/utils";
 import Link from "next/link";
 
@@ -28,8 +28,11 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [waitingList, setWaitingList] = useState<LobbyParticipant[]>([]);
+  const [isWaiting, setIsWaiting] = useState(false);
+  const [waitingPosition, setWaitingPosition] = useState<number | null>(null);
 
-  // Check if user is authenticated, creator, or participant
+  // Check if user is authenticated, creator, or participant and fetch lobby data
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
@@ -41,15 +44,11 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
           setUserId(user.id);
           setIsCreator(user.id === lobby.creator_id);
 
-          // Check if user is a participant
-          const isUserParticipant = lobby.participants?.some(
-            (participant) => participant.user_id === user.id
-          );
-
-          setIsParticipant(isUserParticipant || false);
+          // Fetch full lobby details including waiting list
+          await fetchLobbyData(user.id);
+        } else {
+          setIsLoading(false);
         }
-
-        setIsLoading(false);
       } catch (err) {
         console.error("Error checking user status:", err);
         setIsLoading(false);
@@ -58,6 +57,59 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
 
     checkUserStatus();
   }, [lobby]);
+
+  // Fetch complete lobby data including waiting list
+  const fetchLobbyData = async (currentUserId: string) => {
+    try {
+      // Fetch lobby participants
+      const { data: participantsData, error: participantsError } =
+        await supabase
+          .from("lobby_participants")
+          .select("*, user:user_id(*)")
+          .eq("lobby_id", lobby.id);
+
+      if (participantsError) throw participantsError;
+
+      // Separate active participants from waiting list
+      const activeParticipants: LobbyParticipant[] = [];
+      const waitingParticipants: LobbyParticipant[] = [];
+
+      participantsData.forEach((participant) => {
+        if (participant.is_waiting) {
+          waitingParticipants.push(participant);
+
+          // Check if current user is in waiting list
+          if (participant.user_id === currentUserId) {
+            setIsWaiting(true);
+            setWaitingPosition(participant.waiting_position);
+            setIsParticipant(false);
+          }
+        } else {
+          activeParticipants.push(participant);
+
+          // Check if current user is an active participant
+          if (participant.user_id === currentUserId) {
+            setIsParticipant(true);
+          }
+        }
+      });
+
+      // Sort waiting list by position
+      waitingParticipants.sort(
+        (a, b) => (a.waiting_position || 0) - (b.waiting_position || 0)
+      );
+
+      setWaitingList(waitingParticipants);
+      setCurrentLobby({
+        ...lobby,
+        participants: activeParticipants,
+      });
+    } catch (err) {
+      console.error("Error fetching lobby data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle joining the lobby
   const handleJoinLobby = async () => {
@@ -70,97 +122,89 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         return;
       }
 
-      // Check if the user is already a participant
-      if (isParticipant) {
+      // Check if the user is already a participant or waiting
+      if (isParticipant || isWaiting) {
         setError("You are already in this lobby");
         return;
       }
 
-      // Add user as a participant
-      const { error: participantError } = await supabase
-        .from("lobby_participants")
-        .insert({
-          lobby_id: lobby.id,
-          user_id: userId,
-        });
+      // Check if lobby is full
+      const isFull = currentLobby.current_players >= currentLobby.min_players;
 
-      if (participantError) throw participantError;
-
-      // Get updated lobby and participants
-      const { data: updatedParticipants, error: participantsError } =
-        await supabase
-          .from("lobby_participants")
-          .select("*")
-          .eq("lobby_id", lobby.id);
-
-      if (participantsError) throw participantsError;
-
-      // Fetch user details for all participants
-      const participantsWithUsers = await Promise.all(
-        (updatedParticipants || []).map(async (participant) => {
-          const { data: userData } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", participant.user_id)
-            .single();
-
-          return {
-            ...participant,
-            user: userData,
-          };
-        })
-      );
-
-      // Update participant count
-      const newParticipantCount = participantsWithUsers?.length || 0;
-      const { error: updateError } = await supabase
-        .from("lobbies")
-        .update({
-          current_players: newParticipantCount,
-          updated_at: new Date().toISOString(),
-          status: newParticipantCount >= lobby.min_players ? "filled" : "open",
-        })
-        .eq("id", lobby.id);
-
-      if (updateError) throw updateError;
-
-      // If this was the last player needed, create a booking
-      if (newParticipantCount >= lobby.min_players) {
-        // Get facility price information
-        const { data: facility, error: facilityError } = await supabase
-          .from("facilities")
-          .select("price_per_hour")
-          .eq("id", lobby.facility_id)
+      if (isFull) {
+        // Get current waiting count to determine position
+        const { data: lobbyData } = await supabase
+          .from("lobbies")
+          .select("waiting_count")
+          .eq("id", lobby.id)
           .single();
 
-        if (facilityError) throw facilityError;
+        const waitingPosition = (lobbyData?.waiting_count || 0) + 1;
 
-        // Create a booking from this lobby
-        const { error: bookingError } = await supabase.from("bookings").insert({
-          facility_id: lobby.facility_id,
-          user_id: lobby.creator_id, // Creator is responsible for the booking
-          date: lobby.date,
-          start_time: lobby.start_time,
-          end_time: lobby.end_time,
-          status: "pending",
-          total_price: facility.price_per_hour,
-          notes: `Group booking from lobby: ${lobby.id}`,
-          lobby_id: lobby.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
+        // Add to waiting list
+        const { error: participantError } = await supabase
+          .from("lobby_participants")
+          .insert({
+            lobby_id: lobby.id,
+            user_id: userId,
+            is_waiting: true,
+            waiting_position: waitingPosition,
+          });
 
-        if (bookingError) throw bookingError;
+        if (participantError) throw participantError;
+
+        // Update waiting count on lobby
+        await supabase
+          .from("lobbies")
+          .update({
+            waiting_count: waitingPosition,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", lobby.id);
+
+        // Update local state
+        setIsWaiting(true);
+        setWaitingPosition(waitingPosition);
+
+        alert(
+          `The lobby is full. You've been added to the waiting list at position ${waitingPosition}.`
+        );
+      } else {
+        // Regular join as active participant
+        const { error: participantError } = await supabase
+          .from("lobby_participants")
+          .insert({
+            lobby_id: lobby.id,
+            user_id: userId,
+            is_waiting: false,
+          });
+
+        if (participantError) throw participantError;
+
+        // Update participant count
+        const newParticipantCount = currentLobby.current_players + 1;
+        const { error: updateError } = await supabase
+          .from("lobbies")
+          .update({
+            current_players: newParticipantCount,
+            updated_at: new Date().toISOString(),
+            status:
+              newParticipantCount >= currentLobby.min_players
+                ? "filled"
+                : "open",
+          })
+          .eq("id", lobby.id);
+
+        if (updateError) throw updateError;
+
+        // If this was the last player needed, create a booking
+        if (newParticipantCount >= currentLobby.min_players) {
+          await createBookingFromFilledLobby();
+        }
+
+        // Update local state
+        setIsParticipant(true);
       }
-
-      // Update the local state
-      setCurrentLobby({
-        ...currentLobby,
-        participants: participantsWithUsers || [],
-        current_players: newParticipantCount,
-      });
-
-      setIsParticipant(true);
 
       // Refresh the page to show updated data
       router.refresh();
@@ -169,6 +213,40 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       setError(err.message || "Failed to join lobby");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Helper function to create a booking when a lobby fills
+  const createBookingFromFilledLobby = async () => {
+    try {
+      // Get facility price information
+      const { data: facility, error: facilityError } = await supabase
+        .from("facilities")
+        .select("price_per_hour")
+        .eq("id", currentLobby.facility_id)
+        .single();
+
+      if (facilityError) throw facilityError;
+
+      // Create a booking from this lobby
+      const { error: bookingError } = await supabase.from("bookings").insert({
+        facility_id: currentLobby.facility_id,
+        user_id: currentLobby.creator_id,
+        date: currentLobby.date,
+        start_time: currentLobby.start_time,
+        end_time: currentLobby.end_time,
+        status: "pending",
+        total_price: facility.price_per_hour,
+        notes: `Group booking from lobby: ${currentLobby.id}`,
+        lobby_id: currentLobby.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      if (bookingError) throw bookingError;
+    } catch (err) {
+      console.error("Error creating booking:", err);
+      throw err;
     }
   };
 
@@ -187,38 +265,102 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         return;
       }
 
-      // Remove user from participants
-      const { error: deleteError } = await supabase
-        .from("lobby_participants")
-        .delete()
-        .eq("lobby_id", lobby.id)
-        .eq("user_id", userId);
+      // Check if user is on waiting list or active participant
+      if (isWaiting) {
+        // Leave from waiting list
+        const { error: deleteError } = await supabase
+          .from("lobby_participants")
+          .delete()
+          .eq("lobby_id", lobby.id)
+          .eq("user_id", userId);
 
-      if (deleteError) throw deleteError;
+        if (deleteError) throw deleteError;
 
-      // Get updated participants count
-      const { data: participants, error: participantsError } = await supabase
-        .from("lobby_participants")
-        .select("id")
-        .eq("lobby_id", lobby.id);
+        // Update waiting positions for everyone behind this person
+        await supabase.rpc("reorder_waiting_positions", {
+          p_lobby_id: lobby.id,
+          p_left_position: waitingPosition,
+        });
 
-      if (participantsError) throw participantsError;
+        // Decrease waiting count on lobby
+        await supabase
+          .from("lobbies")
+          .update({
+            waiting_count: supabase.rpc("decrement_waiting_count", {
+              lobby_id: lobby.id,
+            }),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", lobby.id);
+      } else {
+        // Leave as active participant
+        const { error: deleteError } = await supabase
+          .from("lobby_participants")
+          .delete()
+          .eq("lobby_id", lobby.id)
+          .eq("user_id", userId);
 
-      // Update lobby with new participant count
-      const newParticipantCount = participants?.length || 0;
+        if (deleteError) throw deleteError;
 
-      const { error: updateError } = await supabase
-        .from("lobbies")
-        .update({
-          current_players: newParticipantCount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", lobby.id);
+        // Check if we need to promote someone from waiting list
+        const { data: lobby } = await supabase
+          .from("lobbies")
+          .select("current_players, min_players, status, waiting_count")
+          .eq("id", currentLobby.id)
+          .single();
 
-      if (updateError) throw updateError;
+        let newCount = lobby.current_players - 1;
 
-      // Redirect to lobbies page
-      router.push("/facilities/" + lobby.facility_id);
+        if (lobby.waiting_count > 0) {
+          // Find next waiting person
+          const { data: nextPerson } = await supabase
+            .from("lobby_participants")
+            .select("user_id")
+            .eq("lobby_id", currentLobby.id)
+            .eq("is_waiting", true)
+            .eq("waiting_position", 1)
+            .single();
+
+          if (nextPerson) {
+            // Promote this person
+            await supabase
+              .from("lobby_participants")
+              .update({ is_waiting: false, waiting_position: null })
+              .eq("lobby_id", currentLobby.id)
+              .eq("user_id", nextPerson.user_id);
+
+            // Don't decrement current_players since we're replacing the person
+            newCount = lobby.current_players;
+
+            // Update waiting positions for everyone else
+            await supabase.rpc("shift_waiting_positions", {
+              lobby_id: currentLobby.id,
+            });
+
+            // Decrease waiting count
+            await supabase
+              .from("lobbies")
+              .update({
+                waiting_count: Math.max(0, lobby.waiting_count - 1),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", currentLobby.id);
+          }
+        }
+
+        // Update player count
+        await supabase
+          .from("lobbies")
+          .update({
+            current_players: newCount,
+            status: newCount >= lobby.min_players ? "filled" : "open",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", currentLobby.id);
+      }
+
+      // Redirect to facility page
+      router.push("/facilities/" + currentLobby.facility_id);
       router.refresh();
     } catch (err: any) {
       console.error("Error leaving lobby:", err);
@@ -315,16 +457,44 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       <div className="border-b border-gray-200 bg-gray-50 px-4 py-5 sm:px-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-gray-900">Lobby Details</h3>
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(
-              currentLobby.status
-            )}`}
-          >
-            {currentLobby.status.charAt(0).toUpperCase() +
-              currentLobby.status.slice(1)}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(
+                currentLobby.status
+              )}`}
+            >
+              {currentLobby.status.charAt(0).toUpperCase() +
+                currentLobby.status.slice(1)}
+            </span>
+
+            {/* Show waiting count if any */}
+            {currentLobby.waiting_count > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                +{currentLobby.waiting_count} waiting
+              </span>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Display waiting status for current user if applicable */}
+      {isWaiting && (
+        <div className="px-4 py-3 bg-yellow-50 text-yellow-700 border-b border-yellow-100">
+          <div className="flex justify-between items-center">
+            <p className="text-sm">
+              You're on the waiting list (Position {waitingPosition})
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLeaveLobby}
+              disabled={isProcessing}
+            >
+              Leave Waiting List
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="px-4 py-5 sm:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -351,12 +521,31 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
                 <dt className="text-gray-500">Players</dt>
                 <dd className="mt-1 text-gray-900">
                   {currentLobby.current_players} / {currentLobby.min_players}
-                  <span className="text-gray-500 ml-1">
-                    ({currentLobby.min_players - currentLobby.current_players}{" "}
-                    more needed)
-                  </span>
+                  {currentLobby.current_players < currentLobby.min_players && (
+                    <span className="text-gray-500 ml-1">
+                      ({currentLobby.min_players - currentLobby.current_players}{" "}
+                      more needed)
+                    </span>
+                  )}
                 </dd>
               </div>
+              {currentLobby.initial_group_size &&
+                currentLobby.initial_group_size > 1 && (
+                  <div>
+                    <dt className="text-gray-500">Initial Group Size</dt>
+                    <dd className="mt-1 text-gray-900">
+                      {currentLobby.initial_group_size} players
+                    </dd>
+                  </div>
+                )}
+              {currentLobby.group_name && (
+                <div>
+                  <dt className="text-gray-500">Group Name</dt>
+                  <dd className="mt-1 text-gray-900">
+                    {currentLobby.group_name}
+                  </dd>
+                </div>
+              )}
               {currentLobby.notes && (
                 <div>
                   <dt className="text-gray-500">Notes</dt>
@@ -490,6 +679,41 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
             )}
           </div>
         </div>
+
+        {/* Waiting list section */}
+        {waitingList.length > 0 && (
+          <div className="mt-8">
+            <h4 className="font-medium text-gray-900 mb-3">
+              Waiting List ({waitingList.length})
+            </h4>
+            <div className="bg-gray-50 rounded-md p-4">
+              <ul className="divide-y divide-gray-200">
+                {waitingList.map((participant, index) => (
+                  <li
+                    key={participant.id}
+                    className="py-2 flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <div className="h-8 w-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mr-3">
+                        {participant.waiting_position}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {participant.participant_email ||
+                            participant.user?.email ||
+                            "Unknown User"}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Joined {formatDate(participant.joined_at, "PPp")}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -499,9 +723,11 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
             <Button variant="secondary">Back to Facility</Button>
           </Link>
 
-          {currentLobby.status === "open" && !isParticipant && (
+          {currentLobby.status === "open" && !isParticipant && !isWaiting && (
             <Button onClick={handleJoinLobby} disabled={isProcessing}>
-              {isProcessing ? "Processing..." : "Join Lobby"}
+              {currentLobby.current_players >= currentLobby.min_players
+                ? "Join Waiting List"
+                : "Join Lobby"}
             </Button>
           )}
 

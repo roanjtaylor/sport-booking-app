@@ -84,10 +84,33 @@ export function LobbyList({
                     <h3 className="text-lg font-medium text-gray-900 mr-3">
                       {formatDate(lobby.date)}
                     </h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {lobby.current_players}/{lobby.min_players} Players
-                    </span>
+                    <div className="flex items-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {lobby.current_players}/{lobby.min_players} Players
+                      </span>
+
+                      {/* Show waiting list count if any */}
+                      {lobby.waiting_count > 0 && (
+                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          +{lobby.waiting_count} waiting
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Group name if available */}
+                  {lobby.group_name && (
+                    <p className="text-sm font-medium text-gray-800 mb-1">
+                      Group: {lobby.group_name}
+                    </p>
+                  )}
+
+                  {/* Show initial group size info */}
+                  {lobby.initial_group_size > 1 && (
+                    <p className="text-sm text-gray-600 mb-2">
+                      Started with {lobby.initial_group_size} players
+                    </p>
+                  )}
 
                   <p className="text-sm text-gray-700 mb-2">
                     <span className="font-medium">Facility:</span>{" "}
@@ -103,7 +126,7 @@ export function LobbyList({
                   </div>
                 </div>
 
-                {/* Lobby actions - push to bottom when in grid layout */}
+                {/* Lobby actions */}
                 <div
                   className={`flex space-x-2 ${gridLayout ? "mt-auto" : ""}`}
                 >
@@ -113,7 +136,9 @@ export function LobbyList({
                       disabled={isLoading}
                       size="sm"
                     >
-                      Join
+                      {lobby.current_players >= lobby.min_players
+                        ? "Join Waitlist"
+                        : "Join"}
                     </Button>
                   )}
 
