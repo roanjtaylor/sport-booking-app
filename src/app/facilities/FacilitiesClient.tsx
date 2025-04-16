@@ -95,9 +95,9 @@ export default function FacilitiesClient({
   return (
     <div>
       {/* Search and filter controls */}
-      <div className="mb-8">
+      {/* <div className="mb-8">
         <FacilityFilters onFilter={handleFilter} sportTypes={sportTypes} />
-      </div>
+      </div> */}
 
       {isLoading && (
         <div className="text-center py-8">

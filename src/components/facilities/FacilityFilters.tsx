@@ -11,11 +11,13 @@ interface FacilityFiltersProps {
     priceSort: string;
   }) => void;
   sportTypes: string[];
+  rightContent?: React.ReactNode;
 }
 
 export function FacilityFilters({
   onFilter,
   sportTypes,
+  rightContent,
 }: FacilityFiltersProps) {
   const [search, setSearch] = useState("");
   const [selectedSportType, setSelectedSportType] = useState("");
@@ -54,7 +56,7 @@ export function FacilityFilters({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 items-center">
           <select
             className="p-2 border border-gray-300 rounded-md bg-white w-full sm:w-36"
             value={selectedSportType}
@@ -76,18 +78,21 @@ export function FacilityFilters({
             <option value="low">Price: Low to High</option>
             <option value="high">Price: High to Low</option>
           </select>
-          <div className="flex gap-2">
-            <Button type="submit" variant="primary" size="sm">
-              Filter
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={handleReset}
-            >
-              Reset
-            </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-2">
+              <Button type="submit" variant="primary" size="sm">
+                Filter
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleReset}
+              >
+                Reset
+              </Button>
+            </div>
+            {rightContent && <div className="ml-2">{rightContent}</div>}
           </div>
         </div>
       </div>

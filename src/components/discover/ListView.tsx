@@ -6,26 +6,27 @@ import FacilitiesClient from "@/app/facilities/FacilitiesClient";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { LobbyFilters } from "@/components/lobbies/LobbyFilters";
 import { supabase } from "@/lib/supabase";
+import { FacilityFilters } from "@/components/facilities/FacilityFilters";
 import { Card } from "@/components/ui/Card";
 import type { Facility } from "@/types/facility";
 import type { Lobby } from "@/types/lobby";
 
-/**
- * List View component for the Discover page
- * Provides a toggle between facilities and lobbies
- */
 export default function ListView() {
-  // State for toggle between facilities and lobbies
   const [viewMode, setViewMode] = useState<"facilities" | "lobbies">(
     "facilities"
   );
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [filteredFacilities, setFilteredFacilities] = useState<Facility[]>([]);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [filteredLobbies, setFilteredLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch initial data when component mounts
+  // Get unique sport types from facilities
+  const sportTypes = Array.from(
+    new Set(facilities.flatMap((f) => f.sportType || []))
+  );
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -60,22 +61,19 @@ export default function ListView() {
         }));
 
         setFacilities(formattedFacilities);
+        setFilteredFacilities(formattedFacilities);
 
         // Fetch lobbies data
         const { data: lobbiesData, error: lobbiesError } = await supabase
           .from("lobbies")
-          .select(
-            `
-            *,
-            facility:facility_id(*)
-          `
-          )
+          .select(`*, facility:facility_id(*)`)
           .eq("status", "open")
           .order("date", { ascending: true });
 
         if (lobbiesError) throw lobbiesError;
 
         setLobbies(lobbiesData || []);
+        setFilteredLobbies(lobbiesData || []);
       } catch (err) {
         console.error("Error fetching data:", err);
         setError("Failed to load data. Please try again.");
@@ -87,16 +85,30 @@ export default function ListView() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    setFilteredLobbies(lobbies);
-  }, [lobbies]);
+  const handleFacilityFilter = (filters: {
+    search: string;
+    sportType: string;
+  }) => {
+    let filtered = [...facilities];
 
-  // Handle view mode toggle
-  const handleViewToggle = (mode: "facilities" | "lobbies") => {
-    setViewMode(mode);
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (facility) =>
+          facility.name.toLowerCase().includes(searchLower) ||
+          facility.address.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (filters.sportType) {
+      filtered = filtered.filter((facility) =>
+        facility.sportType.includes(filters.sportType)
+      );
+    }
+
+    setFilteredFacilities(filtered);
   };
 
-  // Filter lobbies based on selected filters
   const handleLobbyFilter = (filters: {
     search: string;
     sportType: string;
@@ -104,7 +116,6 @@ export default function ListView() {
   }) => {
     let filtered = [...lobbies];
 
-    // Apply search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(
@@ -115,14 +126,12 @@ export default function ListView() {
       );
     }
 
-    // Apply sport type filter
     if (filters.sportType) {
       filtered = filtered.filter((lobby) =>
         lobby.facility?.sport_type?.includes(filters.sportType)
       );
     }
 
-    // Apply date range filter
     if (filters.dateRange) {
       const today = new Date().toISOString().split("T")[0];
       const tomorrow = new Date();
@@ -135,7 +144,6 @@ export default function ListView() {
         } else if (filters.dateRange === "tomorrow") {
           return lobby.date === tomorrowStr;
         } else if (filters.dateRange === "week") {
-          // Check if within next 7 days
           const lobbyDate = new Date(lobby.date);
           const weekFromNow = new Date();
           weekFromNow.setDate(weekFromNow.getDate() + 7);
@@ -148,7 +156,6 @@ export default function ListView() {
     setFilteredLobbies(filtered);
   };
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -160,7 +167,6 @@ export default function ListView() {
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <Card className="p-6 text-center">
@@ -177,28 +183,32 @@ export default function ListView() {
 
   return (
     <div>
-      <ViewToggle currentView={viewMode} onToggle={handleViewToggle} />
-
       {viewMode === "facilities" ? (
-        <FacilitiesClient initialFacilities={facilities} />
+        <>
+          <div className="mb-8">
+            <FacilityFilters
+              onFilter={handleFacilityFilter}
+              sportTypes={sportTypes}
+              rightContent={
+                <ViewToggle currentView={viewMode} onToggle={setViewMode} />
+              }
+            />
+          </div>
+          <FacilitiesClient initialFacilities={filteredFacilities} />
+        </>
       ) : (
-        <div>
-          <LobbyFilters
-            onFilter={handleLobbyFilter}
-            sportTypes={Array.from(
-              new Set(facilities.flatMap((f) => f.sportType))
-            )}
-          />
-
-          {filteredLobbies.length > 0 ? (
-            <LobbyList lobbies={filteredLobbies} gridLayout={true} />
-          ) : (
-            <Card className="p-6 text-center">
-              <p className="text-gray-500 mb-4">No matching lobbies found.</p>
-              <p>Try adjusting your filters or create a new lobby.</p>
-            </Card>
-          )}
-        </div>
+        <>
+          <div className="mb-8">
+            <LobbyFilters
+              onFilter={handleLobbyFilter}
+              sportTypes={sportTypes}
+              rightContent={
+                <ViewToggle currentView={viewMode} onToggle={setViewMode} />
+              }
+            />
+          </div>
+          <LobbyList lobbies={filteredLobbies} />
+        </>
       )}
     </div>
   );
