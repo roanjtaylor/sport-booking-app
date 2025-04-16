@@ -45,7 +45,7 @@ export function LobbyFilters({ onFilter, sportTypes }: LobbyFiltersProps) {
         <div className="flex-grow">
           <input
             type="text"
-            placeholder="Search lobbies..."
+            placeholder="Search facilities..."
             className="w-full p-2 border border-gray-300 rounded-md"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
