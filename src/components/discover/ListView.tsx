@@ -7,6 +7,7 @@ import { Facility } from "@/types/facility";
 import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/Card";
 import { LobbyList } from "@/components/lobbies/LobbyList";
+import { LobbyFilters } from "@/components/lobbies/LobbyFilters";
 import { Lobby } from "@/types/lobby";
 
 /**
@@ -15,15 +16,13 @@ import { Lobby } from "@/types/lobby";
  */
 export default function ListView() {
   // State for toggle between facilities and lobbies
-  const [viewMode, setViewMode] = useState<"facilities" | "lobbies">(
-    "facilities"
-  );
+  const [viewMode, setViewMode] = useState("facilities");
 
   // State for facility and lobby data
-  const [facilities, setFacilities] = useState<Facility[]>([]);
-  const [lobbies, setLobbies] = useState<Lobby[]>([]);
+  const [facilities, setFacilities] = useState([]);
+  const [lobbies, setLobbies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
   // Fetch initial data when component mounts
   useEffect(() => {
@@ -41,25 +40,23 @@ export default function ListView() {
         if (facilitiesError) throw facilitiesError;
 
         // Format facilities data
-        const formattedFacilities: Facility[] = (facilitiesData || []).map(
-          (facility) => ({
-            id: facility.id,
-            name: facility.name,
-            description: facility.description,
-            address: facility.address,
-            city: facility.city,
-            postal_code: facility.postal_code,
-            country: facility.country,
-            imageUrl: facility.image_url,
-            owner_id: facility.owner_id,
-            owner_email: facility.owner_email,
-            operatingHours: facility.operating_hours,
-            price_per_hour: facility.price_per_hour,
-            currency: facility.currency,
-            sportType: facility.sport_type,
-            amenities: facility.amenities || [],
-          })
-        );
+        const formattedFacilities = (facilitiesData || []).map((facility) => ({
+          id: facility.id,
+          name: facility.name,
+          description: facility.description,
+          address: facility.address,
+          city: facility.city,
+          postal_code: facility.postal_code,
+          country: facility.country,
+          imageUrl: facility.image_url,
+          owner_id: facility.owner_id,
+          owner_email: facility.owner_email,
+          operatingHours: facility.operating_hours,
+          price_per_hour: facility.price_per_hour,
+          currency: facility.currency,
+          sportType: facility.sport_type,
+          amenities: facility.amenities || [],
+        }));
 
         setFacilities(formattedFacilities);
 
@@ -90,7 +87,7 @@ export default function ListView() {
   }, []);
 
   // Toggle handler for switching between facilities and lobbies
-  const handleToggleView = (mode: "facilities" | "lobbies") => {
+  const handleToggleView = (mode) => {
     setViewMode(mode);
   };
 
@@ -156,9 +153,20 @@ export default function ListView() {
         <FacilitiesClient initialFacilities={facilities} />
       ) : (
         <div>
-          <h2 className="text-xl font-semibold mb-4">Available Lobbies</h2>
+          {/* Add the LobbyFilters component */}
+          <LobbyFilters
+            onFilter={(filters) => {
+              // Implement lobby filtering logic here
+              console.log("Filtering lobbies:", filters);
+              // For now, just use the unfiltered lobbies
+            }}
+            sportTypes={Array.from(
+              new Set(facilities.flatMap((f) => f.sportType))
+            )}
+          />
+
           {lobbies.length > 0 ? (
-            <LobbyList lobbies={lobbies} />
+            <LobbyList lobbies={lobbies} gridLayout={true} />
           ) : (
             <Card className="p-6 text-center">
               <p className="text-gray-500 mb-4">No open lobbies found.</p>
