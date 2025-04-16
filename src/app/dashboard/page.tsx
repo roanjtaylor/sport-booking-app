@@ -692,7 +692,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Recommended Facilities</h2>
-            <Link href="/facilities">
+            <Link href="/discover">
               <Button variant="outline" size="sm">
                 View All
               </Button>

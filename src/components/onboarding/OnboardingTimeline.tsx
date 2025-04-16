@@ -72,7 +72,7 @@ export function OnboardingTimeline({ steps }: OnboardingTimelineProps) {
                 {/* Show action buttons only on the last step */}
                 {index === steps.length - 1 && (
                   <div className="flex flex-col space-y-3 w-full max-w-xs">
-                    <Link href="/facilities" className="w-full">
+                    <Link href="/discover" className="w-full">
                       <Button size="lg" fullWidth>
                         Browse Facilities
                       </Button>
