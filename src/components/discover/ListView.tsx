@@ -21,6 +21,7 @@ export default function ListView() {
   // State for facility and lobby data
   const [facilities, setFacilities] = useState([]);
   const [lobbies, setLobbies] = useState([]);
+  const [filteredLobbies, setFilteredLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -86,9 +87,65 @@ export default function ListView() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    setFilteredLobbies(lobbies);
+  }, [lobbies]);
+
   // Toggle handler for switching between facilities and lobbies
   const handleToggleView = (mode) => {
     setViewMode(mode);
+  };
+
+  // Filter lobbies based on selected filters
+  const handleLobbyFilter = (filters: {
+    search: string;
+    sportType: string;
+    dateRange: string;
+  }) => {
+    let filtered = [...lobbies];
+
+    // Apply search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (lobby) =>
+          lobby.facility?.name?.toLowerCase().includes(searchLower) ||
+          lobby.facility?.address?.toLowerCase().includes(searchLower) ||
+          lobby.notes?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply sport type filter
+    if (filters.sportType) {
+      filtered = filtered.filter((lobby) =>
+        lobby.facility?.sport_type?.includes(filters.sportType)
+      );
+    }
+
+    // Apply date range filter
+    if (filters.dateRange) {
+      const today = new Date().toISOString().split("T")[0];
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+      filtered = filtered.filter((lobby) => {
+        if (filters.dateRange === "today") {
+          return lobby.date === today;
+        } else if (filters.dateRange === "tomorrow") {
+          return lobby.date === tomorrowStr;
+        } else if (filters.dateRange === "week") {
+          // Check if within next 7 days
+          const lobbyDate = new Date(lobby.date);
+          const weekFromNow = new Date();
+          weekFromNow.setDate(weekFromNow.getDate() + 7);
+          return lobbyDate <= weekFromNow;
+        }
+        return true;
+      });
+    }
+
+    setFilteredLobbies(filtered);
   };
 
   // Show loading state
@@ -153,24 +210,20 @@ export default function ListView() {
         <FacilitiesClient initialFacilities={facilities} />
       ) : (
         <div>
-          {/* Add the LobbyFilters component */}
+          {/* Add the LobbyFilters component with the handler */}
           <LobbyFilters
-            onFilter={(filters) => {
-              // Implement lobby filtering logic here
-              console.log("Filtering lobbies:", filters);
-              // For now, just use the unfiltered lobbies
-            }}
+            onFilter={handleLobbyFilter}
             sportTypes={Array.from(
               new Set(facilities.flatMap((f) => f.sportType))
             )}
           />
 
-          {lobbies.length > 0 ? (
-            <LobbyList lobbies={lobbies} gridLayout={true} />
+          {filteredLobbies.length > 0 ? (
+            <LobbyList lobbies={filteredLobbies} gridLayout={true} />
           ) : (
             <Card className="p-6 text-center">
-              <p className="text-gray-500 mb-4">No open lobbies found.</p>
-              <p>Be the first to create a lobby for a facility!</p>
+              <p className="text-gray-500 mb-4">No matching lobbies found.</p>
+              <p>Try adjusting your filters or create a new lobby.</p>
             </Card>
           )}
         </div>

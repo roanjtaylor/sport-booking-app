@@ -53,7 +53,7 @@ export function LobbyFilters({ onFilter, sportTypes }: LobbyFiltersProps) {
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <select
-            className="p-2 border border-gray-300 rounded-md bg-white"
+            className="p-2 border border-gray-300 rounded-md bg-white w-full sm:w-36"
             value={selectedSportType}
             onChange={(e) => setSelectedSportType(e.target.value)}
           >
@@ -65,7 +65,7 @@ export function LobbyFilters({ onFilter, sportTypes }: LobbyFiltersProps) {
             ))}
           </select>
           <select
-            className="p-2 border border-gray-300 rounded-md bg-white"
+            className="p-2 border border-gray-300 rounded-md bg-white w-full sm:w-36"
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
           >

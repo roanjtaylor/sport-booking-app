@@ -1,8 +1,8 @@
 // src/components/facilities/FacilityFilters.tsx
 "use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 interface FacilityFiltersProps {
   onFilter: (filters: {
@@ -13,32 +13,35 @@ interface FacilityFiltersProps {
   sportTypes: string[];
 }
 
-export function FacilityFilters({ onFilter, sportTypes }: FacilityFiltersProps) {
-  const [search, setSearch] = useState('');
-  const [selectedSportType, setSelectedSportType] = useState('');
-  const [priceSort, setPriceSort] = useState('');
-  
+export function FacilityFilters({
+  onFilter,
+  sportTypes,
+}: FacilityFiltersProps) {
+  const [search, setSearch] = useState("");
+  const [selectedSportType, setSelectedSportType] = useState("");
+  const [priceSort, setPriceSort] = useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onFilter({
       search,
       sportType: selectedSportType,
-      priceSort
+      priceSort,
     });
   };
-  
+
   const handleReset = () => {
-    setSearch('');
-    setSelectedSportType('');
-    setPriceSort('');
-    
+    setSearch("");
+    setSelectedSportType("");
+    setPriceSort("");
+
     onFilter({
-      search: '',
-      sportType: '',
-      priceSort: ''
+      search: "",
+      sportType: "",
+      priceSort: "",
     });
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="p-4 bg-gray-50 rounded-lg">
       <div className="flex flex-col md:flex-row gap-4">
@@ -52,8 +55,8 @@ export function FacilityFilters({ onFilter, sportTypes }: FacilityFiltersProps) 
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <select 
-            className="p-2 border border-gray-300 rounded-md bg-white"
+          <select
+            className="p-2 border border-gray-300 rounded-md bg-white w-full sm:w-36"
             value={selectedSportType}
             onChange={(e) => setSelectedSportType(e.target.value)}
           >
@@ -64,8 +67,8 @@ export function FacilityFilters({ onFilter, sportTypes }: FacilityFiltersProps) 
               </option>
             ))}
           </select>
-          <select 
-            className="p-2 border border-gray-300 rounded-md bg-white"
+          <select
+            className="p-2 border border-gray-300 rounded-md bg-white w-full sm:w-36"
             value={priceSort}
             onChange={(e) => setPriceSort(e.target.value)}
           >
@@ -77,7 +80,12 @@ export function FacilityFilters({ onFilter, sportTypes }: FacilityFiltersProps) 
             <Button type="submit" variant="primary" size="sm">
               Filter
             </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={handleReset}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleReset}
+            >
               Reset
             </Button>
           </div>
