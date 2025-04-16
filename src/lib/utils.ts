@@ -6,7 +6,11 @@ import { OperatingHours, TimeRange } from "@/types/facility";
 /**
  * Format a date string to a human-readable format
  */
-export function formatDate(dateString: string, formatString: string = "PPP") {
+export function formatDate(
+  dateString: string,
+  formatString: string = "EEEE do MMMM"
+  // Add yyyy for showing year too if desired, but not necessary right now- makes it too cluttered
+) {
   try {
     const date = new Date(dateString);
     if (!isValid(date)) return "Invalid date";
