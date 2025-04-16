@@ -1,7 +1,6 @@
 // src/app/facilities/[id]/page.tsx
 import { Suspense } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formatPrice, formatTime } from "@/lib/utils";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
@@ -9,50 +8,12 @@ import { notFound } from "next/navigation";
 import BookingFormWrapper from "@/components/bookings/BookingFormWrapper";
 import { FacilityOwnerActions } from "@/components/facilities/FacilityOwnerActions";
 import { Facility } from "@/types/facility";
-import { LobbyList } from "@/components/lobbies/LobbyList";
 
 // Define the expected params type
 type Props = {
   params: {
     id: string;
   };
-};
-
-// Define database types
-type DBFacility = {
-  id: string;
-  name: string;
-  description: string;
-  address: string;
-  city: string;
-  postal_code: string;
-  country: string;
-  image_url?: string;
-  owner_id: string;
-  owner_email: string;
-  operating_hours: {
-    monday: { open: string; close: string } | null;
-    tuesday: { open: string; close: string } | null;
-    wednesday: { open: string; close: string } | null;
-    thursday: { open: string; close: string } | null;
-    friday: { open: string; close: string } | null;
-    saturday: { open: string; close: string } | null;
-    sunday: { open: string; close: string } | null;
-  };
-  price_per_hour: number;
-  currency: string;
-  sport_type: string[];
-  amenities: string[];
-};
-
-type DBBooking = {
-  id: string;
-  facility_id: string;
-  user_id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  status: string;
 };
 
 /**
@@ -70,7 +31,7 @@ export default async function FacilityDetailPage({ params }: Props) {
     .from("facilities")
     .select("*")
     .eq("id", id)
-    .single<DBFacility>();
+    .single();
 
   if (error || !facility) {
     console.error("Error fetching facility:", error);
@@ -83,7 +44,7 @@ export default async function FacilityDetailPage({ params }: Props) {
     .select("*")
     .eq("facility_id", id)
     .in("status", ["confirmed", "pending"])
-    .returns<DBBooking[]>();
+    .returns();
 
   // Fetch open lobbies for this facility
   const { data: facilityLobbies, error: lobbiesError } = await supabase
@@ -115,6 +76,7 @@ export default async function FacilityDetailPage({ params }: Props) {
     currency: facility.currency,
     sportType: facility.sport_type,
     amenities: facility.amenities || [],
+    min_players: facility.min_players,
   };
 
   // Convert bookings to the expected format for booking form
