@@ -189,7 +189,7 @@ export default function ListView() {
                 : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
             }`}
           >
-            Full Bookings
+            Facilities
           </button>
           <button
             type="button"

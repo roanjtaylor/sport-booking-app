@@ -112,20 +112,11 @@ export async function joinLobby(
 
     if (participantError) throw participantError;
 
-    // CHANGE: Manually count participants instead of using count API
-    const { data: allParticipants, error: participantsError } = await supabase
-      .from("lobby_participants")
-      .select("id")
-      .eq("lobby_id", lobbyId);
-
-    if (participantsError) throw participantsError;
-
-    // Calculate the count manually
-    const newCount = allParticipants ? allParticipants.length : 0;
+    // MODIFIED: Instead of counting participants, increment the current_players count
+    const newCount = lobby.current_players + 1;
     const isFull = newCount >= lobby.min_players;
 
-    // Use service role or server-side call for update
-    // This could be the key issue - client-side permissions may be insufficient
+    // Update the lobby with the new count
     const { error: updateError } = await supabase
       .from("lobbies")
       .update({
@@ -152,7 +143,7 @@ export async function joinLobby(
           start_time: lobby.start_time,
           end_time: lobby.end_time,
           status: "pending",
-          total_price: lobby.price_per_hour || 0, // You may need to fetch this
+          total_price: lobby.price_per_hour || 0,
           notes: `Group booking from lobby: ${lobbyId}`,
           lobby_id: lobbyId,
           created_at: new Date().toISOString(),

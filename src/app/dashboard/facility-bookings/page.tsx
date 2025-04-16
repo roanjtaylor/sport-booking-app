@@ -130,32 +130,54 @@ export default function FacilityBookingsPage() {
     newStatus: "pending" | "confirmed" | "cancelled"
   ) => {
     try {
+      // Get the booking to check if it's a lobby booking
+      const { data: booking } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", bookingId)
+        .single();
+
+      if (!booking) throw new Error("Booking not found");
+
+      // Get current user ID to prove ownership
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Authentication required");
+
+      // Update with explicit facility ownership check
       const { error } = await supabase
         .from("bookings")
         .update({
           status: newStatus,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", bookingId);
+        .eq("id", bookingId)
+        .eq("facility_id", booking.facility_id);
 
       if (error) throw error;
 
-      // Update local state
+      // If this is a lobby booking and status changed to confirmed,
+      // update the lobby status as well
+      if (booking.lobby_id && newStatus === "confirmed") {
+        await supabase
+          .from("lobbies")
+          .update({ status: "filled" })
+          .eq("id", booking.lobby_id);
+      }
+
+      // Rest of your code remains the same
       const updatedBookings = bookings.map((booking) =>
         booking.id === bookingId ? { ...booking, status: newStatus } : booking
       );
 
       setBookings(updatedBookings);
-
-      // Apply current filter to updated bookings
-      const tabFilteredBookings =
+      setFilteredBookings(
         activeTab === "pending"
           ? updatedBookings.filter((booking) => booking.status === "pending")
-          : updatedBookings;
+          : updatedBookings
+      );
 
-      setFilteredBookings(tabFilteredBookings);
-
-      // Show confirmation
       alert(
         `Booking ${
           newStatus === "confirmed" ? "approved" : "rejected"
