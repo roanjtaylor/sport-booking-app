@@ -1,14 +1,14 @@
 "use client";
 
-// src/components/discover/ListView.tsx
 import { useState, useEffect } from "react";
+import { ViewToggle } from "@/components/discover/ViewToggle";
 import FacilitiesClient from "@/app/facilities/FacilitiesClient";
-import { Facility } from "@/types/facility";
-import { supabase } from "@/lib/supabase";
-import { Card } from "@/components/ui/Card";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { LobbyFilters } from "@/components/lobbies/LobbyFilters";
-import { Lobby } from "@/types/lobby";
+import { supabase } from "@/lib/supabase";
+import { Card } from "@/components/ui/Card";
+import type { Facility } from "@/types/facility";
+import type { Lobby } from "@/types/lobby";
 
 /**
  * List View component for the Discover page
@@ -16,14 +16,14 @@ import { Lobby } from "@/types/lobby";
  */
 export default function ListView() {
   // State for toggle between facilities and lobbies
-  const [viewMode, setViewMode] = useState("facilities");
-
-  // State for facility and lobby data
-  const [facilities, setFacilities] = useState([]);
-  const [lobbies, setLobbies] = useState([]);
+  const [viewMode, setViewMode] = useState<"facilities" | "lobbies">(
+    "facilities"
+  );
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [filteredLobbies, setFilteredLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch initial data when component mounts
   useEffect(() => {
@@ -91,8 +91,8 @@ export default function ListView() {
     setFilteredLobbies(lobbies);
   }, [lobbies]);
 
-  // Toggle handler for switching between facilities and lobbies
-  const handleToggleView = (mode) => {
+  // Handle view mode toggle
+  const handleViewToggle = (mode: "facilities" | "lobbies") => {
     setViewMode(mode);
   };
 
@@ -177,40 +177,12 @@ export default function ListView() {
 
   return (
     <div>
-      {/* Toggle control */}
-      <div className="flex justify-end mb-6">
-        <div className="inline-flex rounded-md shadow-sm" role="group">
-          <button
-            type="button"
-            onClick={() => handleToggleView("facilities")}
-            className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
-              viewMode === "facilities"
-                ? "bg-primary-600 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
-          >
-            Facilities
-          </button>
-          <button
-            type="button"
-            onClick={() => handleToggleView("lobbies")}
-            className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
-              viewMode === "lobbies"
-                ? "bg-primary-600 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
-          >
-            Lobbies
-          </button>
-        </div>
-      </div>
+      <ViewToggle currentView={viewMode} onToggle={handleViewToggle} />
 
-      {/* Content based on selected view mode */}
       {viewMode === "facilities" ? (
         <FacilitiesClient initialFacilities={facilities} />
       ) : (
         <div>
-          {/* Add the LobbyFilters component with the handler */}
           <LobbyFilters
             onFilter={handleLobbyFilter}
             sportTypes={Array.from(
