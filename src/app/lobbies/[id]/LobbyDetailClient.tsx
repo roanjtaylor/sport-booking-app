@@ -67,7 +67,12 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       // Get fresh lobby data directly from the database
       const { data: freshLobby, error: lobbyError } = await supabase
         .from("lobbies")
-        .select("*")
+        .select(
+          `
+          *,
+          facility:facility_id(*)
+        `
+        )
         .eq("id", lobby.id)
         .single();
 
@@ -77,8 +82,9 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       const { data: participantsData, error: participantsError } =
         await supabase
           .from("lobby_participants")
-          .select("*, user:user_id(*)")
+          .select("*, user")
           .eq("lobby_id", lobby.id);
+      // MAYBE A BUG HERE- CAREFUL ATTENTION!!
 
       if (participantsError) throw participantsError;
 
@@ -258,15 +264,15 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         if (deleteError) throw deleteError;
 
         // Check if we need to promote someone from waiting list
-        const { data: lobby } = await supabase
+        const { data: lobbyData } = await supabase
           .from("lobbies")
           .select("current_players, min_players, status, waiting_count")
           .eq("id", currentLobby.id)
           .single();
 
-        let newCount = lobby.current_players - 1;
+        let newCount = lobbyData.current_players - 1;
 
-        if (lobby.waiting_count > 0) {
+        if (lobbyData.waiting_count > 0) {
           // Find next waiting person
           const { data: nextPerson } = await supabase
             .from("lobby_participants")
@@ -285,7 +291,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
               .eq("user_id", nextPerson.user_id);
 
             // Don't decrement current_players since we're replacing the person
-            newCount = lobby.current_players;
+            newCount = lobbyData.current_players;
 
             // Update waiting positions for everyone else
             await supabase.rpc("shift_waiting_positions", {
@@ -296,7 +302,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
             await supabase
               .from("lobbies")
               .update({
-                waiting_count: Math.max(0, lobby.waiting_count - 1),
+                waiting_count: Math.max(0, lobbyData.waiting_count - 1),
                 updated_at: new Date().toISOString(),
               })
               .eq("id", currentLobby.id);
@@ -308,14 +314,21 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
           .from("lobbies")
           .update({
             current_players: newCount,
-            status: newCount >= lobby.min_players ? "filled" : "open",
+            status: newCount >= lobbyData.min_players ? "filled" : "open",
             updated_at: new Date().toISOString(),
           })
           .eq("id", currentLobby.id);
       }
 
-      // Redirect to facility page
-      router.push("/facilities/" + currentLobby.facility_id);
+      // Update local state to reflect changes
+      setIsParticipant(false);
+      setIsWaiting(false);
+      setWaitingPosition(null);
+
+      // Fetch updated lobby data
+      await fetchLobbyData(userId);
+
+      // Refresh the page to show the changes (without redirecting)
       router.refresh();
     } catch (err: any) {
       console.error("Error leaving lobby:", err);
