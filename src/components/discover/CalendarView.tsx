@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatDate, formatTime, getDayOfWeek } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { Facility } from "@/types/facility";
 import { Lobby } from "@/types/lobby";
@@ -106,17 +106,12 @@ export default function CalendarView() {
     date: string,
     time: string
   ) => {
-    // Get day of week from selected date
-    const dayOfWeek = new Date(date).toLocaleDateString("en-US", {
-      weekday: "lowercase",
-    });
+    // Get day of week from selected date using the utility function
+    const dayOfWeek = getDayOfWeek(date);
 
     // Filter facilities that are open on the selected day and time
     const availableFacilities = facilities.filter((facility) => {
-      const dayHours =
-        facility.operatingHours[
-          dayOfWeek as keyof typeof facility.operatingHours
-        ];
+      const dayHours = facility.operatingHours[dayOfWeek];
       if (!dayHours) return false; // Facility is closed on this day
 
       // Check if selected time is within operating hours
