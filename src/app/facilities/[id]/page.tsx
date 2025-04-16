@@ -14,6 +14,10 @@ type Props = {
   params: {
     id: string;
   };
+  searchParams: {
+    date?: string;
+    time?: string;
+  };
 };
 
 /**
@@ -21,7 +25,10 @@ type Props = {
  */
 export const dynamic = "force-dynamic";
 
-export default async function FacilityDetailPage({ params }: Props) {
+export default async function FacilityDetailPage({
+  params,
+  searchParams,
+}: Props) {
   // Important: We create the Supabase client here properly
   const supabase = await createServerSupabaseClient();
   const { id } = params;
@@ -87,6 +94,10 @@ export default async function FacilityDetailPage({ params }: Props) {
       date: booking.date,
     })
   );
+
+  // Access search params directly from the props
+  const preselectedDate = searchParams.date || null;
+  const preselectedTime = searchParams.time || null;
 
   return (
     <div>
@@ -258,6 +269,8 @@ export default async function FacilityDetailPage({ params }: Props) {
                 <BookingFormWrapper
                   facility={formattedFacility}
                   existingBookings={formattedBookings}
+                  preselectedDate={preselectedDate}
+                  preselectedTime={preselectedTime}
                 />
               </Suspense>
             </div>

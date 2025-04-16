@@ -1,45 +1,150 @@
+// src/components/discover/CalendarView.tsx
 "use client";
 
-// src/components/discover/CalendarView.tsx
 import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { formatDate, formatTime } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { Facility } from "@/types/facility";
+import { Lobby } from "@/types/lobby";
+import SearchResultsList from "./SearchResultsList";
 
-/**
- * Calendar View component for the Discover page
- * Allows users to find available bookings and lobbies by date/time
- * Note: This is a placeholder that will be expanded with actual calendar functionality
- */
 export default function CalendarView() {
+  // State for search parameters and results
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [isSearched, setIsSearched] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [lobbies, setLobbies] = useState<Lobby[]>([]);
 
-  // Format today's date and calculate max date (30 days from now)
+  // Format today's date for min date attribute
   const today = new Date().toISOString().split("T")[0];
+
+  // Calculate max date (30 days from now) for date picker
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 30);
   const maxDateString = maxDate.toISOString().split("T")[0];
 
   // Handle search button click
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!selectedDate || !selectedTime) {
       return;
     }
 
-    setIsLoading(true);
+    setIsSearching(true);
+    setError(null);
 
-    // Simulate loading delay for the placeholder
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsSearched(true);
-    }, 1000);
+    try {
+      // 1. Search for available facilities at the selected date/time
+      const { data: facilitiesData, error: facilitiesError } = await supabase
+        .from("facilities")
+        .select("*");
 
-    // In the real implementation, this would fetch available facilities and lobbies
-    // based on the selected date and time
+      if (facilitiesError) throw facilitiesError;
+
+      // 2. Format facility data
+      const formattedFacilities = (facilitiesData || []).map((facility) => ({
+        id: facility.id,
+        name: facility.name,
+        description: facility.description,
+        address: facility.address,
+        city: facility.city,
+        postal_code: facility.postal_code,
+        country: facility.country,
+        imageUrl: facility.image_url,
+        owner_id: facility.owner_id,
+        owner_email: facility.owner_email,
+        operatingHours: facility.operating_hours,
+        price_per_hour: facility.price_per_hour,
+        currency: facility.currency,
+        sportType: facility.sport_type,
+        amenities: facility.amenities || [],
+        min_players: facility.min_players,
+      }));
+
+      // 3. Filter facilities based on operating hours and existing bookings
+      const filteredFacilities = await filterAvailableFacilities(
+        formattedFacilities,
+        selectedDate,
+        selectedTime
+      );
+      setFacilities(filteredFacilities);
+
+      // 4. Search for available lobbies
+      const { data: lobbiesData, error: lobbiesError } = await supabase
+        .from("lobbies")
+        .select(
+          `
+          *,
+          facility:facility_id(*)
+        `
+        )
+        .eq("date", selectedDate)
+        .eq("status", "open")
+        .gte("start_time", selectedTime)
+        .order("start_time", { ascending: true });
+
+      if (lobbiesError) throw lobbiesError;
+
+      setLobbies(lobbiesData || []);
+      setHasSearched(true);
+    } catch (err) {
+      console.error("Error searching for availability:", err);
+      setError("Failed to load availability data. Please try again.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Helper function to filter facilities based on availability
+  const filterAvailableFacilities = async (
+    facilities: Facility[],
+    date: string,
+    time: string
+  ) => {
+    // Get day of week from selected date
+    const dayOfWeek = new Date(date).toLocaleDateString("en-US", {
+      weekday: "lowercase",
+    });
+
+    // Filter facilities that are open on the selected day and time
+    const availableFacilities = facilities.filter((facility) => {
+      const dayHours =
+        facility.operatingHours[
+          dayOfWeek as keyof typeof facility.operatingHours
+        ];
+      if (!dayHours) return false; // Facility is closed on this day
+
+      // Check if selected time is within operating hours
+      return time >= dayHours.open && time < dayHours.close;
+    });
+
+    // For each available facility, check existing bookings
+    const result = await Promise.all(
+      availableFacilities.map(async (facility) => {
+        const { data: bookings } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("facility_id", facility.id)
+          .eq("date", date)
+          .in("status", ["confirmed", "pending"])
+          .returns();
+
+        // Check if facility is already booked at the selected time
+        const isBooked = (bookings || []).some((booking) => {
+          return time >= booking.start_time && time < booking.end_time;
+        });
+
+        return isBooked ? null : facility;
+      })
+    );
+
+    // Filter out null values (booked facilities)
+    return result.filter(Boolean) as Facility[];
   };
 
   return (
@@ -82,10 +187,10 @@ export default function CalendarView() {
           <div className="md:col-span-1 flex items-end">
             <Button
               onClick={handleSearch}
-              disabled={!selectedDate || !selectedTime || isLoading}
+              disabled={!selectedDate || !selectedTime || isSearching}
               fullWidth
             >
-              {isLoading ? "Searching..." : "Search"}
+              {isSearching ? "Searching..." : "Search"}
             </Button>
           </div>
         </div>
@@ -101,52 +206,19 @@ export default function CalendarView() {
         )}
       </Card>
 
-      {isSearched && (
-        <div className="space-y-6">
-          {/* Placeholder for search results */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Available Facilities</h3>
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <p className="text-center text-gray-600 py-4">
-                This section will display facilities available at the selected
-                date and time.
-              </p>
-              <div className="bg-white p-4 rounded shadow-sm mb-4 max-w-lg mx-auto">
-                <p className="font-medium mb-2">Implementation Plan:</p>
-                <ul className="text-left text-sm list-disc pl-5 space-y-1">
-                  <li>
-                    Query facilities with available slots for the selected
-                    date/time
-                  </li>
-                  <li>Show available time slots around the selected time</li>
-                  <li>Display facility details with booking options</li>
-                  <li>Allow direct booking from calendar view</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-medium mb-3">Open Lobbies</h3>
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <p className="text-center text-gray-600 py-4">
-                This section will display open lobbies for the selected date and
-                time.
-              </p>
-              <div className="bg-white p-4 rounded shadow-sm mb-4 max-w-lg mx-auto">
-                <p className="font-medium mb-2">Implementation Plan:</p>
-                <ul className="text-left text-sm list-disc pl-5 space-y-1">
-                  <li>Query lobbies scheduled for the selected date/time</li>
-                  <li>
-                    Display lobby details including current/minimum players
-                  </li>
-                  <li>Provide options to join existing lobbies</li>
-                  <li>Allow creation of new lobbies if none available</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+      {error && (
+        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
+          {error}
         </div>
+      )}
+
+      {hasSearched && (
+        <SearchResultsList
+          facilities={facilities}
+          lobbies={lobbies}
+          selectedDate={selectedDate}
+          selectedTime={selectedTime}
+        />
       )}
     </div>
   );
