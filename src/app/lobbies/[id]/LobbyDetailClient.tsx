@@ -29,6 +29,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [waitingList, setWaitingList] = useState<LobbyParticipant[]>([]);
   const [isWaiting, setIsWaiting] = useState(false);
   const [waitingPosition, setWaitingPosition] = useState<number | null>(null);
@@ -43,6 +44,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
 
         if (user) {
           setUserId(user.id);
+          setUserEmail(user.email);
           setIsCreator(user.id === lobby.creator_id);
 
           // Fetch full lobby details including waiting list
@@ -139,14 +141,25 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       }
 
       // Use the centralized joinLobby function
-      const userEmail = user?.email || "";
-      const result = await joinLobby(lobby.id, userId, userEmail);
+      const email = userEmail || "";
+      const result = await joinLobby(lobby.id, userId, email);
 
+      // Success - refresh or redirect
       if (result.isFull) {
         alert(
           "Congratulations! The lobby is now full and a booking has been created."
         );
       }
+
+      // Update local state to reflect changes immediately
+      setCurrentLobby((prev) => ({
+        ...prev,
+        current_players: result.newCount,
+        status: result.isFull ? "filled" : "open",
+      }));
+
+      // Set the user as participant in local state
+      setIsParticipant(true);
 
       // Refresh the page to show updated data
       router.refresh();
