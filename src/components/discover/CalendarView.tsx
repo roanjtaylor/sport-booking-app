@@ -84,7 +84,6 @@ export default function CalendarView() {
         `
         )
         .eq("date", selectedDate)
-        .eq("status", "open")
         .gte("start_time", selectedTime)
         .order("start_time", { ascending: true });
 

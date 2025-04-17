@@ -58,7 +58,6 @@ export default async function FacilityDetailPage({
     .from("lobbies")
     .select("*")
     .eq("facility_id", id)
-    .eq("status", "open")
     .order("created_at", { ascending: true });
 
   if (lobbiesError) {

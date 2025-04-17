@@ -101,7 +101,6 @@ export default function BookingFormWrapper({
         `
         )
         .eq("facility_id", facility.id)
-        .eq("status", "open")
         .order("date", { ascending: true });
 
       if (error) throw error;

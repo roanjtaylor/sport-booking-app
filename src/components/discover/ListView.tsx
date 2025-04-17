@@ -63,7 +63,6 @@ export default function ListView() {
         const { data: lobbiesData, error: lobbiesError } = await supabase
           .from("lobbies")
           .select(`*, facility:facility_id(*)`)
-          .eq("status", "open")
           .order("date", { ascending: true });
 
         if (lobbiesError) throw lobbiesError;

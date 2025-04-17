@@ -16,7 +16,6 @@ export async function getOpenLobbiesByFacility(facilityId: string) {
     `
     )
     .eq("facility_id", facilityId)
-    .eq("status", "open")
     .order("date", { ascending: true });
 
   if (error) throw error;

@@ -23,7 +23,6 @@ export default async function LobbiesPage() {
     facility:facility_id(*)
   `
     )
-    .eq("status", "open")
     .order("date", { ascending: true });
 
   if (error) {

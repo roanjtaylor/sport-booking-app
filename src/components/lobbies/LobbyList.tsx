@@ -38,6 +38,18 @@ export function LobbyList({
     );
   }
 
+  // Handle snake_case field names from the database
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "open":
+        return "bg-yellow-100 text-yellow-800";
+      case "filled":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   return (
     <div
       className={
@@ -95,6 +107,16 @@ export function LobbyList({
                           +{lobby.waiting_count} waiting
                         </span>
                       )}
+
+                      {/* Show status badge for lobby */}
+                      <span
+                        className={`inline-flex items-center mx-2.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(
+                          lobby.status
+                        )}`}
+                      >
+                        {lobby.status.charAt(0).toUpperCase() +
+                          lobby.status.slice(1)}
+                      </span>
                     </div>
                   </div>
 
