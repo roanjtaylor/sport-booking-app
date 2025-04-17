@@ -163,19 +163,32 @@ export default function CalendarView() {
 
   // Calculate date range based on view mode
   const getDateRange = (): { startDate: string; endDate: string } => {
+    // Create new Date objects to avoid mutating the original selectedDate
     const start = new Date(selectedDate);
     const end = new Date(selectedDate);
 
+    // Reset time to midnight local time to avoid timezone issues
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
     if (viewMode === "week") {
-      // For week view, get Sunday to Saturday
       const day = start.getDay();
-      start.setDate(start.getDate() - day); // Go to beginning of week (Sunday)
-      end.setDate(end.getDate() + (6 - day)); // Go to end of week (Saturday)
+      const adjustedDay = day === 0 ? 7 : day;
+      start.setDate(start.getDate() - (adjustedDay - 1));
+      end.setDate(end.getDate() + (7 - adjustedDay));
     }
 
+    // Format dates to YYYY-MM-DD using local timezone
+    const formatToYYYYMMDD = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     return {
-      startDate: start.toISOString().split("T")[0],
-      endDate: end.toISOString().split("T")[0],
+      startDate: formatToYYYYMMDD(start),
+      endDate: formatToYYYYMMDD(end),
     };
   };
 
@@ -327,29 +340,55 @@ export default function CalendarView() {
 
       setFacilities(filteredFacilities);
 
+      // Test query to see what lobbies exist in the system at all
+      const { data: allLobbies, error: allLobbiesError } = await supabase
+        .from("lobbies")
+        .select("id, date, status")
+        .limit(10);
+
+      console.log("All lobbies sample:", allLobbies);
+
       // Fetch lobbies for the date range
-      // Note: Select all possible fields to ensure we get complete data
       const { data: lobbiesData, error: lobbiesError } = await supabase
         .from("lobbies")
         .select("*")
+        .limit(50);
+
+      console.log("All lobbies with all fields:", lobbiesData);
+
+      // Now try the filtered query
+      const { data: dateFilteredLobbies, error: dateFilterError } =
+        await supabase
+          .from("lobbies")
+          .select("*")
+          .gte("date", dateRange.startDate)
+          .lte("dateRange.endDate");
+
+      console.log("Date filtered lobbies:", dateFilteredLobbies);
+
+      // Finally, the full query with all filters
+      const { data: lobbies, error: fullQueryError } = await supabase
+        .from("lobbies")
+        .select("*, facility:facility_id(*)")
         .gte("date", dateRange.startDate)
-        .lte("date", dateRange.endDate)
-        .in("status", ["open", "filled"])
-        .order("date", { ascending: true });
+        .lte("date", dateRange.endDate);
 
-      if (lobbiesError) throw lobbiesError;
+      if (lobbiesError || fullQueryError) {
+        console.error("Lobby query error:", lobbiesError || fullQueryError);
+        throw lobbiesError || fullQueryError;
+      }
 
-      console.log("Lobbies fetched:", lobbiesData?.length || 0);
+      console.log("Lobbies fetched with full query:", lobbies);
 
       // Filter lobbies by sport type if needed
-      const filteredLobbies = sportTypeFilter
-        ? (lobbiesData || []).filter((lobby) =>
-            lobby.facility?.sport_type?.includes(sportTypeFilter)
-          )
-        : lobbiesData || [];
+      const filteredLobbies =
+        lobbies && sportTypeFilter
+          ? lobbies.filter((lobby) =>
+              lobby.facility?.sport_type?.includes(sportTypeFilter)
+            )
+          : lobbies || [];
 
-      // Log the final filtered lobbies
-      console.log("Filtered lobbies:", filteredLobbies.length);
+      console.log("Final filtered lobbies:", filteredLobbies);
 
       setLobbies(filteredLobbies);
     } catch (err) {
