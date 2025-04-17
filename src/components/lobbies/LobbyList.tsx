@@ -1,12 +1,13 @@
 // src/components/lobbies/LobbyList.tsx
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formatDate, formatTime } from "@/lib/utils";
 import { Lobby } from "@/types/lobby";
+import { supabase } from "@/lib/supabase";
 
 type LobbyListProps = {
   lobbies: Lobby[];
@@ -24,19 +25,65 @@ export function LobbyList({
   isLoading = false,
   gridLayout = false,
 }: LobbyListProps) {
-  // If no lobbies are found, display a message
-  if (!lobbies || lobbies.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          No open lobbies found
-        </h3>
-        <p className="text-gray-500 mb-6">
-          Be the first to create a lobby for a facility!
-        </p>
-      </div>
-    );
-  }
+  const [userParticipations, setUserParticipations] = useState<{
+    [lobbyId: string]: boolean;
+  }>({});
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isCheckingParticipation, setIsCheckingParticipation] = useState(true);
+  const [processedLobbies, setProcessedLobbies] = useState<Lobby[]>([]);
+
+  // Check if current user is a participant in any lobbies
+  useEffect(() => {
+    const checkUserParticipation = async () => {
+      try {
+        setIsCheckingParticipation(true);
+
+        // Get current user
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          setIsCheckingParticipation(false);
+          setProcessedLobbies(lobbies);
+          return;
+        }
+
+        setUserId(user.id);
+
+        // Get all lobbies the user is part of
+        const { data: participations } = await supabase
+          .from("lobby_participants")
+          .select("lobby_id")
+          .eq("user_id", user.id);
+
+        // Create map of lobby IDs to participation status
+        const participationMap: { [lobbyId: string]: boolean } = {};
+
+        if (participations) {
+          participations.forEach((p) => {
+            participationMap[p.lobby_id] = true;
+          });
+        }
+
+        setUserParticipations(participationMap);
+        setProcessedLobbies(lobbies);
+      } catch (err) {
+        console.error("Error checking user participation:", err);
+        // Still show lobbies even if there's an error checking participation
+        setProcessedLobbies(lobbies);
+      } finally {
+        setIsCheckingParticipation(false);
+      }
+    };
+
+    checkUserParticipation();
+  }, [lobbies]);
+
+  // Function to check if user is in this lobby
+  const isUserInLobby = (lobbyId: string) => {
+    return userParticipations[lobbyId] || false;
+  };
 
   // Handle snake_case field names from the database
   const getStatusBadgeClass = (status: string) => {
@@ -52,18 +99,63 @@ export function LobbyList({
     }
   };
 
+  // Show a loading state while checking participation
+  if (isCheckingParticipation) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Card key={index} className="animate-pulse">
+            <div
+              className={
+                gridLayout
+                  ? "flex flex-col h-full"
+                  : "flex flex-col md:flex-row"
+              }
+            >
+              <div
+                className={`bg-gray-200 h-48 relative ${
+                  gridLayout ? "w-full" : "md:w-1/3"
+                }`}
+              ></div>
+              <div className={`p-4 ${gridLayout ? "flex-grow" : "md:w-2/3"}`}>
+                <div className="h-6 bg-gray-200 rounded mb-3 w-1/4"></div>
+                <div className="h-4 bg-gray-200 rounded mb-2 w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded mb-2 w-1/2"></div>
+                <div className="h-10 bg-gray-200 rounded w-full mt-4"></div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // If no lobbies are found, display a message
+  if (!processedLobbies || processedLobbies.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          No open lobbies found
+        </h3>
+        <p className="text-gray-500 mb-6">
+          Be the first to create a lobby for a facility!
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       className={
         gridLayout ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"
       }
     >
-      {lobbies.map((lobby) => (
+      {processedLobbies.map((lobby) => (
         <Card
           key={lobby.id}
           className={`overflow-hidden ${
             gridLayout ? "h-full flex flex-col" : ""
-          }`}
+          } ${isUserInLobby(lobby.id) ? "ring-2 ring-green-500" : ""}`}
         >
           {/* Card contents */}
           <div
@@ -98,27 +190,34 @@ export function LobbyList({
                     <h3 className="text-lg font-medium text-gray-900 mr-3">
                       {formatDate(lobby.date)}
                     </h3>
-                    <div className="flex items-center">
+                    <div className="flex flex-wrap items-center gap-1">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {lobby.current_players}/{lobby.min_players} Players
                       </span>
 
                       {/* Show waiting list count if any */}
                       {lobby.waiting_count > 0 && (
-                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                           +{lobby.waiting_count} waiting
                         </span>
                       )}
 
                       {/* Show status badge for lobby */}
                       <span
-                        className={`inline-flex items-center mx-2.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(
                           lobby.status
                         )}`}
                       >
                         {lobby.status.charAt(0).toUpperCase() +
                           lobby.status.slice(1)}
                       </span>
+
+                      {/* Show enrolled badge if user is in this lobby */}
+                      {isUserInLobby(lobby.id) && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          ✓
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -154,7 +253,8 @@ export function LobbyList({
                 <div
                   className={`flex space-x-2 ${gridLayout ? "mt-auto" : ""}`}
                 >
-                  {onJoinLobby && (
+                  {/* Show Join button only if not already in the lobby */}
+                  {onJoinLobby && !isUserInLobby(lobby.id) && (
                     <Button
                       onClick={() => onJoinLobby(lobby.id)}
                       disabled={isLoading}
@@ -168,7 +268,9 @@ export function LobbyList({
 
                   <Link href={`/lobbies/${lobby.id}`} className="flex-grow">
                     <Button variant="outline" fullWidth size="sm">
-                      View Details
+                      {isUserInLobby(lobby.id)
+                        ? "View Your Lobby"
+                        : "View Details"}
                     </Button>
                   </Link>
                 </div>
