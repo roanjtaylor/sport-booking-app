@@ -22,11 +22,6 @@ export default function ListView() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get unique sport types from facilities
-  const sportTypes = Array.from(
-    new Set(facilities.flatMap((f) => f.sportType || []))
-  );
-
   useEffect(() => {
     async function fetchData() {
       try {
@@ -58,6 +53,7 @@ export default function ListView() {
           currency: facility.currency,
           sportType: facility.sport_type,
           amenities: facility.amenities || [],
+          min_players: facility.min_players,
         }));
 
         setFacilities(formattedFacilities);
@@ -85,25 +81,42 @@ export default function ListView() {
     fetchData();
   }, []);
 
+  // Get unique sport types from facilities
+  const sportTypes = Array.from(
+    new Set(facilities.flatMap((f) => f.sportType || []))
+  );
+
   const handleFacilityFilter = (filters: {
     search: string;
     sportType: string;
+    priceSort: string;
   }) => {
     let filtered = [...facilities];
 
+    // Apply search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(
         (facility) =>
           facility.name.toLowerCase().includes(searchLower) ||
-          facility.address.toLowerCase().includes(searchLower)
+          facility.description.toLowerCase().includes(searchLower) ||
+          facility.address.toLowerCase().includes(searchLower) ||
+          facility.city.toLowerCase().includes(searchLower)
       );
     }
 
+    // Apply sport type filter
     if (filters.sportType) {
       filtered = filtered.filter((facility) =>
         facility.sportType.includes(filters.sportType)
       );
+    }
+
+    // Apply price sorting
+    if (filters.priceSort === "low") {
+      filtered.sort((a, b) => a.price_per_hour - b.price_per_hour);
+    } else if (filters.priceSort === "high") {
+      filtered.sort((a, b) => b.price_per_hour - a.price_per_hour);
     }
 
     setFilteredFacilities(filtered);
@@ -116,6 +129,7 @@ export default function ListView() {
   }) => {
     let filtered = [...lobbies];
 
+    // Apply search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(
@@ -126,12 +140,14 @@ export default function ListView() {
       );
     }
 
+    // Apply sport type filter
     if (filters.sportType) {
       filtered = filtered.filter((lobby) =>
         lobby.facility?.sport_type?.includes(filters.sportType)
       );
     }
 
+    // Apply date range filter
     if (filters.dateRange) {
       const today = new Date().toISOString().split("T")[0];
       const tomorrow = new Date();
@@ -194,7 +210,10 @@ export default function ListView() {
               }
             />
           </div>
-          <FacilitiesClient initialFacilities={filteredFacilities} />
+          <FacilitiesClient
+            initialFacilities={filteredFacilities}
+            isFiltered={true}
+          />
         </>
       ) : (
         <>
@@ -207,7 +226,7 @@ export default function ListView() {
               }
             />
           </div>
-          <LobbyList lobbies={filteredLobbies} />
+          <LobbyList lobbies={filteredLobbies} gridLayout={true} />
         </>
       )}
     </div>
