@@ -101,7 +101,8 @@ export async function joinLobby(
     }
 
     // Check if the lobby is already full
-    const isFull = lobby.current_players >= lobby.min_players;
+    const isFull =
+      lobby.current_players >= lobby.min_players || lobby.status === "filled";
 
     // Add the user as a participant - with waiting status if lobby is full
     const { data: newParticipant, error: participantError } = await supabase

@@ -2,13 +2,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
-import { LobbyList } from "@/components/lobbies/LobbyList";
 import { Card } from "@/components/ui/Card";
+import LobbiesClient from "./LobbiesClient"; // Import new client component
 
-/**
- * Server component for the lobbies page
- * Lists all open lobbies available for joining
- */
 export const dynamic = "force-dynamic";
 
 export default async function LobbiesPage() {
@@ -46,7 +42,7 @@ export default async function LobbiesPage() {
 
       {/* Display lobbies if any exist */}
       {lobbies && lobbies.length > 0 ? (
-        <LobbyList lobbies={lobbies} />
+        <LobbiesClient initialLobbies={lobbies} />
       ) : (
         <Card className="p-6 text-center">
           <h3 className="text-lg font-medium mb-2">No open lobbies found</h3>

@@ -10,6 +10,8 @@ import { FacilityFilters } from "@/components/facilities/FacilityFilters";
 import { Card } from "@/components/ui/Card";
 import type { Facility } from "@/types/facility";
 import type { Lobby } from "@/types/lobby";
+import { useRouter } from "next/navigation";
+import { joinLobby } from "@/lib/lobbies";
 
 export default function ListView() {
   const [viewMode, setViewMode] = useState<"facilities" | "lobbies">(
@@ -21,6 +23,9 @@ export default function ListView() {
   const [filteredLobbies, setFilteredLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isJoiningLobby, setIsJoiningLobby] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchData() {
@@ -196,6 +201,52 @@ export default function ListView() {
     );
   }
 
+  const handleJoinLobby = async (lobbyId: string) => {
+    try {
+      setIsJoiningLobby(true);
+      setJoinError(null);
+
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push(`/auth/login?redirect=/discover`);
+        return;
+      }
+
+      // Use the centralized joinLobby function
+      const result = await joinLobby(lobbyId, user.id, user.email || "");
+
+      // Show success message
+      if (result.isWaiting) {
+        alert("You've been added to the waiting list!");
+      } else if (result.isFull) {
+        alert("You've joined the lobby! The lobby is now full.");
+      } else {
+        alert("You've joined the lobby successfully!");
+      }
+
+      // Refresh the lobbies data to show updated status
+      const { data: updatedLobbies } = await supabase
+        .from("lobbies")
+        .select(`*, facility:facility_id(*)`)
+        .order("date", { ascending: true });
+
+      if (updatedLobbies) {
+        setLobbies(updatedLobbies);
+        setFilteredLobbies(updatedLobbies);
+      }
+    } catch (err: any) {
+      console.error("Error joining lobby:", err);
+      setJoinError(err.message || "Failed to join lobby");
+      alert(err.message || "Failed to join lobby");
+    } finally {
+      setIsJoiningLobby(false);
+    }
+  };
+
   return (
     <div>
       {viewMode === "facilities" ? (
@@ -225,7 +276,18 @@ export default function ListView() {
               }
             />
           </div>
-          <LobbyList lobbies={filteredLobbies} gridLayout={true} />
+          {/* Update this LobbyList with the onJoinLobby prop */}
+          {joinError && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
+              {joinError}
+            </div>
+          )}
+          <LobbyList
+            lobbies={filteredLobbies}
+            onJoinLobby={handleJoinLobby}
+            isLoading={isJoiningLobby}
+            gridLayout={true}
+          />
         </>
       )}
     </div>

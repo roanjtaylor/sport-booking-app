@@ -253,14 +253,15 @@ export function LobbyList({
                 <div
                   className={`flex space-x-2 ${gridLayout ? "mt-auto" : ""}`}
                 >
-                  {/* Show Join button only if not already in the lobby */}
+                  {/* Show Join button with appropriate text based on lobby status */}
                   {onJoinLobby && !isUserInLobby(lobby.id) && (
                     <Button
                       onClick={() => onJoinLobby(lobby.id)}
                       disabled={isLoading}
                       size="sm"
                     >
-                      {lobby.current_players >= lobby.min_players
+                      {lobby.status === "filled" ||
+                      lobby.current_players >= lobby.min_players
                         ? "Join Waiting List"
                         : "Join"}
                     </Button>

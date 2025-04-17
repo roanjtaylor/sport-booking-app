@@ -771,14 +771,14 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
           </div>
         </div>
 
-        {/* Waiting list section */}
+        {/* Waiting list section - Always show if there's a waiting list */}
         {waitingList.length > 0 && (
           <div className="mt-8">
             <h4 className="font-medium text-gray-900 mb-3">
               Waiting List ({waitingList.length})
             </h4>
-            <div className="bg-gray-50 rounded-md p-4">
-              <ul className="divide-y divide-gray-200">
+            <div className="bg-yellow-50 rounded-md p-4 border border-yellow-100">
+              <ul className="divide-y divide-yellow-200">
                 {waitingList.map((participant, index) => (
                   <li
                     key={participant.id}
@@ -815,13 +815,17 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
           </Link>
 
           {/* Show Join button only if lobby is open and user is not already a participant or waiting */}
-          {currentLobby.status === "open" && !isParticipant && !isWaiting && (
-            <Button onClick={handleJoinLobby} disabled={isProcessing}>
-              {currentLobby.current_players >= currentLobby.min_players
-                ? "Join Waiting List"
-                : "Join Lobby"}
-            </Button>
-          )}
+          {(currentLobby.status === "open" ||
+            currentLobby.status === "filled") &&
+            !isParticipant &&
+            !isWaiting && (
+              <Button onClick={handleJoinLobby} disabled={isProcessing}>
+                {currentLobby.status === "filled" ||
+                currentLobby.current_players >= currentLobby.min_players
+                  ? "Join Waiting List"
+                  : "Join Lobby"}
+              </Button>
+            )}
 
           {/* Show Leave button for participants who are not the creator */}
           {(isParticipant || isWaiting) && !isCreator && (
