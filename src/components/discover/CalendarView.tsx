@@ -1,52 +1,255 @@
 // src/components/discover/CalendarView.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { formatDate, formatTime, getDayOfWeek } from "@/lib/utils";
+import { formatDate, formatTime, formatPrice, getDayOfWeek } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { Facility } from "@/types/facility";
 import { Lobby } from "@/types/lobby";
-import SearchResultsList from "./SearchResultsList";
+import Link from "next/link";
+import { LobbyList } from "@/components/lobbies/LobbyList";
+import { joinLobby } from "@/lib/lobbies";
+import { useRouter } from "next/navigation";
+
+// Simple Calendar Component
+function SimpleCalendar({ value, onChange, minDate = new Date(), maxDate }) {
+  // Get current month and year
+  const [currentMonth, setCurrentMonth] = useState(value.getMonth());
+  const [currentYear, setCurrentYear] = useState(value.getFullYear());
+
+  // Navigate to previous month
+  const prevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  // Navigate to next month
+  const nextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  // Get days in month
+  const getDaysInMonth = (month, year) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  // Get first day of month
+  const getFirstDayOfMonth = (month, year) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  // Generate calendar cells
+  const generateCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+    const days = [];
+
+    // Add empty cells for days before first day of month
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-10 w-10"></div>);
+    }
+
+    // Add actual days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentYear, currentMonth, day);
+      const isSelected = date.toDateString() === value.toDateString();
+      const isToday = date.toDateString() === new Date().toDateString();
+      const isDisabled = date < minDate || date > maxDate;
+
+      days.push(
+        <button
+          key={day}
+          onClick={() => !isDisabled && onChange(date)}
+          disabled={isDisabled}
+          className={`h-10 w-10 rounded-full flex items-center justify-center text-sm 
+            ${isSelected ? "bg-primary-600 text-white" : ""} 
+            ${isToday && !isSelected ? "border border-primary-600" : ""}
+            ${
+              isDisabled
+                ? "text-gray-300 cursor-not-allowed"
+                : "hover:bg-gray-100"
+            }`}
+        >
+          {day}
+        </button>
+      );
+    }
+
+    return days;
+  };
+
+  // Month names for header
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  return (
+    <div className="border border-gray-200 rounded-md p-4">
+      {/* Calendar header with month/year and navigation */}
+      <div className="flex justify-between items-center mb-4">
+        <button
+          onClick={prevMonth}
+          className="p-2 rounded-full hover:bg-gray-100"
+          aria-label="Previous month"
+        >
+          &larr;
+        </button>
+        <span className="font-medium">
+          {monthNames[currentMonth]} {currentYear}
+        </span>
+        <button
+          onClick={nextMonth}
+          className="p-2 rounded-full hover:bg-gray-100"
+          aria-label="Next month"
+        >
+          &rarr;
+        </button>
+      </div>
+
+      {/* Day labels (S M T W T F S) */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+          <div
+            key={index}
+            className="h-10 w-10 flex items-center justify-center text-sm font-medium text-gray-500"
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar days */}
+      <div className="grid grid-cols-7 gap-1">{generateCalendar()}</div>
+    </div>
+  );
+}
 
 export default function CalendarView() {
-  // State for search parameters and results
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const router = useRouter();
+
+  // State for calendar and results
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"day" | "week">("day");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isJoiningLobby, setIsJoiningLobby] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
+  const [sportTypeFilter, setSportTypeFilter] = useState<string>("");
+  const [availableSportTypes, setAvailableSportTypes] = useState<string[]>([]);
+  const [existingBookings, setExistingBookings] = useState<any[]>([]);
 
-  // Format today's date for min date attribute
-  const today = new Date().toISOString().split("T")[0];
+  // Calculate date range based on view mode
+  const getDateRange = (): { startDate: string; endDate: string } => {
+    const start = new Date(selectedDate);
+    const end = new Date(selectedDate);
 
-  // Calculate max date (30 days from now) for date picker
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 30);
-  const maxDateString = maxDate.toISOString().split("T")[0];
-
-  // Handle search button click
-  const handleSearch = async () => {
-    if (!selectedDate || !selectedTime) {
-      return;
+    if (viewMode === "week") {
+      // For week view, get Sunday to Saturday
+      const day = start.getDay();
+      start.setDate(start.getDate() - day); // Go to beginning of week (Sunday)
+      end.setDate(end.getDate() + (6 - day)); // Go to end of week (Saturday)
     }
 
-    setIsSearching(true);
-    setError(null);
+    return {
+      startDate: start.toISOString().split("T")[0],
+      endDate: end.toISOString().split("T")[0],
+    };
+  };
 
+  // Fetch data when date, view mode, or filter changes
+  useEffect(() => {
+    fetchAvailability();
+  }, [selectedDate, viewMode, sportTypeFilter]);
+
+  // Fetch bookings to check facility availability
+  const fetchBookings = async (dateRange: {
+    startDate: string;
+    endDate: string;
+  }) => {
     try {
-      // 1. Search for available facilities at the selected date/time
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .gte("date", dateRange.startDate)
+        .lte("date", dateRange.endDate)
+        .in("status", ["confirmed", "pending"]);
+
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error("Error fetching bookings:", err);
+      return [];
+    }
+  };
+
+  // Check if a facility is available on a given date
+  const isFacilityAvailable = (
+    facility: Facility,
+    date: string,
+    bookings: any[]
+  ) => {
+    // Get the day of week
+    const dayOfWeek = getDayOfWeek(date);
+
+    // Check if facility is open this day
+    if (!facility.operatingHours[dayOfWeek]) {
+      return false;
+    }
+
+    // Get facility bookings for this date
+    const facilityBookings = bookings.filter(
+      (booking) => booking.facility_id === facility.id && booking.date === date
+    );
+
+    // For simplicity, we'll consider a facility available if it has operating hours for the day
+    // You could enhance this to check for specific time slot availability if needed
+    return true;
+  };
+
+  // Fetch available facilities and lobbies
+  const fetchAvailability = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const dateRange = getDateRange();
+      console.log("Fetching for date range:", dateRange);
+
+      // Fetch bookings to check availability
+      const bookings = await fetchBookings(dateRange);
+      setExistingBookings(bookings);
+
+      // Fetch all facilities
       const { data: facilitiesData, error: facilitiesError } = await supabase
         .from("facilities")
         .select("*");
 
       if (facilitiesError) throw facilitiesError;
 
-      // 2. Format facility data
+      // Format facility data
       const formattedFacilities = (facilitiesData || []).map((facility) => ({
         id: facility.id,
         name: facility.name,
@@ -66,153 +269,372 @@ export default function CalendarView() {
         min_players: facility.min_players,
       }));
 
-      // 3. Filter facilities based on operating hours and existing bookings
-      const filteredFacilities = await filterAvailableFacilities(
-        formattedFacilities,
-        selectedDate,
-        selectedTime
+      // Extract sport types for filter
+      const sportTypes = Array.from(
+        new Set(formattedFacilities.flatMap((f) => f.sportType))
       );
+      setAvailableSportTypes(sportTypes);
+
+      // Filter facilities based on availability and sports type
+      let filteredFacilities: Facility[] = [];
+
+      if (viewMode === "day") {
+        // For day view, check just the selected date
+        filteredFacilities = formattedFacilities.filter((facility) => {
+          // Apply sport type filter
+          if (
+            sportTypeFilter &&
+            !facility.sportType.includes(sportTypeFilter)
+          ) {
+            return false;
+          }
+
+          // Check availability
+          return isFacilityAvailable(facility, dateRange.startDate, bookings);
+        });
+      } else {
+        // For week view, include facilities available on any day in the range
+        const weekFacilities = new Map<string, Facility>();
+
+        // Check each day in the date range
+        let currentDate = new Date(dateRange.startDate);
+        const endDateObj = new Date(dateRange.endDate);
+
+        while (currentDate <= endDateObj) {
+          const dateString = currentDate.toISOString().split("T")[0];
+
+          formattedFacilities.forEach((facility) => {
+            // Apply sport type filter
+            if (
+              sportTypeFilter &&
+              !facility.sportType.includes(sportTypeFilter)
+            ) {
+              return;
+            }
+
+            // Check availability for this date
+            if (isFacilityAvailable(facility, dateString, bookings)) {
+              weekFacilities.set(facility.id, facility);
+            }
+          });
+
+          // Move to next day
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        filteredFacilities = Array.from(weekFacilities.values());
+      }
+
       setFacilities(filteredFacilities);
 
-      // 4. Search for available lobbies
+      // Fetch lobbies for the date range
+      // Note: Select all possible fields to ensure we get complete data
       const { data: lobbiesData, error: lobbiesError } = await supabase
         .from("lobbies")
-        .select(
-          `
-          *,
-          facility:facility_id(*)
-        `
-        )
-        .eq("date", selectedDate)
-        .gte("start_time", selectedTime)
-        .order("start_time", { ascending: true });
+        .select("*")
+        .gte("date", dateRange.startDate)
+        .lte("date", dateRange.endDate)
+        .in("status", ["open", "filled"])
+        .order("date", { ascending: true });
 
       if (lobbiesError) throw lobbiesError;
 
-      setLobbies(lobbiesData || []);
-      setHasSearched(true);
+      console.log("Lobbies fetched:", lobbiesData?.length || 0);
+
+      // Filter lobbies by sport type if needed
+      const filteredLobbies = sportTypeFilter
+        ? (lobbiesData || []).filter((lobby) =>
+            lobby.facility?.sport_type?.includes(sportTypeFilter)
+          )
+        : lobbiesData || [];
+
+      // Log the final filtered lobbies
+      console.log("Filtered lobbies:", filteredLobbies.length);
+
+      setLobbies(filteredLobbies);
     } catch (err) {
-      console.error("Error searching for availability:", err);
-      setError("Failed to load availability data. Please try again.");
+      console.error("Error fetching availability:", err);
+      setError("Failed to load availability data");
     } finally {
-      setIsSearching(false);
+      setIsLoading(false);
     }
   };
 
-  // Helper function to filter facilities based on availability
-  const filterAvailableFacilities = async (
-    facilities: Facility[],
-    date: string,
-    time: string
-  ) => {
-    // Get day of week from selected date using the utility function
-    const dayOfWeek = getDayOfWeek(date);
-
-    // Filter facilities that are open on the selected day and time
-    const availableFacilities = facilities.filter((facility) => {
-      const dayHours = facility.operatingHours[dayOfWeek];
-      if (!dayHours) return false; // Facility is closed on this day
-
-      // Check if selected time is within operating hours
-      return time >= dayHours.open && time < dayHours.close;
-    });
-
-    // For each available facility, check existing bookings
-    const result = await Promise.all(
-      availableFacilities.map(async (facility) => {
-        const { data: bookings } = await supabase
-          .from("bookings")
-          .select("*")
-          .eq("facility_id", facility.id)
-          .eq("date", date)
-          .in("status", ["confirmed", "pending"])
-          .returns();
-
-        // Check if facility is already booked at the selected time
-        const isBooked = (bookings || []).some((booking) => {
-          return time >= booking.start_time && time < booking.end_time;
-        });
-
-        return isBooked ? null : facility;
-      })
-    );
-
-    // Filter out null values (booked facilities)
-    return result.filter(Boolean) as Facility[];
+  // Handle date selection from calendar
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
   };
+
+  // Navigate to previous day/week
+  const handlePrevious = () => {
+    const newDate = new Date(selectedDate);
+    if (viewMode === "day") {
+      newDate.setDate(newDate.getDate() - 1);
+    } else {
+      newDate.setDate(newDate.getDate() - 7);
+    }
+    setSelectedDate(newDate);
+  };
+
+  // Navigate to next day/week
+  const handleNext = () => {
+    const newDate = new Date(selectedDate);
+    if (viewMode === "day") {
+      newDate.setDate(newDate.getDate() + 1);
+    } else {
+      newDate.setDate(newDate.getDate() + 7);
+    }
+    setSelectedDate(newDate);
+  };
+
+  // Join a lobby using the existing function
+  const handleJoinLobby = async (lobbyId: string) => {
+    try {
+      setIsJoiningLobby(true);
+      setError(null);
+
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push(`/auth/login?redirect=/discover`);
+        return;
+      }
+
+      // Use existing join function
+      const result = await joinLobby(lobbyId, user.id, user.email || "");
+
+      // Show success message
+      if (result.isWaiting) {
+        alert("You've been added to the waiting list!");
+      } else if (result.isFull) {
+        alert("You've joined the lobby! The lobby is now full.");
+      } else {
+        alert("You've joined the lobby successfully!");
+      }
+
+      // Redirect to lobby details
+      router.push(`/lobbies/${lobbyId}`);
+    } catch (err: any) {
+      console.error("Error joining lobby:", err);
+      setError(err.message || "Failed to join lobby");
+    } finally {
+      setIsJoiningLobby(false);
+    }
+  };
+
+  // Format date range for display
+  const formatDateRange = () => {
+    const { startDate, endDate } = getDateRange();
+    if (viewMode === "day") {
+      return formatDate(startDate);
+    } else {
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    }
+  };
+
+  // Get today's date
+  const today = new Date();
+
+  // Calculate max date (30 days from now)
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 30);
 
   return (
     <div>
       <Card className="p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Find Available Options</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="md:col-span-1">
-            <label
-              htmlFor="date"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Date
-            </label>
-            <Input
-              id="date"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              min={today}
-              max={maxDateString}
-            />
-          </div>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold mb-4 md:mb-0">Calendar View</h2>
 
-          <div className="md:col-span-1">
-            <label
-              htmlFor="time"
-              className="block text-sm font-medium text-gray-700 mb-1"
+          {/* Day/Week Toggle */}
+          <div className="inline-flex rounded-md shadow-sm" role="group">
+            <button
+              type="button"
+              onClick={() => setViewMode("day")}
+              className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
+                viewMode === "day"
+                  ? "bg-primary-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+              }`}
             >
-              Preferred Time
-            </label>
-            <Input
-              id="time"
-              type="time"
-              value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
-            />
-          </div>
-
-          <div className="md:col-span-1 flex items-end">
-            <Button
-              onClick={handleSearch}
-              disabled={!selectedDate || !selectedTime || isSearching}
-              fullWidth
+              Day
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("week")}
+              className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
+                viewMode === "week"
+                  ? "bg-primary-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+              }`}
             >
-              {isSearching ? "Searching..." : "Search"}
-            </Button>
+              Week
+            </button>
           </div>
         </div>
 
-        {selectedDate && selectedTime && (
-          <div className="mt-4 bg-gray-50 p-4 rounded-md">
-            <p className="text-sm text-gray-700">
-              Searching for available bookings on{" "}
-              <span className="font-medium">{formatDate(selectedDate)}</span> at{" "}
-              <span className="font-medium">{formatTime(selectedTime)}</span>
-            </p>
-          </div>
-        )}
+        {/* Navigation Controls */}
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="outline" onClick={handlePrevious}>
+            &larr; Previous {viewMode === "day" ? "Day" : "Week"}
+          </Button>
+          <h3 className="text-lg font-medium">{formatDateRange()}</h3>
+          <Button variant="outline" onClick={handleNext}>
+            Next {viewMode === "day" ? "Day" : "Week"} &rarr;
+          </Button>
+        </div>
+
+        {/* Calendar Component */}
+        <div className="mb-6">
+          <SimpleCalendar
+            value={selectedDate}
+            onChange={handleDateChange}
+            minDate={today}
+            maxDate={maxDate}
+          />
+        </div>
+
+        {/* Sport Type Filter */}
+        <div className="mb-4">
+          <select
+            className="p-2 border border-gray-300 rounded-md bg-white w-full sm:w-48"
+            value={sportTypeFilter}
+            onChange={(e) => setSportTypeFilter(e.target.value)}
+          >
+            <option value="">All Sports</option>
+            {availableSportTypes.map((type) => (
+              <option key={type} value={type}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </option>
+            ))}
+          </select>
+        </div>
       </Card>
 
-      {error && (
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading availability...</p>
+          </div>
+        </div>
+      ) : error ? (
         <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
           {error}
         </div>
-      )}
+      ) : (
+        <div className="space-y-8">
+          {/* Available Facilities Section */}
+          {facilities.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">
+                Available Facilities
+              </h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {facilities.map((facility) => (
+                  <Card
+                    key={facility.id}
+                    className="h-full flex flex-col transition-shadow hover:shadow-lg"
+                  >
+                    {/* Facility image */}
+                    <div className="bg-gray-200 h-48 relative">
+                      {facility.imageUrl ? (
+                        <img
+                          src={facility.imageUrl}
+                          alt={facility.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          No image available
+                        </div>
+                      )}
+                    </div>
 
-      {hasSearched && (
-        <SearchResultsList
-          facilities={facilities}
-          lobbies={lobbies}
-          selectedDate={selectedDate}
-          selectedTime={selectedTime}
-        />
+                    <div className="p-4 flex-grow flex flex-col">
+                      <h3 className="text-lg font-semibold mb-1">
+                        {facility.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-2">
+                        {facility.address}
+                      </p>
+
+                      {/* Sport types */}
+                      <div className="mb-3 flex flex-wrap gap-1">
+                        {facility.sportType.map((sport) => (
+                          <span
+                            key={sport}
+                            className="inline-block bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded"
+                          >
+                            {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-gray-700 text-sm mb-4 line-clamp-2">
+                        {facility.description}
+                      </p>
+
+                      {/* Price and booking button */}
+                      <div className="mt-auto flex justify-between items-center">
+                        <span className="font-medium text-primary-600">
+                          {formatPrice(
+                            facility.price_per_hour,
+                            facility.currency
+                          )}
+                          /hour
+                        </span>
+                        <Link
+                          href={`/facilities/${facility.id}?date=${
+                            getDateRange().startDate
+                          }&time=${
+                            facility.operatingHours[
+                              getDayOfWeek(getDateRange().startDate)
+                            ]?.open || "09:00"
+                          }`}
+                        >
+                          <Button variant="primary" size="sm">
+                            Book Now
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Available Lobbies Section */}
+          {lobbies.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Open Lobbies</h2>
+              <LobbyList
+                lobbies={lobbies}
+                onJoinLobby={handleJoinLobby}
+                isLoading={isJoiningLobby}
+                gridLayout={true}
+              />
+            </div>
+          )}
+
+          {/* Empty state */}
+          {facilities.length === 0 && lobbies.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                No facilities or lobbies available for the selected{" "}
+                {viewMode === "day" ? "day" : "week"}.
+              </p>
+              <p className="text-gray-500 mt-2">
+                Try selecting a different date or view mode.
+              </p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
