@@ -130,7 +130,7 @@ export default function FacilityBookingsPage() {
     newStatus: "pending" | "confirmed" | "cancelled"
   ) => {
     try {
-      // Get the booking with the related lobby
+      // Get the booking with the related lobby and facility data
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
         .select("*, facility:facility_id(*)")
@@ -143,6 +143,16 @@ export default function FacilityBookingsPage() {
       }
 
       if (!booking) throw new Error("Booking not found");
+
+      console.log(
+        "Processing booking:",
+        booking.id,
+        "Current status:",
+        booking.status,
+        "New status:",
+        newStatus
+      );
+      console.log("Lobby ID:", booking.lobby_id || "Not a lobby booking");
 
       // Update booking status
       const { error: updateError } = await supabase
@@ -163,20 +173,41 @@ export default function FacilityBookingsPage() {
       if (booking.lobby_id && newStatus === "confirmed") {
         console.log("Updating lobby status for lobby ID:", booking.lobby_id);
 
-        // Use a more direct approach for the update
-        const { error: lobbyUpdateError } = await supabase
+        // First verify the lobby exists and get its current status
+        const { data: lobby, error: getLobbyError } = await supabase
           .from("lobbies")
-          .update({
-            // Make sure status is lowercase to match your schema constraint
-            status: "filled",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", booking.lobby_id);
+          .select("status, facility_id")
+          .eq("id", booking.lobby_id)
+          .single();
 
-        if (lobbyUpdateError) {
-          console.error("Error updating lobby status:", lobbyUpdateError);
-          // Continue execution - don't throw here to allow booking update to succeed
-          // even if lobby update fails
+        if (getLobbyError) {
+          console.error("Error fetching lobby:", getLobbyError);
+        } else {
+          console.log("Current lobby status:", lobby?.status);
+          console.log("Lobby facility ID:", lobby?.facility_id);
+
+          // Only update if the lobby exists and isn't already in final state
+          if (
+            lobby &&
+            lobby.status !== "cancelled" &&
+            lobby.status !== "expired"
+          ) {
+            const { data: updateData, error: lobbyUpdateError } = await supabase
+              .from("lobbies")
+              .update({
+                status: "filled", // This matches your valid statuses
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", booking.lobby_id)
+              .select();
+
+            if (lobbyUpdateError) {
+              console.error("Error updating lobby status:", lobbyUpdateError);
+              // Don't throw - allow booking update to succeed even if lobby update fails
+            } else {
+              console.log("Lobby update successful:", updateData);
+            }
+          }
         }
       }
 
