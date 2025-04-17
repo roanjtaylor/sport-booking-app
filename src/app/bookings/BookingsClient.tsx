@@ -70,7 +70,8 @@ export default function BookingsClient() {
       const { data: lobbyParticipations, error: lobbyError } = await supabase
         .from("lobby_participants")
         .select("lobby_id")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .eq("is_waiting", false); // Only include active participations
 
       if (lobbyError) throw lobbyError;
 

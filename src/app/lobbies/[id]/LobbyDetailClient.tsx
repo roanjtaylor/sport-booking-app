@@ -215,8 +215,8 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         setWaitingList(updatedWaitingList);
       }
 
-      // If lobby is not yet full or there's a waiting list
-      if (!isFull || currentLobby.current_players < currentLobby.min_players) {
+      // Only set as active participant if NOT on waiting list
+      if (!result.isWaiting) {
         // Set the user as active participant in local state
         setIsParticipant(true);
         setIsWaiting(false);
