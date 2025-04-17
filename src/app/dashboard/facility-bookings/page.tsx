@@ -130,51 +130,65 @@ export default function FacilityBookingsPage() {
     newStatus: "pending" | "confirmed" | "cancelled"
   ) => {
     try {
-      // Get the booking to check if it's a lobby booking
-      const { data: booking } = await supabase
+      // Get the booking with the related lobby
+      const { data: booking, error: bookingError } = await supabase
         .from("bookings")
-        .select("*")
+        .select("*, facility:facility_id(*)")
         .eq("id", bookingId)
         .single();
 
+      if (bookingError) {
+        console.error("Error fetching booking:", bookingError);
+        throw new Error("Booking not found");
+      }
+
       if (!booking) throw new Error("Booking not found");
 
-      // Get current user ID to prove ownership
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Authentication required");
-
-      // Update with explicit facility ownership check
-      const { error } = await supabase
+      // Update booking status
+      const { error: updateError } = await supabase
         .from("bookings")
         .update({
           status: newStatus,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", bookingId)
-        .eq("facility_id", booking.facility_id);
+        .eq("id", bookingId);
 
-      if (error) throw error;
+      if (updateError) {
+        console.error("Error updating booking:", updateError);
+        throw updateError;
+      }
 
       // If this is a lobby booking and status changed to confirmed,
       // update the lobby status as well
       if (booking.lobby_id && newStatus === "confirmed") {
-        await supabase
+        console.log("Updating lobby status for lobby ID:", booking.lobby_id);
+
+        // Use a more direct approach for the update
+        const { error: lobbyUpdateError } = await supabase
           .from("lobbies")
-          .update({ status: "filled" })
+          .update({
+            // Make sure status is lowercase to match your schema constraint
+            status: "filled",
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", booking.lobby_id);
+
+        if (lobbyUpdateError) {
+          console.error("Error updating lobby status:", lobbyUpdateError);
+          // Continue execution - don't throw here to allow booking update to succeed
+          // even if lobby update fails
+        }
       }
 
-      // Rest of your code remains the same
-      const updatedBookings = bookings.map((booking) =>
-        booking.id === bookingId ? { ...booking, status: newStatus } : booking
+      // Update local state
+      const updatedBookings = bookings.map((b) =>
+        b.id === bookingId ? { ...b, status: newStatus } : b
       );
 
       setBookings(updatedBookings);
       setFilteredBookings(
         activeTab === "pending"
-          ? updatedBookings.filter((booking) => booking.status === "pending")
+          ? updatedBookings.filter((b) => b.status === "pending")
           : updatedBookings
       );
 
