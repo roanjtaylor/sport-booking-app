@@ -11,9 +11,9 @@ export default function BookingsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">My Bookings</h1>
+        <h1 className="text-3xl font-bold mb-2">My Bookings & Lobbies</h1>
         <p className="text-gray-600">
-          Manage all your facility bookings in one place
+          Manage all your bookings and active lobbies in one place
         </p>
       </div>
 

@@ -6,7 +6,12 @@ import { Booking } from "./booking";
 /**
  * Status options for a lobby
  */
-export type LobbyStatus = "open" | "filled" | "expired" | "cancelled";
+export type LobbyStatus =
+  | "open"
+  | "filled"
+  | "expired"
+  | "cancelled"
+  | "confirmed";
 
 /**
  * Represents a lobby for a partial booking
