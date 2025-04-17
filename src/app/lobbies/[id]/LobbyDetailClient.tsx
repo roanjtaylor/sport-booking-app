@@ -356,9 +356,10 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
 
         let newCount = lobbyData.current_players - 1;
 
+        // Check if we need to promote someone from waiting list
         if (lobbyData.waiting_count > 0) {
           // Find next waiting person
-          const { data: nextPerson, error: nextPersonError } = await supabase
+          const { data: nextPerson } = await supabase
             .from("lobby_participants")
             .select("*")
             .eq("lobby_id", lobby.id)
@@ -366,34 +367,13 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
             .eq("waiting_position", 1)
             .single();
 
-          if (
-            nextPersonError &&
-            !nextPersonError.message.includes("No rows found")
-          ) {
-            console.error(
-              "Error finding next waiting person:",
-              nextPersonError
-            );
-            throw nextPersonError;
-          }
-
           if (nextPerson) {
-            console.log("Promoting next waiting person:", nextPerson);
-
             // Promote this person
-            const { error: promoteError } = await supabase
+            await supabase
               .from("lobby_participants")
-              .update({
-                is_waiting: false,
-                waiting_position: null,
-              })
+              .update({ is_waiting: false, waiting_position: null })
               .eq("lobby_id", lobby.id)
               .eq("user_id", nextPerson.user_id);
-
-            if (promoteError) {
-              console.error("Error promoting waiting person:", promoteError);
-              throw promoteError;
-            }
 
             // Don't decrement current_players since we're replacing the person
             newCount = lobbyData.current_players;
@@ -404,21 +384,13 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
             });
 
             // Decrease waiting count
-            const { error: waitingUpdateError } = await supabase
+            await supabase
               .from("lobbies")
               .update({
                 waiting_count: Math.max(0, lobbyData.waiting_count - 1),
                 updated_at: new Date().toISOString(),
               })
               .eq("id", lobby.id);
-
-            if (waitingUpdateError) {
-              console.error(
-                "Error updating waiting count:",
-                waitingUpdateError
-              );
-              throw waitingUpdateError;
-            }
           }
         }
 
@@ -779,7 +751,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
             </h4>
             <div className="bg-yellow-50 rounded-md p-4 border border-yellow-100">
               <ul className="divide-y divide-yellow-200">
-                {waitingList.map((participant, index) => (
+                {waitingList.map((participant) => (
                   <li
                     key={participant.id}
                     className="py-2 flex items-center justify-between"
