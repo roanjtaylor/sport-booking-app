@@ -130,80 +130,40 @@ export default function FacilityBookingsPage() {
     newStatus: "pending" | "confirmed" | "cancelled"
   ) => {
     try {
-      // Get the booking with the related lobby and facility data
+      // Get the booking (still need this for UI updates)
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
         .select("*, facility:facility_id(*)")
         .eq("id", bookingId)
         .single();
 
-      if (bookingError) {
-        console.error("Error fetching booking:", bookingError);
-        throw new Error("Booking not found");
-      }
+      if (bookingError) throw bookingError;
 
-      if (!booking) throw new Error("Booking not found");
-
-      console.log(
-        "Processing booking:",
-        booking.id,
-        "Current status:",
-        booking.status,
-        "New status:",
-        newStatus
-      );
-      console.log("Lobby ID:", booking.lobby_id || "Not a lobby booking");
-
-      // Update booking status
-      const { error: updateError } = await supabase
-        .from("bookings")
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", bookingId);
-
-      if (updateError) {
-        console.error("Error updating booking:", updateError);
-        throw updateError;
-      }
-
-      // If this is a lobby booking and status changed to confirmed
+      // Use the custom function if this is a lobby booking being confirmed
       if (booking.lobby_id && newStatus === "confirmed") {
-        // First verify the lobby exists and get its current status
-        const { data: lobby, error: getLobbyError } = await supabase
-          .from("lobbies")
-          .select("status, current_players, min_players, facility_id")
-          .eq("id", booking.lobby_id)
-          .single();
-
-        if (!getLobbyError && lobby) {
-          console.log("Current lobby status:", lobby.status);
-
-          // Only update if the lobby is in a valid state
-          if (lobby.status !== "cancelled" && lobby.status !== "expired") {
-            // Set status explicitly based on player count
-            const newLobbyStatus =
-              lobby.current_players >= lobby.min_players ? "filled" : "open";
-
-            console.log(`Setting lobby status to: ${newLobbyStatus}`);
-
-            const { error: lobbyUpdateError } = await supabase
-              .from("lobbies")
-              .update({
-                status: newLobbyStatus,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", booking.lobby_id);
-
-            if (lobbyUpdateError) {
-              console.error("Error updating lobby status:", lobbyUpdateError);
-            }
+        const { error: rpcError } = await supabase.rpc(
+          "update_booking_status",
+          {
+            booking_id: bookingId,
+            new_status: newStatus,
           }
-        }
+        );
+
+        if (rpcError) throw rpcError;
+      } else {
+        // Standard update for non-lobby bookings or when cancelling
+        const { error: updateError } = await supabase
+          .from("bookings")
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", bookingId);
+
+        if (updateError) throw updateError;
       }
 
-      // Update local state
+      // Update local state (rest of your existing code...)
       const updatedBookings = bookings.map((b) =>
         b.id === bookingId ? { ...b, status: newStatus } : b
       );
