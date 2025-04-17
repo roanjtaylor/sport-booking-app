@@ -54,7 +54,7 @@ export function LobbyList({
         // Get all lobbies the user is part of
         const { data: participations } = await supabase
           .from("lobby_participants")
-          .select("lobby_id")
+          .select("lobby_id, is_waiting")
           .eq("user_id", user.id);
 
         // Create map of lobby IDs to participation status
@@ -62,7 +62,10 @@ export function LobbyList({
 
         if (participations) {
           participations.forEach((p) => {
-            participationMap[p.lobby_id] = true;
+            // Only count as participant if not on waiting list
+            if (!p.is_waiting) {
+              participationMap[p.lobby_id] = true;
+            }
           });
         }
 

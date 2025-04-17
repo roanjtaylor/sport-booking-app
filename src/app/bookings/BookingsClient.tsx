@@ -137,7 +137,8 @@ export default function BookingsClient() {
         await supabase
           .from("lobby_participants")
           .select("lobby_id")
-          .eq("user_id", userId);
+          .eq("user_id", userId)
+          .eq("is_waiting", false); // Only include active participations
 
       if (participationsError) throw participationsError;
 
