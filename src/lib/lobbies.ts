@@ -134,6 +134,15 @@ export async function joinLobby(
     // If the lobby is now full, create a booking
     let bookingId = null;
     if (isFull && lobby.status !== "filled") {
+      // First fetch the facility to get the price_per_hour
+      const { data: facility, error: facilityError } = await supabase
+        .from("facilities")
+        .select("price_per_hour")
+        .eq("id", lobby.facility_id)
+        .single();
+
+      if (facilityError) throw facilityError;
+
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
         .insert({
@@ -143,7 +152,7 @@ export async function joinLobby(
           start_time: lobby.start_time,
           end_time: lobby.end_time,
           status: "pending",
-          total_price: lobby.price_per_hour || 0,
+          total_price: facility.price_per_hour, // Use facility price
           notes: `Group booking from lobby: ${lobbyId}`,
           lobby_id: lobbyId,
           created_at: new Date().toISOString(),

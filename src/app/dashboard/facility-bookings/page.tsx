@@ -168,44 +168,36 @@ export default function FacilityBookingsPage() {
         throw updateError;
       }
 
-      // If this is a lobby booking and status changed to confirmed,
-      // update the lobby status as well
+      // If this is a lobby booking and status changed to confirmed
       if (booking.lobby_id && newStatus === "confirmed") {
-        console.log("Updating lobby status for lobby ID:", booking.lobby_id);
-
         // First verify the lobby exists and get its current status
         const { data: lobby, error: getLobbyError } = await supabase
           .from("lobbies")
-          .select("status, facility_id")
+          .select("status, current_players, min_players, facility_id")
           .eq("id", booking.lobby_id)
           .single();
 
-        if (getLobbyError) {
-          console.error("Error fetching lobby:", getLobbyError);
-        } else {
-          console.log("Current lobby status:", lobby?.status);
-          console.log("Lobby facility ID:", lobby?.facility_id);
+        if (!getLobbyError && lobby) {
+          console.log("Current lobby status:", lobby.status);
 
-          // Only update if the lobby exists and isn't already in final state
-          if (
-            lobby &&
-            lobby.status !== "cancelled" &&
-            lobby.status !== "expired"
-          ) {
-            const { data: updateData, error: lobbyUpdateError } = await supabase
+          // Only update if the lobby is in a valid state
+          if (lobby.status !== "cancelled" && lobby.status !== "expired") {
+            // Set status explicitly based on player count
+            const newLobbyStatus =
+              lobby.current_players >= lobby.min_players ? "filled" : "open";
+
+            console.log(`Setting lobby status to: ${newLobbyStatus}`);
+
+            const { error: lobbyUpdateError } = await supabase
               .from("lobbies")
               .update({
-                status: "filled", // This matches your valid statuses
+                status: newLobbyStatus,
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", booking.lobby_id)
-              .select();
+              .eq("id", booking.lobby_id);
 
             if (lobbyUpdateError) {
               console.error("Error updating lobby status:", lobbyUpdateError);
-              // Don't throw - allow booking update to succeed even if lobby update fails
-            } else {
-              console.log("Lobby update successful:", updateData);
             }
           }
         }
@@ -231,6 +223,8 @@ export default function FacilityBookingsPage() {
     } catch (err) {
       console.error(`Error updating booking status:`, err);
       alert("Failed to update booking status");
+    } finally {
+      setIsLoading(false);
     }
   };
 
