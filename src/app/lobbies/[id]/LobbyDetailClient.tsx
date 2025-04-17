@@ -22,7 +22,6 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
   const router = useRouter();
 
   // State variables
-  const [currentLobby, setCurrentLobby] = useState<Lobby>(lobby);
   const [isCreator, setIsCreator] = useState(false);
   const [isParticipant, setIsParticipant] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +29,28 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [waitingList, setWaitingList] = useState<LobbyParticipant[]>([]);
+
+  // Separate active and waiting participants from initial lobby data
+  const initialActiveParticipants = (lobby.participants || []).filter(
+    (p) => !p.is_waiting
+  );
+  const initialWaitingList = (lobby.participants || []).filter(
+    (p) => p.is_waiting
+  );
+
+  // Sort waiting list by position
+  initialWaitingList.sort(
+    (a, b) => (a.waiting_position || 0) - (b.waiting_position || 0)
+  );
+
+  // Initialize state with correctly separated participants
+  const [currentLobby, setCurrentLobby] = useState<Lobby>({
+    ...lobby,
+    participants: initialActiveParticipants,
+  });
+  const [waitingList, setWaitingList] =
+    useState<LobbyParticipant[]>(initialWaitingList);
+
   const [isWaiting, setIsWaiting] = useState(false);
   const [waitingPosition, setWaitingPosition] = useState<number | null>(null);
 
