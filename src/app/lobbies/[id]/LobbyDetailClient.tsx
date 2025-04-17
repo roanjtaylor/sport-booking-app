@@ -96,12 +96,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       // Get fresh lobby data directly from the database
       const { data: freshLobby, error: lobbyError } = await supabase
         .from("lobbies")
-        .select(
-          `
-          *,
-          facility:facility_id(*)
-        `
-        )
+        .select(`*, facility:facility_id(*)`)
         .eq("id", lobby.id)
         .single();
 
@@ -111,12 +106,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       const { data: participantsData, error: participantsError } =
         await supabase
           .from("lobby_participants")
-          .select(
-            `
-            *,
-            user:user_id(*)
-          `
-          )
+          .select(`*, user:user_id(*)`)
           .eq("lobby_id", lobby.id);
 
       if (participantsError) throw participantsError;
@@ -182,13 +172,6 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       const email = userEmail || "";
       const result = await joinLobby(lobby.id, userId, email);
 
-      // Success - refresh or redirect
-      if (result.isFull) {
-        alert(
-          "Congratulations! The lobby is now full and a booking has been created."
-        );
-      }
-
       // Update local state to reflect changes immediately
       setCurrentLobby((prev) => ({
         ...prev,
@@ -199,19 +182,47 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       // Check if the lobby is now full after joining
       const isFull = result.newCount >= currentLobby.min_players;
 
+      // Update local state based on result
+      if (result.isWaiting) {
+        // Handle waiting list join
+        setIsWaiting(true);
+        setWaitingPosition(result.waitingPosition);
+
+        // Update waiting count in the lobby display
+        setCurrentLobby((prev) => ({
+          ...prev,
+          waiting_count: (prev.waiting_count || 0) + 1,
+        }));
+
+        // Add user to waiting list UI temporarily until refresh
+        const updatedWaitingList = [
+          ...waitingList,
+          {
+            id: "temp-" + Date.now(),
+            user_id: userId,
+            lobby_id: lobby.id,
+            participant_email: email,
+            is_waiting: true,
+            waiting_position: result.waitingPosition,
+            joined_at: new Date().toISOString(),
+          },
+        ];
+
+        // Sort by waiting position
+        updatedWaitingList.sort(
+          (a, b) => (a.waiting_position || 0) - (b.waiting_position || 0)
+        );
+        setWaitingList(updatedWaitingList);
+      }
+
       // If lobby is not yet full or there's a waiting list
       if (!isFull || currentLobby.current_players < currentLobby.min_players) {
         // Set the user as active participant in local state
         setIsParticipant(true);
         setIsWaiting(false);
-      } else {
-        // User joined a full lobby, so they're on the waiting list
-        setIsParticipant(false);
-        setIsWaiting(true);
-        setWaitingPosition(1); // Assuming they're first on the waiting list
       }
 
-      // Refresh the page data without navigation
+      // Refresh the lobby data
       fetchLobbyData(userId);
     } catch (err: any) {
       console.error("Error joining lobby:", err);

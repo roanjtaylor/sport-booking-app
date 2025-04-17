@@ -261,7 +261,7 @@ export function LobbyList({
                       size="sm"
                     >
                       {lobby.current_players >= lobby.min_players
-                        ? "Join Waitlist"
+                        ? "Join Waiting List"
                         : "Join"}
                     </Button>
                   )}
