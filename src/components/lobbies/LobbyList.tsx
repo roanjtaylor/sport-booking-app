@@ -31,6 +31,9 @@ export function LobbyList({
   const [userId, setUserId] = useState<string | null>(null);
   const [isCheckingParticipation, setIsCheckingParticipation] = useState(true);
   const [processedLobbies, setProcessedLobbies] = useState<Lobby[]>([]);
+  const [userWaitingStatuses, setUserWaitingStatuses] = useState<{
+    [lobbyId: string]: number | null;
+  }>({});
 
   // Check if current user is a participant in any lobbies
   useEffect(() => {
@@ -59,17 +62,22 @@ export function LobbyList({
 
         // Create map of lobby IDs to participation status
         const participationMap: { [lobbyId: string]: boolean } = {};
+        const waitingStatusMap: { [lobbyId: string]: number | null } = {};
 
         if (participations) {
           participations.forEach((p) => {
-            // Only count as participant if not on waiting list
-            if (!p.is_waiting) {
+            if (p.is_waiting) {
+              // Track waiting list status
+              waitingStatusMap[p.lobby_id] = p.waiting_position;
+            } else {
+              // Only count as active participant if not on waiting list
               participationMap[p.lobby_id] = true;
             }
           });
         }
 
         setUserParticipations(participationMap);
+        setUserWaitingStatuses(waitingStatusMap);
         setProcessedLobbies(lobbies);
       } catch (err) {
         console.error("Error checking user participation:", err);
@@ -86,6 +94,16 @@ export function LobbyList({
   // Function to check if user is in this lobby
   const isUserInLobby = (lobbyId: string) => {
     return userParticipations[lobbyId] || false;
+  };
+
+  // Check if user is on waiting list for this lobby
+  const isUserWaiting = (lobbyId: string) => {
+    return lobbyId in userWaitingStatuses;
+  };
+
+  // Get waiting position
+  const getUserWaitingPosition = (lobbyId: string) => {
+    return userWaitingStatuses[lobbyId] || null;
   };
 
   // Handle snake_case field names from the database
@@ -256,24 +274,34 @@ export function LobbyList({
                 <div
                   className={`flex space-x-2 ${gridLayout ? "mt-auto" : ""}`}
                 >
-                  {/* Show Join button with appropriate text based on lobby status */}
-                  {onJoinLobby && !isUserInLobby(lobby.id) && (
-                    <Button
-                      onClick={() => onJoinLobby(lobby.id)}
-                      disabled={isLoading}
-                      size="sm"
-                    >
-                      {lobby.status === "filled" ||
-                      lobby.current_players >= lobby.min_players
-                        ? "Join Waiting List"
-                        : "Join"}
-                    </Button>
-                  )}
+                  {/* Show Join button only if:
+      1. onJoinLobby is provided
+      2. User is not already an active participant
+      3. User is not on the waiting list
+      4. Not already in process of joining */}
+                  {onJoinLobby &&
+                    !isUserInLobby(lobby.id) &&
+                    !isUserWaiting(lobby.id) &&
+                    !isLoading && (
+                      <Button
+                        onClick={() => onJoinLobby(lobby.id)}
+                        disabled={isLoading}
+                        size="sm"
+                      >
+                        {lobby.status === "filled" ||
+                        lobby.current_players >= lobby.min_players
+                          ? "Join Waiting List"
+                          : "Join"}
+                      </Button>
+                    )}
 
+                  {/* Show waiting list status if user is on waiting list */}
                   <Link href={`/lobbies/${lobby.id}`} className="flex-grow">
                     <Button variant="outline" fullWidth size="sm">
                       {isUserInLobby(lobby.id)
                         ? "View Your Lobby"
+                        : isUserWaiting(lobby.id)
+                        ? "View Waiting Status"
                         : "View Details"}
                     </Button>
                   </Link>
