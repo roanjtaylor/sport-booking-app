@@ -526,9 +526,9 @@ export default function DashboardPage() {
                 You don't have any pending booking requests
               </p>
               <div className="mt-4">
-                <Link href="/facilities">
+                <Link href="/dashboard/facilities">
                   <Button variant="primary" size="sm">
-                    Manage Your Facilities
+                    Manage Facilities
                   </Button>
                 </Link>
               </div>
@@ -625,9 +625,9 @@ export default function DashboardPage() {
                 You don't have any upcoming bookings
               </p>
               <div className="mt-4">
-                <Link href="/facilities">
+                <Link href="/discover">
                   <Button variant="primary" size="sm">
-                    Browse Facilities
+                    Browse Facilities & Lobbies
                   </Button>
                 </Link>
               </div>
