@@ -211,72 +211,101 @@ export async function joinLobby(
  * Leave a lobby and promote next waiting person if needed
  */
 export async function leaveLobby(lobbyId: string, userId: string) {
-  const { data: participant, error: getError } = await supabase
-    .from("lobby_participants")
-    .select("is_waiting")
-    .eq("lobby_id", lobbyId)
-    .eq("user_id", userId)
-    .single();
+  try {
+    // Get participant's current status and position
+    const { data: participant, error: getError } = await supabase
+      .from("lobby_participants")
+      .select("is_waiting, waiting_position")
+      .eq("lobby_id", lobbyId)
+      .eq("user_id", userId)
+      .single();
 
-  if (getError) throw getError;
+    if (getError) throw getError;
 
-  // Remove the user from participants
-  const { error: deleteError } = await supabase
-    .from("lobby_participants")
-    .delete()
-    .eq("lobby_id", lobbyId)
-    .eq("user_id", userId);
+    // Remove the user from participants
+    const { error: deleteError } = await supabase
+      .from("lobby_participants")
+      .delete()
+      .eq("lobby_id", lobbyId)
+      .eq("user_id", userId);
 
-  if (deleteError) throw deleteError;
+    if (deleteError) throw deleteError;
 
-  // If active participant left and lobby was filled, promote next waiting person
-  if (!participant.is_waiting) {
-    const { data: lobby } = await supabase
+    // Get current lobby information
+    const { data: lobby, error: lobbyError } = await supabase
       .from("lobbies")
       .select("current_players, min_players, status, waiting_count")
       .eq("id", lobbyId)
       .single();
 
-    // Decrement current players
-    let newCount = lobby.current_players - 1;
+    if (lobbyError) throw lobbyError;
 
-    // Check if we need to promote someone from waiting list
-    if (lobby.status === "filled" && lobby.waiting_count > 0) {
-      // Find next waiting person
-      const { data: nextPerson } = await supabase
-        .from("lobby_participants")
-        .select("user_id")
-        .eq("lobby_id", lobbyId)
-        .eq("is_waiting", true)
-        .eq("waiting_position", 1)
-        .single();
+    // If active participant left (not on waiting list)
+    if (!participant.is_waiting) {
+      // Decrement current players
+      let newCount = lobby.current_players - 1;
 
-      if (nextPerson) {
-        // Promote this person
-        await supabase
+      // If there are people on the waiting list, promote the first one
+      if (lobby.waiting_count > 0) {
+        // Find next waiting person with explicit error handling
+        const { data: nextPerson, error: nextPersonError } = await supabase
           .from("lobby_participants")
-          .update({ is_waiting: false, waiting_position: null })
+          .select("*") // Get all fields for better logging
           .eq("lobby_id", lobbyId)
-          .eq("user_id", nextPerson.user_id);
+          .eq("is_waiting", true)
+          .eq("waiting_position", 1)
+          .single();
 
-        // Don't decrement current_players since we're replacing the person
-        newCount = lobby.current_players;
+        if (nextPersonError) {
+          console.error("Error finding next person:", nextPersonError);
+        } else if (nextPerson) {
+          console.log("Promoting participant:", nextPerson);
 
-        // Update waiting positions for everyone else
-        await supabase.rpc("shift_waiting_positions", { lobby_id: lobbyId });
+          // Promote this person
+          const { error: promoteError } = await supabase
+            .from("lobby_participants")
+            .update({ is_waiting: false, waiting_position: null })
+            .eq("id", nextPerson.id);
 
-        // Decrease waiting count
-        await supabase
-          .from("lobbies")
-          .update({
-            waiting_count: Math.max(0, lobby.waiting_count - 1),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", lobbyId);
+          if (promoteError) {
+            console.error(
+              "Failed to promote waiting participant:",
+              promoteError
+            );
+          } else {
+            // Don't decrement current_players since we're replacing the person
+            newCount = lobby.current_players;
+
+            // Update waiting positions for everyone else
+            const { error: shiftError } = await supabase.rpc(
+              "shift_waiting_positions",
+              {
+                lobby_id: lobbyId,
+              }
+            );
+
+            if (shiftError) {
+              console.error("Error shifting waiting positions:", shiftError);
+            }
+
+            // Decrease waiting count
+            const { error: updateError } = await supabase
+              .from("lobbies")
+              .update({
+                waiting_count: Math.max(0, lobby.waiting_count - 1),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", lobbyId);
+
+            if (updateError) {
+              console.error("Error updating lobby waiting count:", updateError);
+            }
+          }
+        }
       }
-    } else {
-      // Just update player count
-      await supabase
+
+      // Always update player count
+      const { error: playerCountError } = await supabase
         .from("lobbies")
         .update({
           current_players: newCount,
@@ -284,28 +313,50 @@ export async function leaveLobby(lobbyId: string, userId: string) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", lobbyId);
+
+      if (playerCountError) {
+        console.error("Error updating player count:", playerCountError);
+      }
+    } else {
+      // Leaving from waiting list - get position first
+      const waitingPosition = participant.waiting_position;
+
+      if (!waitingPosition) {
+        console.error("Participant marked as waiting but has no position");
+      } else {
+        // Update waiting positions for everyone behind this person
+        const { error: reorderError } = await supabase.rpc(
+          "reorder_waiting_positions",
+          {
+            p_lobby_id: lobbyId,
+            p_left_position: waitingPosition,
+          }
+        );
+
+        if (reorderError) {
+          console.error("Error reordering waiting positions:", reorderError);
+        }
+
+        // Decrease waiting count on lobby
+        const { error: updateError } = await supabase
+          .from("lobbies")
+          .update({
+            waiting_count: Math.max(0, lobby.waiting_count - 1),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", lobbyId);
+
+        if (updateError) {
+          console.error("Error decreasing waiting count:", updateError);
+        }
+      }
     }
-  } else {
-    // Leaving from waiting list
-    // Decrease waiting count on lobby
-    await supabase
-      .from("lobbies")
-      .update({
-        waiting_count: supabase.rpc("decrement_waiting_count", {
-          lobby_id: lobbyId,
-        }),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", lobbyId);
 
-    // Update waiting positions for everyone behind this person
-    await supabase.rpc("reorder_waiting_positions", {
-      p_lobby_id: lobbyId,
-      p_left_position: participant.waiting_position,
-    });
+    return { success: true };
+  } catch (err) {
+    console.error("Error in leaveLobby:", err);
+    throw err;
   }
-
-  return { success: true };
 }
 
 /**

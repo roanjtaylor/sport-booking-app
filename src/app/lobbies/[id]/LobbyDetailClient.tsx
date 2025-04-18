@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { Lobby, LobbyParticipant } from "@/types/lobby";
 import { formatDate, formatTime, formatPrice } from "@/lib/utils";
 import Link from "next/link";
-import { joinLobby } from "@/lib/lobbies";
+import { joinLobby, leaveLobby } from "@/lib/lobbies";
 
 type LobbyDetailClientProps = {
   lobby: Lobby;
@@ -301,119 +301,8 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         return;
       }
 
-      // Verify participant exists
-      const { data: participantData, error: participantError } = await supabase
-        .from("lobby_participants")
-        .select("*")
-        .eq("lobby_id", lobby.id)
-        .eq("user_id", userId)
-        .single();
-
-      if (participantError)
-        throw new Error("Failed to find your participant record");
-      if (!participantData)
-        throw new Error("You are not a participant in this lobby");
-
-      console.log("Found participant record:", participantData);
-
-      const isWaitingParticipant = participantData.is_waiting;
-      const waitingPos = participantData.waiting_position;
-
-      // Delete participant record
-      const { error: deleteError } = await supabase
-        .from("lobby_participants")
-        .delete()
-        .eq("lobby_id", lobby.id)
-        .eq("user_id", userId);
-
-      if (deleteError) throw deleteError;
-
-      if (isWaitingParticipant) {
-        // For waiting list participants
-        const { error: reorderError } = await supabase.rpc(
-          "reorder_waiting_positions",
-          {
-            p_lobby_id: lobby.id, // Use parameter name from your function
-            p_left_position: waitingPos,
-          }
-        );
-
-        if (reorderError) throw reorderError;
-
-        // Get current waiting count
-        const { data: currentLobby } = await supabase
-          .from("lobbies")
-          .select("waiting_count")
-          .eq("id", lobby.id)
-          .single();
-
-        // Update waiting count directly
-        await supabase
-          .from("lobbies")
-          .update({
-            waiting_count: Math.max(0, currentLobby.waiting_count - 1),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", lobby.id);
-      } else {
-        // For active participants
-        const { data: lobbyData } = await supabase
-          .from("lobbies")
-          .select("current_players, min_players, status, waiting_count")
-          .eq("id", lobby.id)
-          .single();
-
-        let newCount = lobbyData.current_players - 1;
-
-        // Try to promote someone from waiting list
-        if (lobbyData.waiting_count > 0) {
-          const { data: nextPerson, error: nextPersonError } = await supabase
-            .from("lobby_participants")
-            .select("*")
-            .eq("lobby_id", lobby.id)
-            .eq("is_waiting", true)
-            .order("waiting_position", { ascending: true })
-            .limit(1)
-            .single();
-
-          if (!nextPersonError && nextPerson) {
-            console.log("Promoting waiting person:", nextPerson);
-
-            // Promote participant
-            await supabase
-              .from("lobby_participants")
-              .update({ is_waiting: false, waiting_position: null })
-              .eq("id", nextPerson.id);
-
-            // Don't reduce player count since we're promoting someone
-            newCount = lobbyData.current_players;
-
-            // Shift other waiting positions
-            await supabase.rpc("shift_waiting_positions", {
-              lobby_id: lobby.id, // Use parameter name as in your database
-            });
-
-            // Reduce waiting count
-            await supabase
-              .from("lobbies")
-              .update({
-                waiting_count: Math.max(0, lobbyData.waiting_count - 1),
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", lobby.id);
-          }
-        }
-
-        // Always update player count
-        await supabase
-          .from("lobbies")
-          .update({
-            current_players: newCount,
-            status: newCount >= lobbyData.min_players ? "filled" : "open",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", lobby.id);
-      }
+      // Call the centralized leaveLobby function instead of duplicating logic
+      await leaveLobby(lobby.id, userId);
 
       // Update client state
       setIsParticipant(false);
