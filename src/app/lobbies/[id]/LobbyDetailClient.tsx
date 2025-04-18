@@ -301,7 +301,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         return;
       }
 
-      // First, verify the participant exists
+      // Verify participant exists
       const { data: participantData, error: participantError } = await supabase
         .from("lobby_participants")
         .select("*")
@@ -309,97 +309,64 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         .eq("user_id", userId)
         .single();
 
-      if (participantError) {
-        console.error("Error finding participant:", participantError);
+      if (participantError)
         throw new Error("Failed to find your participant record");
-      }
-
-      if (!participantData) {
+      if (!participantData)
         throw new Error("You are not a participant in this lobby");
-      }
 
       console.log("Found participant record:", participantData);
 
-      // Check if user is on waiting list or active participant
       const isWaitingParticipant = participantData.is_waiting;
       const waitingPos = participantData.waiting_position;
 
-      // Delete the participant record
-      const { data: deleteData, error: deleteError } = await supabase
+      // Delete participant record
+      const { error: deleteError } = await supabase
         .from("lobby_participants")
         .delete()
         .eq("lobby_id", lobby.id)
-        .eq("user_id", userId)
-        .select();
+        .eq("user_id", userId);
 
-      if (deleteError) {
-        console.error("Delete error:", deleteError);
-        throw deleteError;
-      }
-
-      console.log("Delete response:", deleteData);
+      if (deleteError) throw deleteError;
 
       if (isWaitingParticipant) {
-        // First, reorder waiting positions
+        // For waiting list participants
         const { error: reorderError } = await supabase.rpc(
           "reorder_waiting_positions",
           {
-            p_lobby_id: lobby.id,
+            p_lobby_id: lobby.id, // Use parameter name from your function
             p_left_position: waitingPos,
           }
         );
 
-        if (reorderError) {
-          console.error("Error reordering waiting positions:", reorderError);
-          throw reorderError;
-        }
+        if (reorderError) throw reorderError;
 
-        // Fetch current lobby data to get the waiting count
-        const { data: lobbyData, error: lobbyError } = await supabase
+        // Get current waiting count
+        const { data: currentLobby } = await supabase
           .from("lobbies")
           .select("waiting_count")
           .eq("id", lobby.id)
           .single();
 
-        if (lobbyError) {
-          console.error("Error fetching lobby data:", lobbyError);
-          throw lobbyError;
-        }
-
-        // Manually decrement the waiting count
-        const newWaitingCount = Math.max(0, (lobbyData.waiting_count || 0) - 1);
-
-        // Then update the lobby's waiting count directly
-        const { error: updateError } = await supabase
+        // Update waiting count directly
+        await supabase
           .from("lobbies")
           .update({
-            waiting_count: newWaitingCount,
+            waiting_count: Math.max(0, currentLobby.waiting_count - 1),
             updated_at: new Date().toISOString(),
           })
           .eq("id", lobby.id);
-
-        if (updateError) {
-          console.error("Error updating lobby waiting count:", updateError);
-          throw updateError;
-        }
       } else {
-        // Check if we need to promote someone from waiting list
-        const { data: lobbyData, error: lobbyError } = await supabase
+        // For active participants
+        const { data: lobbyData } = await supabase
           .from("lobbies")
           .select("current_players, min_players, status, waiting_count")
           .eq("id", lobby.id)
           .single();
 
-        if (lobbyError) {
-          console.error("Error fetching lobby data:", lobbyError);
-          throw lobbyError;
-        }
-
         let newCount = lobbyData.current_players - 1;
 
-        // Check if we need to promote someone from waiting list
+        // Try to promote someone from waiting list
         if (lobbyData.waiting_count > 0) {
-          // Find next waiting person - get lowest waiting position instead of exactly position 1
           const { data: nextPerson, error: nextPersonError } = await supabase
             .from("lobby_participants")
             .select("*")
@@ -409,61 +376,36 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
             .limit(1)
             .single();
 
-          if (nextPersonError) {
-            console.error(
-              "Error finding next person on waiting list:",
-              nextPersonError
-            );
-            // Continue with just updating player count if no waiting person found
-          } else if (nextPerson) {
-            console.log("Found waiting person to promote:", nextPerson);
+          if (!nextPersonError && nextPerson) {
+            console.log("Promoting waiting person:", nextPerson);
 
-            // Promote this person
-            const { error: promoteError } = await supabase
+            // Promote participant
+            await supabase
               .from("lobby_participants")
               .update({ is_waiting: false, waiting_position: null })
-              .eq("lobby_id", lobby.id)
-              .eq("user_id", nextPerson.user_id);
+              .eq("id", nextPerson.id);
 
-            if (promoteError) {
-              console.error("Error promoting waiting person:", promoteError);
-              throw promoteError;
-            }
-
-            // Don't decrement current_players since we're replacing the person
+            // Don't reduce player count since we're promoting someone
             newCount = lobbyData.current_players;
 
-            // Update waiting positions for everyone else
-            const { error: shiftError } = await supabase.rpc(
-              "shift_waiting_positions",
-              {
-                lobby_id: lobby.id,
-              }
-            );
+            // Shift other waiting positions
+            await supabase.rpc("shift_waiting_positions", {
+              lobby_id: lobby.id, // Use parameter name as in your database
+            });
 
-            if (shiftError) {
-              console.error("Error shifting waiting positions:", shiftError);
-              throw shiftError;
-            }
-
-            // Decrease waiting count
-            const { error: waitingCountError } = await supabase
+            // Reduce waiting count
+            await supabase
               .from("lobbies")
               .update({
                 waiting_count: Math.max(0, lobbyData.waiting_count - 1),
                 updated_at: new Date().toISOString(),
               })
               .eq("id", lobby.id);
-
-            if (waitingCountError) {
-              console.error("Error updating waiting count:", waitingCountError);
-              throw waitingCountError;
-            }
           }
         }
 
-        // Update player count
-        const { error: countUpdateError } = await supabase
+        // Always update player count
+        await supabase
           .from("lobbies")
           .update({
             current_players: newCount,
@@ -471,27 +413,18 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
             updated_at: new Date().toISOString(),
           })
           .eq("id", lobby.id);
-
-        if (countUpdateError) {
-          console.error("Error updating player count:", countUpdateError);
-          throw countUpdateError;
-        }
       }
 
-      // Update local state to reflect changes
+      // Update client state
       setIsParticipant(false);
       setIsWaiting(false);
       setWaitingPosition(null);
 
-      // Fetch updated lobby data
+      // Refresh lobby data
       await fetchLobbyData(userId);
-
-      // Success message
       alert("You have left the lobby successfully");
-
-      // Refresh the page to show the changes
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error leaving lobby:", err);
       setError(err.message || "Failed to leave lobby");
     } finally {
