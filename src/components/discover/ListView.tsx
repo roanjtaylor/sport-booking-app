@@ -276,7 +276,6 @@ export default function ListView() {
               }
             />
           </div>
-          {/* Update this LobbyList with the onJoinLobby prop */}
           {joinError && (
             <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
               {joinError}

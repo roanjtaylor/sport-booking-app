@@ -71,6 +71,7 @@ export async function createLobby(
 
 /**
  * Join an existing lobby or join waiting list if full
+ * Waiting list / Booking / Player count
  */
 export async function joinLobby(
   lobbyId: string,
@@ -161,8 +162,6 @@ export async function joinLobby(
       // If the lobby is NOW becoming full, create a booking
       let bookingId = null;
       if (becomingFull && lobby.status !== "filled") {
-        // <-- FIXED: using becomingFull instead of isFull
-        // First fetch the facility to get the price_per_hour
         const { data: facility, error: facilityError } = await supabase
           .from("facilities")
           .select("price_per_hour")
