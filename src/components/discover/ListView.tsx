@@ -147,7 +147,7 @@ export default function ListView() {
     // Apply sport type filter
     if (filters.sportType) {
       filtered = filtered.filter((lobby) =>
-        lobby.facility?.sport_type?.includes(filters.sportType)
+        lobby.facility?.sportType?.includes(filters.sportType)
       );
     }
 
@@ -216,7 +216,7 @@ export default function ListView() {
         return;
       }
 
-      // Use the centralized joinLobby function
+      // Use the centralised joinLobby function
       const result = await joinLobby(lobbyId, user.id, user.email || "");
 
       // Show success message

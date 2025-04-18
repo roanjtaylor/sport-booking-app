@@ -64,7 +64,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
 
         if (user) {
           setUserId(user.id);
-          setUserEmail(user.email);
+          setUserEmail(user.email ?? null);
           setIsCreator(user.id === lobby.creator_id);
 
           // Fetch full lobby details including waiting list
@@ -188,7 +188,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         return;
       }
 
-      // Use the centralized joinLobby function
+      // Use the centralised joinLobby function
       const email = userEmail || "";
       const result = await joinLobby(lobby.id, userId, email);
 
@@ -301,7 +301,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
         return;
       }
 
-      // Call the centralized leaveLobby function instead of duplicating logic
+      // Call the centralised leaveLobby function instead of duplicating logic
       await leaveLobby(lobby.id, userId);
 
       // Update client state
@@ -315,7 +315,7 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
       router.refresh();
     } catch (err) {
       console.error("Error leaving lobby:", err);
-      setError(err.message || "Failed to leave lobby");
+      setError(err instanceof Error ? err.message : "Failed to leave lobby");
     } finally {
       setIsProcessing(false);
     }
@@ -562,8 +562,8 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
               <div>
                 <dt className="text-gray-500">Game Tags</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
-                  {currentLobby.facility?.sport_type
-                    ? currentLobby.facility.sport_type.map((sport: string) => (
+                  {currentLobby.facility?.sportType
+                    ? currentLobby.facility.sportType.map((sport: string) => (
                         <span
                           key={sport}
                           className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"

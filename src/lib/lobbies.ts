@@ -362,7 +362,14 @@ export async function leaveLobby(lobbyId: string, userId: string) {
 /**
  * Helper function to create a booking when a lobby is filled
  */
-async function createBookingFromFilledLobby(lobby) {
+async function createBookingFromFilledLobby(lobby: {
+  facility_id: any;
+  creator_id: any;
+  date: any;
+  start_time: any;
+  end_time: any;
+  id: any;
+}) {
   // Get facility price info
   const { data: facility } = await supabase
     .from("facilities")
@@ -380,7 +387,7 @@ async function createBookingFromFilledLobby(lobby) {
       start_time: lobby.start_time,
       end_time: lobby.end_time,
       status: "pending",
-      total_price: facility.price_per_hour,
+      total_price: facility?.price_per_hour ?? 0, // Default to 0 if facility is null
       notes: `Group booking from lobby: ${lobby.id}`,
       lobby_id: lobby.id,
       created_at: new Date().toISOString(),
