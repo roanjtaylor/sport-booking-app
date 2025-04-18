@@ -88,10 +88,8 @@ export default function ManageFacilitiesPage() {
     <div>
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Manage Your Facilities</h1>
-          <p className="text-gray-600">
-            Edit, manage bookings, or create new facilities
-          </p>
+          <h1 className="text-3xl font-bold mb-2">My Facilities</h1>
+          <p className="text-gray-600">Edit and manage your facilities</p>
         </div>
         <Link href="/facilities/add">
           <Button>Add New Facility</Button>

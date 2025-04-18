@@ -173,7 +173,7 @@ export default function SettingsPage() {
         >
           ← Back to Dashboard
         </Link>
-        <h1 className="text-3xl font-bold mt-2">Account Settings</h1>
+        <h1 className="text-3xl font-bold mt-2">Settings</h1>
         <p className="text-gray-600">
           Manage your profile and account preferences
         </p>

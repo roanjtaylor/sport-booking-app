@@ -32,6 +32,8 @@ export default function RootLayout({
   const [scrollPosition, setScrollPosition] = useState(0);
   // Get current pathname
   const pathname = usePathname();
+  // Track user role to adjust navbar
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Check if we're on the homepage
   const isHomePage = pathname === "/";
@@ -45,29 +47,52 @@ export default function RootLayout({
   useEffect(() => {
     // Initial auth check
     const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        setUser(session?.user || null);
+
+        // If user is authenticated, fetch their role
+        if (session?.user) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", session.user.id)
+            .single();
+
+          setUserRole(profileData?.role || null);
+        } else {
+          setUserRole(null);
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    checkAuth();
-
-    // Subscribe to auth changes with proper cleanup
+    // Subscribe to auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user || null);
 
-      // If session is null and we're not on an auth page, redirect to home
-      if (
-        !session &&
-        !window.location.pathname.startsWith("/auth/") &&
-        window.location.pathname !== "/"
-      ) {
-        window.location.href = "/";
+      // Update role when auth state changes
+      if (session?.user) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        setUserRole(profileData?.role || null);
+      } else {
+        setUserRole(null);
       }
     });
+
+    checkAuth();
 
     // Clean up subscription on unmount
     return () => subscription.unsubscribe();
@@ -115,18 +140,63 @@ export default function RootLayout({
                   </Link>
                 </div>
                 <nav className="hidden md:ml-6 md:flex md:space-x-8 items-center">
-                  <Link
-                    href="/discover"
-                    className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
-                  >
-                    Discover
-                  </Link>
-                  <AuthenticatedLink
-                    href="/bookings"
-                    className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
-                  >
-                    My Bookings
-                  </AuthenticatedLink>
+                  {/* No user signed in - only show Discover */}
+                  {!user && (
+                    <Link
+                      href="/discover"
+                      className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                    >
+                      Discover
+                    </Link>
+                  )}
+
+                  {/* Regular user navigation */}
+                  {user && userRole === "user" && (
+                    <>
+                      <Link
+                        href="/discover"
+                        className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                      >
+                        Discover
+                      </Link>
+                      <Link
+                        href="/bookings"
+                        className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                      >
+                        Bookings & Lobbies
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                      >
+                        Settings
+                      </Link>
+                    </>
+                  )}
+
+                  {/* Facility owner navigation */}
+                  {user && userRole === "facility_owner" && (
+                    <>
+                      <Link
+                        href="/dashboard/facilities"
+                        className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                      >
+                        My Facilities
+                      </Link>
+                      <Link
+                        href="/dashboard/facility-bookings"
+                        className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                      >
+                        Manage Bookings
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        className="text-gray-900 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                      >
+                        Settings
+                      </Link>
+                    </>
+                  )}
                 </nav>
               </div>
 
@@ -166,21 +236,67 @@ export default function RootLayout({
             {isMobileMenuOpen && (
               <div className="md:hidden">
                 <div className="pt-2 pb-3 space-y-1">
-                  <Link
-                    href="/discover"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Discover
-                  </Link>
-                  {user && (
+                  {/* No user signed in - only show Discover */}
+                  {!user && (
+                    <Link
+                      href="/discover"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Discover
+                    </Link>
+                  )}
+
+                  {/* Regular user navigation */}
+                  {user && userRole === "user" && (
                     <>
+                      <Link
+                        href="/discover"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Discover
+                      </Link>
                       <Link
                         href="/bookings"
                         className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        My Bookings
+                        Bookings & Lobbies
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Settings
+                      </Link>
+                    </>
+                  )}
+
+                  {/* Facility owner navigation */}
+                  {user && userRole === "facility_owner" && (
+                    <>
+                      <Link
+                        href="/dashboard/facilities"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        My Facilities
+                      </Link>
+                      <Link
+                        href="/dashboard/facility-bookings"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Manage Bookings
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Settings
                       </Link>
                     </>
                   )}

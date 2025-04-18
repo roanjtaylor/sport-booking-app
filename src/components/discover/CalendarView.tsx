@@ -371,7 +371,8 @@ export default function CalendarView() {
         .from("lobbies")
         .select("*, facility:facility_id(*)")
         .gte("date", dateRange.startDate)
-        .lte("date", dateRange.endDate);
+        .lte("date", dateRange.endDate)
+        .order("date", { ascending: true });
 
       if (lobbiesError || fullQueryError) {
         console.error("Lobby query error:", lobbiesError || fullQueryError);

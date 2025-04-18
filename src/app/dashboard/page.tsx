@@ -352,20 +352,6 @@ export default function DashboardPage() {
         {isFacilityOwner ? (
           // Facility Owner Statistics
           <>
-            <Link href="/dashboard/facility-bookings">
-              <Card className="p-6 border-l-4 border-green-500">
-                <h3 className="text-lg font-medium mb-2">Upcoming Bookings</h3>
-                <p className="text-3xl font-bold text-primary-600">
-                  {stats.upcomingBookings}
-                </p>
-                <div className="mt-4">
-                  <Button variant="outline" size="sm">
-                    View Bookings
-                  </Button>
-                </div>
-              </Card>
-            </Link>
-
             <Card className="p-6 border-l-4 border-orange-500">
               <h3 className="text-lg font-medium mb-2">Your Facilities</h3>
               <p className="text-3xl font-bold text-primary-600">
@@ -391,6 +377,20 @@ export default function DashboardPage() {
               </div>
             </Card>
 
+            <Link href="/dashboard/facility-bookings">
+              <Card className="p-6 border-l-4 border-green-500">
+                <h3 className="text-lg font-medium mb-2">Upcoming Bookings</h3>
+                <p className="text-3xl font-bold text-primary-600">
+                  {stats.upcomingBookings}
+                </p>
+                <div className="mt-4">
+                  <Button variant="outline" size="sm">
+                    View Bookings
+                  </Button>
+                </div>
+              </Card>
+            </Link>
+
             <Link href="/dashboard/settings" className="block">
               <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-purple-500">
                 <h3 className="text-lg font-medium mb-2">Profile Settings</h3>
@@ -406,18 +406,6 @@ export default function DashboardPage() {
         ) : (
           // Regular User Main Action Cards (Updated)
           <>
-            <Link href="/bookings" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-green-500">
-                <h3 className="text-lg font-medium mb-2">My Bookings</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  View and manage your bookings
-                </p>
-                <Button variant="outline" size="sm">
-                  Bookings
-                </Button>
-              </Card>
-            </Link>
-
             <Link href="/discover" className="block">
               <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-orange-500">
                 <h3 className="text-lg font-medium mb-2">Discover</h3>
@@ -426,6 +414,18 @@ export default function DashboardPage() {
                 </p>
                 <Button variant="outline" size="sm">
                   Explore
+                </Button>
+              </Card>
+            </Link>
+
+            <Link href="/bookings" className="block">
+              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-green-500">
+                <h3 className="text-lg font-medium mb-2">My Bookings</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  View and manage your bookings
+                </p>
+                <Button variant="outline" size="sm">
+                  Bookings
                 </Button>
               </Card>
             </Link>

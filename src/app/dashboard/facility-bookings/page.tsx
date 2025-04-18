@@ -282,7 +282,7 @@ export default function FacilityBookingsPage() {
   return (
     <div>
       <div className="mb-8 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Facility Bookings</h1>
+        <h1 className="text-2xl font-bold">Manage Bookings</h1>
         <Link href="/dashboard">
           <Button variant="outline">Back to Dashboard</Button>
         </Link>
