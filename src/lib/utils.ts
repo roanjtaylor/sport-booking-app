@@ -126,16 +126,21 @@ export function generateTimeSlots(
 export function getDayOfWeek(dateString: string): keyof OperatingHours {
   try {
     const date = new Date(dateString);
+    // JavaScript getDay() returns 0 for Sunday, 1 for Monday, etc.
+    const dayIndex = date.getDay();
+
+    // Map JavaScript's day indices to our day names
     const days: (keyof OperatingHours)[] = [
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-      "sunday",
+      "sunday", // 0
+      "monday", // 1
+      "tuesday", // 2
+      "wednesday", // 3
+      "thursday", // 4
+      "friday", // 5
+      "saturday", // 6
     ];
-    return days[date.getDay()];
+
+    return days[dayIndex];
   } catch (error) {
     console.error("Error getting day of week:", error);
     return "monday"; // Default to Monday on error
