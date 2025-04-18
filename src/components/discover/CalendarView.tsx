@@ -44,9 +44,11 @@ function SimpleCalendar({ value, onChange, minDate = new Date(), maxDate }) {
     return new Date(year, month + 1, 0).getDate();
   };
 
-  // Get first day of month
+  // Get first day of month (0 = Monday, 6 = Sunday)
   const getFirstDayOfMonth = (month, year) => {
-    return new Date(year, month, 1).getDay();
+    let day = new Date(year, month, 1).getDay();
+    // Convert Sunday (0) to 6, and shift others back by 1
+    return day === 0 ? 6 : day - 1;
   };
 
   // Generate calendar cells
@@ -128,9 +130,9 @@ function SimpleCalendar({ value, onChange, minDate = new Date(), maxDate }) {
         </button>
       </div>
 
-      {/* Day labels (S M T W T F S) */}
+      {/* Day labels (M T W T F S S) */}
       <div className="grid grid-cols-7 gap-1 mb-2">
-        {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+        {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
           <div
             key={index}
             className="h-10 w-10 flex items-center justify-center text-sm font-medium text-gray-500"
@@ -543,7 +545,7 @@ export default function CalendarView() {
             value={sportTypeFilter}
             onChange={(e) => setSportTypeFilter(e.target.value)}
           >
-            <option value="">All Sports</option>
+            <option value="">All types</option>
             {availableSportTypes.map((type) => (
               <option key={type} value={type}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}

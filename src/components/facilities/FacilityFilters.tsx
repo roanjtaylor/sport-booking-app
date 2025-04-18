@@ -62,7 +62,7 @@ export function FacilityFilters({
             value={selectedSportType}
             onChange={(e) => setSelectedSportType(e.target.value)}
           >
-            <option value="">All Sports</option>
+            <option value="">All Types</option>
             {sportTypes.map((type) => (
               <option key={type} value={type}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}
