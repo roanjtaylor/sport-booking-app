@@ -4,12 +4,13 @@
 import { useState } from "react";
 import ListView from "@/components/discover/ListView";
 import MapView from "@/components/discover/MapView";
+import { Button } from "@/components/ui/Button";
 import CalendarView from "@/components/discover/CalendarView";
 import { ModeSelectionScreen } from "@/components/discover/ModeSelectionScreen";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Tab type definition for type safety
-type TabType = "list" | "map" | "calendar";
+type TabType = "list" | "map" | "calendar" | "create";
 type BookingMode = "booking" | "lobby" | null;
 
 /**
@@ -41,13 +42,24 @@ export default function DiscoverClient() {
   const renderTabContent = () => {
     switch (activeTab) {
       case "list":
-        return <ListView mode={mode} />;
+        return (
+          <ListView mode={mode} onCreateLobby={() => setActiveTab("create")} />
+        );
       case "map":
         return <MapView mode={mode} />;
       case "calendar":
-        return <CalendarView mode={mode} />;
+        return (
+          <CalendarView
+            mode={mode}
+            onCreateLobby={() => setActiveTab("create")}
+          />
+        );
+      case "create":
+        return <CreateLobbyView />;
       default:
-        return <ListView mode={mode} />;
+        return (
+          <ListView mode={mode} onCreateLobby={() => setActiveTab("create")} />
+        );
     }
   };
 
@@ -63,12 +75,9 @@ export default function DiscoverClient() {
         <h2 className="text-xl font-semibold">
           {mode === "booking" ? "Browse Facilities" : "Find Lobbies"}
         </h2>
-        <button
-          onClick={() => handleModeSelect(null)}
-          className="text-primary-600 hover:text-primary-800 text-sm"
-        >
+        <Button onClick={() => handleModeSelect(null)} variant="outline">
           Change Mode
-        </button>
+        </Button>
       </div>
 
       {/* Tab Navigation */}
@@ -107,6 +116,18 @@ export default function DiscoverClient() {
           >
             Calendar View
           </button>
+          {mode === "lobby" && (
+            <button
+              onClick={() => setActiveTab("create")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "create"
+                  ? "border-primary-600 text-primary-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Create Lobby
+            </button>
+          )}
         </nav>
       </div>
 

@@ -8,6 +8,7 @@ import { LobbyFilters } from "@/components/lobbies/LobbyFilters";
 import { supabase } from "@/lib/supabase";
 import { FacilityFilters } from "@/components/facilities/FacilityFilters";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import type { Facility } from "@/types/facility";
 import type { Lobby } from "@/types/lobby";
 import { useRouter } from "next/navigation";
@@ -17,6 +18,7 @@ type BookingMode = "booking" | "lobby" | null;
 
 interface ListViewProps {
   mode: BookingMode;
+  onCreateLobby?: () => void;
 }
 
 export default function ListView({ mode }: ListViewProps) {
@@ -283,11 +285,14 @@ export default function ListView({ mode }: ListViewProps) {
         <div className="mb-8">
           <LobbyFilters onFilter={handleLobbyFilter} sportTypes={sportTypes} />
         </div>
-        {joinError && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
-            {joinError}
-          </div>
-        )}
+
+        {/* Add "Create Lobby" button */}
+        <div className="flex justify-end mb-4">
+          <Button onClick={onCreateLobby} variant="primary">
+            Don't see a lobby that suits you? Make one!
+          </Button>
+        </div>
+
         <LobbyList
           lobbies={filteredLobbies}
           onJoinLobby={handleJoinLobby}

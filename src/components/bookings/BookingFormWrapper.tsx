@@ -304,7 +304,7 @@ export default function BookingFormWrapper({
   const maxDateString = maxDate.toISOString().split("T")[0];
 
   // If we're in "booking" mode, only show the full booking form
-  if (mode === "booking" || (!mode && bookingType === "full")) {
+  if (mode === "booking") {
     return (
       <div>
         {error && (
@@ -313,14 +313,7 @@ export default function BookingFormWrapper({
           </div>
         )}
 
-        {/* Only show booking type selector if no mode is forced */}
-        {!mode && (
-          <BookingTypeSelector
-            selectedType={bookingType}
-            onChange={handleBookingTypeChange}
-            minPlayers={minPlayers}
-          />
-        )}
+        {/* Remove the BookingTypeSelector when in forced booking mode */}
 
         {/* Full Booking Form */}
         <form onSubmit={handleFullBookingSubmit} className="space-y-4">
@@ -420,10 +413,8 @@ export default function BookingFormWrapper({
         </form>
       </div>
     );
-  }
-
-  // If we're in "lobby" mode, only show the lobby options
-  if (mode === "lobby" || (!mode && bookingType === "lobby")) {
+  } else if (mode === "lobby") {
+    // Only show lobby options
     return (
       <div>
         {error && (
@@ -432,14 +423,7 @@ export default function BookingFormWrapper({
           </div>
         )}
 
-        {/* Only show booking type selector if no mode is forced */}
-        {!mode && (
-          <BookingTypeSelector
-            selectedType={bookingType}
-            onChange={handleBookingTypeChange}
-            minPlayers={minPlayers}
-          />
-        )}
+        {/* Remove the BookingTypeSelector when in forced lobby mode */}
 
         {/* Lobby Options */}
         {!showLobbyForm ? (
