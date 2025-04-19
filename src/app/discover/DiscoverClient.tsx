@@ -93,7 +93,7 @@ export default function DiscoverClient() {
             }`}
             aria-current={activeTab === "list" ? "page" : undefined}
           >
-            List View
+            View All
           </button>
           <button
             onClick={() => setActiveTab("map")}
@@ -104,7 +104,7 @@ export default function DiscoverClient() {
             }`}
             aria-current={activeTab === "map" ? "page" : undefined}
           >
-            Map View
+            Specific Location
           </button>
           <button
             onClick={() => setActiveTab("calendar")}
@@ -115,7 +115,7 @@ export default function DiscoverClient() {
             }`}
             aria-current={activeTab === "calendar" ? "page" : undefined}
           >
-            Calendar View
+            Specific Date
           </button>
           {mode === "lobby" && (
             <button

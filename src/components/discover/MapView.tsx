@@ -9,6 +9,8 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { LobbyList } from "@/components/lobbies/LobbyList";
+import { joinLobby } from "@/lib/lobbies";
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -46,6 +48,12 @@ export default function MapView({ mode }: MapViewProps) {
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
+  // New state variables
+  const [isMapExpanded, setIsMapExpanded] = useState(true);
+  const [selectedFacility, setSelectedFacility] = useState(null);
+  const [facilityLobbies, setFacilityLobbies] = useState([]);
+  const [isJoiningLobby, setIsJoiningLobby] = useState(false);
+
   // Set mounted state
   useEffect(() => {
     setIsMounted(true);
@@ -77,33 +85,30 @@ export default function MapView({ mode }: MapViewProps) {
         setIsLoading(true);
         setError(null);
 
-        if (mode === "booking" || !mode) {
-          // Fetch facilities with coordinates
-          const { data: facilitiesData, error: facilitiesError } =
-            await supabase
-              .from("facilities")
-              .select("*")
-              .not("latitude", "is", null)
-              .not("longitude", "is", null);
+        // Always fetch facilities with coordinates
+        const { data: facilitiesData, error: facilitiesError } = await supabase
+          .from("facilities")
+          .select("*")
+          .not("latitude", "is", null)
+          .not("longitude", "is", null);
 
-          if (facilitiesError) throw facilitiesError;
-          setFacilities(facilitiesData || []);
+        if (facilitiesError) throw facilitiesError;
+        setFacilities(facilitiesData || []);
 
-          // Center map on facilities if any exist with coordinates
-          if (facilitiesData && facilitiesData.length > 0) {
-            const validFacilities = facilitiesData.filter(
-              (f) => f.latitude && f.longitude
-            );
+        // Center map on facilities if any exist with coordinates
+        if (facilitiesData && facilitiesData.length > 0) {
+          const validFacilities = facilitiesData.filter(
+            (f) => f.latitude && f.longitude
+          );
 
-            if (validFacilities.length > 0) {
-              const avgLat =
-                validFacilities.reduce((sum, f) => sum + f.latitude, 0) /
-                validFacilities.length;
-              const avgLng =
-                validFacilities.reduce((sum, f) => sum + f.longitude, 0) /
-                validFacilities.length;
-              setMapCenter([avgLat, avgLng]);
-            }
+          if (validFacilities.length > 0) {
+            const avgLat =
+              validFacilities.reduce((sum, f) => sum + f.latitude, 0) /
+              validFacilities.length;
+            const avgLng =
+              validFacilities.reduce((sum, f) => sum + f.longitude, 0) /
+              validFacilities.length;
+            setMapCenter([avgLat, avgLng]);
           }
         }
 
@@ -117,6 +122,7 @@ export default function MapView({ mode }: MapViewProps) {
               facility:facility_id(*)
             `
             )
+            .eq("status", "open")
             .order("date", { ascending: true });
 
           if (lobbiesError) throw lobbiesError;
@@ -130,21 +136,6 @@ export default function MapView({ mode }: MapViewProps) {
           );
 
           setLobbies(lobbiesWithCoordinates);
-
-          // If in lobby mode and we have lobbies with coordinates, center the map on them
-          if (mode === "lobby" && lobbiesWithCoordinates.length > 0) {
-            const avgLat =
-              lobbiesWithCoordinates.reduce(
-                (sum, l) => sum + l.facility.latitude,
-                0
-              ) / lobbiesWithCoordinates.length;
-            const avgLng =
-              lobbiesWithCoordinates.reduce(
-                (sum, l) => sum + l.facility.longitude,
-                0
-              ) / lobbiesWithCoordinates.length;
-            setMapCenter([avgLat, avgLng]);
-          }
         }
       } catch (err) {
         console.error("Error fetching data for map:", err);
@@ -157,11 +148,57 @@ export default function MapView({ mode }: MapViewProps) {
     fetchData();
   }, [mode]);
 
+  // Get all lobbies for a specific facility
+  const getLobbiesForFacility = (facilityId) => {
+    return lobbies.filter((lobby) => lobby.facility_id === facilityId);
+  };
+
+  // Handle viewing lobbies for a facility
+  const handleViewFacilityLobbies = (facility) => {
+    const facilityId = facility.id;
+    const facilityLobbies = getLobbiesForFacility(facilityId);
+
+    setSelectedFacility(facility);
+    setFacilityLobbies(facilityLobbies);
+    setIsMapExpanded(false);
+    setSelectedItem(null); // Close popup
+  };
+
   // Join lobby function
   const handleJoinLobby = async (lobbyId) => {
-    // Implementation would be similar to the one in ListView
-    // Redirect to lobby detail page for now
-    router.push(`/lobbies/${lobbyId}`);
+    try {
+      setIsJoiningLobby(true);
+
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push(`/auth/login?redirect=/discover?mode=lobby`);
+        return;
+      }
+
+      // Use the centralized joinLobby function
+      const result = await joinLobby(lobbyId, user.id, user.email || "");
+
+      // Show success message
+      if (result.isWaiting) {
+        alert("You've been added to the waiting list!");
+      } else if (result.isFull) {
+        alert("You've joined the lobby! The lobby is now full.");
+      } else {
+        alert("You've joined the lobby successfully!");
+      }
+
+      // Redirect to the lobby detail page
+      router.push(`/lobbies/${lobbyId}`);
+    } catch (err) {
+      console.error("Error joining lobby:", err);
+      alert(err.message || "Failed to join lobby");
+    } finally {
+      setIsJoiningLobby(false);
+    }
   };
 
   if (isLoading) {
@@ -182,23 +219,35 @@ export default function MapView({ mode }: MapViewProps) {
     );
   }
 
-  // Determine what to display based on mode
-  const displayItems =
-    mode === "booking"
-      ? facilities
-      : mode === "lobby"
-      ? lobbies
-      : [...facilities, ...lobbies];
+  // Group lobbies by facility to count how many are at each location
+  const lobbyCountByFacility = {};
+  if (mode === "lobby") {
+    lobbies.forEach((lobby) => {
+      const facilityId = lobby.facility_id;
+      lobbyCountByFacility[facilityId] =
+        (lobbyCountByFacility[facilityId] || 0) + 1;
+    });
+  }
 
-  // In lobby mode, transform facility coords to lobby markers
+  // Determine what markers to show
+  // In lobby mode, show facilities that have lobbies rather than individual lobbies
   const mapMarkers =
     mode === "lobby"
-      ? lobbies.map((lobby) => ({
-          id: lobby.id,
-          type: "lobby",
-          position: [lobby.facility.latitude, lobby.facility.longitude],
-          data: lobby,
-        }))
+      ? facilities
+          .filter((facility) => {
+            // Only show facilities that have lobbies
+            const facilityLobbies = lobbies.filter(
+              (lobby) => lobby.facility_id === facility.id
+            );
+            return facilityLobbies.length > 0;
+          })
+          .map((facility) => ({
+            id: facility.id,
+            type: "facility",
+            position: [facility.latitude, facility.longitude],
+            data: facility,
+            lobbyCount: lobbyCountByFacility[facility.id] || 0,
+          }))
       : facilities.map((facility) => ({
           id: facility.id,
           type: "facility",
@@ -217,128 +266,175 @@ export default function MapView({ mode }: MapViewProps) {
   }
 
   return (
-    <Card className="overflow-hidden">
-      <div className="h-[70vh] w-full relative">
-        <MapContainer
-          center={mapCenter}
-          zoom={11}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+    <div className="space-y-4">
+      {/* Collapsed Map Header - only show when map is collapsed */}
+      {!isMapExpanded && selectedFacility && (
+        <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
+          <div>
+            <h3 className="font-medium">{selectedFacility.name}</h3>
+            <p className="text-sm text-gray-600">{selectedFacility.address}</p>
+          </div>
+          <Button onClick={() => setIsMapExpanded(true)} variant="outline">
+            Return to Map
+          </Button>
+        </div>
+      )}
 
-          {/* Render markers for facilities or lobbies based on mode */}
-          {mapMarkers.map((marker) => (
-            <Marker
-              key={`${marker.type}-${marker.id}`}
-              position={marker.position}
-              eventHandlers={{
-                click: () => {
-                  setSelectedItem(marker);
-                },
-              }}
+      {/* Map - only show when expanded */}
+      {isMapExpanded && (
+        <Card className="overflow-hidden">
+          <div className="h-[70vh] w-full relative">
+            <MapContainer
+              center={mapCenter}
+              zoom={11}
+              style={{ height: "100%", width: "100%" }}
             >
-              {selectedItem && selectedItem.id === marker.id && (
-                <Popup onClose={() => setSelectedItem(null)}>
-                  <div className="p-2 max-w-xs">
-                    {marker.type === "facility" ? (
-                      // Facility popup
-                      <>
-                        <h3 className="font-medium text-lg mb-1">
-                          {marker.data.name}
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-2">
-                          {marker.data.address}
-                        </p>
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {marker.data.sport_type.slice(0, 2).map((sport) => (
-                            <span
-                              key={sport}
-                              className="bg-primary-100 text-primary-800 text-xs px-2 py-0.5 rounded-full"
-                            >
-                              {sport}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="font-medium text-primary-600 mb-2">
-                          {formatPrice(
-                            marker.data.price_per_hour,
-                            marker.data.currency
-                          )}
-                        </p>
-                        <Link
-                          href={`/facilities/${marker.data.id}${
-                            mode ? `?mode=${mode}` : ""
-                          }`}
-                        >
-                          <Button variant="primary" size="sm" fullWidth>
-                            {mode === "booking" ? "Book Now" : "View Facility"}
-                          </Button>
-                        </Link>
-                      </>
-                    ) : (
-                      // Lobby popup
-                      <>
-                        <h3 className="font-medium text-lg mb-1">
-                          {marker.data.facility.name}
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-2">
-                          {marker.data.date} • {marker.data.start_time}
-                        </p>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
-                            {marker.data.current_players}/
-                            {marker.data.min_players} Players
-                          </span>
-                          <span className="font-medium text-primary-600">
-                            {formatPrice(
-                              marker.data.facility.price_per_hour /
-                                marker.data.min_players,
-                              marker.data.facility.currency
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Link
-                            href={`/lobbies/${marker.data.id}`}
-                            className="flex-1"
-                          >
-                            <Button variant="primary" size="sm" fullWidth>
-                              View Details
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleJoinLobby(marker.data.id)}
-                          >
-                            Join
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </Popup>
-              )}
-            </Marker>
-          ))}
-        </MapContainer>
-      </div>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
 
-      <div className="p-4 bg-white border-t border-gray-200">
-        <p className="text-sm text-gray-600">
-          {mode === "booking" && (
-            <>Showing {facilities.length} facilities on the map</>
+              {/* Render markers for facilities or lobbies based on mode */}
+              {mapMarkers.map((marker) => (
+                <Marker
+                  key={`${marker.type}-${marker.id}`}
+                  position={marker.position}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedItem(marker);
+                    },
+                  }}
+                >
+                  {selectedItem && selectedItem.id === marker.id && (
+                    <Popup onClose={() => setSelectedItem(null)}>
+                      <div className="p-2 max-w-xs">
+                        {mode === "lobby" ? (
+                          // Facility with lobbies popup in lobby mode
+                          <>
+                            <h3 className="font-medium text-lg mb-1">
+                              {marker.data.name}
+                            </h3>
+                            <p className="text-sm text-gray-500 mb-2">
+                              {marker.data.address}
+                            </p>
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {marker.data.sport_type
+                                ?.slice(0, 2)
+                                .map((sport) => (
+                                  <span
+                                    key={sport}
+                                    className="bg-primary-100 text-primary-800 text-xs px-2 py-0.5 rounded-full"
+                                  >
+                                    {sport}
+                                  </span>
+                                ))}
+                            </div>
+                            <div className="text-sm font-medium text-blue-600 mb-2">
+                              {marker.lobbyCount} active{" "}
+                              {marker.lobbyCount === 1 ? "lobby" : "lobbies"}
+                            </div>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              fullWidth
+                              onClick={() =>
+                                handleViewFacilityLobbies(marker.data)
+                              }
+                            >
+                              View Lobbies
+                            </Button>
+                          </>
+                        ) : (
+                          // Standard facility popup in booking mode
+                          <>
+                            <h3 className="font-medium text-lg mb-1">
+                              {marker.data.name}
+                            </h3>
+                            <p className="text-sm text-gray-500 mb-2">
+                              {marker.data.address}
+                            </p>
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {marker.data.sport_type
+                                ?.slice(0, 2)
+                                .map((sport) => (
+                                  <span
+                                    key={sport}
+                                    className="bg-primary-100 text-primary-800 text-xs px-2 py-0.5 rounded-full"
+                                  >
+                                    {sport}
+                                  </span>
+                                ))}
+                            </div>
+                            <p className="font-medium text-primary-600 mb-2">
+                              {formatPrice(
+                                marker.data.price_per_hour,
+                                marker.data.currency
+                              )}
+                            </p>
+                            <Link
+                              href={`/facilities/${marker.data.id}${
+                                mode ? `?mode=${mode}` : ""
+                              }`}
+                            >
+                              <Button variant="primary" size="sm" fullWidth>
+                                View Facility
+                              </Button>
+                            </Link>
+                          </>
+                        )}
+                      </div>
+                    </Popup>
+                  )}
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+
+          <div className="p-4 bg-white border-t border-gray-200">
+            <p className="text-sm text-gray-600">
+              {mode === "booking" && (
+                <>Showing {facilities.length} facilities on the map</>
+              )}
+              {mode === "lobby" && (
+                <>Showing {mapMarkers.length} facilities with active lobbies</>
+              )}
+              {!mode && <>Showing {mapMarkers.length} items on the map</>}
+              {mapMarkers.length === 0 && (
+                <span> - Nothing found with coordinates</span>
+              )}
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* Facility Lobbies Section - only show when map is collapsed and facility is selected */}
+      {!isMapExpanded && selectedFacility && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">
+            Lobbies at {selectedFacility.name}
+          </h2>
+
+          {facilityLobbies.length > 0 ? (
+            <LobbyList
+              lobbies={facilityLobbies}
+              onJoinLobby={handleJoinLobby}
+              isLoading={isJoiningLobby}
+              gridLayout={true}
+            />
+          ) : (
+            <Card className="p-6 text-center">
+              <p className="text-gray-600">
+                No active lobbies found for this facility.
+              </p>
+              <Link href={`/facilities/${selectedFacility.id}?mode=lobby`}>
+                <Button variant="primary" className="mt-4">
+                  Create a Lobby
+                </Button>
+              </Link>
+            </Card>
           )}
-          {mode === "lobby" && <>Showing {lobbies.length} lobbies on the map</>}
-          {!mode && <>Showing {displayItems.length} items on the map</>}
-          {displayItems.length === 0 && (
-            <span> - Nothing found with coordinates</span>
-          )}
-        </p>
-      </div>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }

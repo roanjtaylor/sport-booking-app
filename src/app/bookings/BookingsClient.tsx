@@ -5,20 +5,23 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { BookingsList } from "@/components/bookings/BookingsList";
-import { UserLobbiesList } from "@/components/bookings/UserLobbiesList"; // New component
+import { UserLobbiesList } from "@/components/bookings/UserLobbiesList";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Lobby } from "@/types/lobby"; // Import the Lobby type
+import { Lobby } from "@/types/lobby";
 
 /**
  * Client component for handling booking data fetching and interactivity
+ * Updated tab structure to: Confirmed Bookings, Pending Requests, Lobbies in progress
  */
 export default function BookingsClient() {
+  // Tabs are now: "confirmed", "pending", "lobbies"
+  const [activeTab, setActiveTab] = useState("confirmed");
   const [bookings, setBookings] = useState<any[]>([]);
-  const [lobbies, setLobbies] = useState<Lobby[]>([]); // New state for lobbies
+  const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const [filteredBookings, setFilteredBookings] = useState<any[]>([]);
 
   useEffect(() => {
     // Fetch bookings for the current user
@@ -47,6 +50,25 @@ export default function BookingsClient() {
 
     fetchUserData();
   }, []);
+
+  // Effect to filter bookings when active tab or bookings change
+  useEffect(() => {
+    filterBookingsByTab();
+  }, [activeTab, bookings]);
+
+  // Filter bookings based on active tab
+  const filterBookingsByTab = () => {
+    if (activeTab === "confirmed") {
+      setFilteredBookings(
+        bookings.filter((booking) => booking.status === "confirmed")
+      );
+    } else if (activeTab === "pending") {
+      setFilteredBookings(
+        bookings.filter((booking) => booking.status === "pending")
+      );
+    }
+    // For "lobbies" tab we don't need to filter bookings
+  };
 
   // Fetch user's bookings
   async function fetchBookings(userId: string) {
@@ -123,6 +145,16 @@ export default function BookingsClient() {
       });
 
       setBookings(allBookings);
+      // Initial filtering based on tab
+      if (activeTab === "confirmed") {
+        setFilteredBookings(
+          allBookings.filter((booking) => booking.status === "confirmed")
+        );
+      } else if (activeTab === "pending") {
+        setFilteredBookings(
+          allBookings.filter((booking) => booking.status === "pending")
+        );
+      }
     } catch (err) {
       console.error("Error fetching bookings:", err);
       throw err;
@@ -190,21 +222,6 @@ export default function BookingsClient() {
     }
   }
 
-  // Filter bookings based on active tab
-  const filteredBookings = bookings.filter((booking) => {
-    const today = new Date().toISOString().split("T")[0];
-
-    if (activeTab === "upcoming") {
-      return booking.date >= today && booking.status !== "cancelled";
-    } else if (activeTab === "past") {
-      return booking.date < today || booking.status === "completed";
-    } else if (activeTab === "cancelled") {
-      return booking.status === "cancelled";
-    }
-
-    return true; // All bookings
-  });
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -236,15 +253,31 @@ export default function BookingsClient() {
       <div className="border-b border-gray-200 mb-6">
         <nav className="flex space-x-8">
           <button
-            onClick={() => setActiveTab("upcoming")}
+            onClick={() => setActiveTab("confirmed")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "upcoming"
+              activeTab === "confirmed"
                 ? "border-primary-600 text-primary-600"
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            Bookings & Requests
+            Confirmed Bookings
+            {bookings.filter((b) => b.status === "confirmed").length > 0 &&
+              ` (${bookings.filter((b) => b.status === "confirmed").length})`}
           </button>
+
+          <button
+            onClick={() => setActiveTab("pending")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "pending"
+                ? "border-primary-600 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Pending Requests
+            {bookings.filter((b) => b.status === "pending").length > 0 &&
+              ` (${bookings.filter((b) => b.status === "pending").length})`}
+          </button>
+
           <button
             onClick={() => setActiveTab("lobbies")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -253,27 +286,8 @@ export default function BookingsClient() {
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            My Lobbies {lobbies.length > 0 && `(${lobbies.length})`}
-          </button>
-          <button
-            onClick={() => setActiveTab("past")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "past"
-                ? "border-primary-600 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Past
-          </button>
-          <button
-            onClick={() => setActiveTab("cancelled")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "cancelled"
-                ? "border-primary-600 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Cancelled
+            Lobbies in Progress
+            {lobbies.length > 0 && ` (${lobbies.length})`}
           </button>
         </nav>
       </div>
@@ -296,30 +310,16 @@ export default function BookingsClient() {
         ) : (
           <UserLobbiesList lobbies={lobbies} />
         )
-      ) : // Render bookings
-      bookings.length === 0 ? (
+      ) : // Render bookings (confirmed or pending)
+      filteredBookings.length === 0 ? (
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No bookings found
+            No {activeTab} bookings found
           </h3>
           <p className="text-gray-500 mb-6">
-            You haven't made any bookings yet.
-          </p>
-          <Link href="/facilities">
-            <Button>Find a Facility</Button>
-          </Link>
-        </div>
-      ) : filteredBookings.length === 0 ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No {activeTab} bookings
-          </h3>
-          <p className="text-gray-500 mb-6">
-            {activeTab === "upcoming" &&
-              "You don't have any upcoming bookings."}
-            {activeTab === "past" && "You don't have any past bookings."}
-            {activeTab === "cancelled" &&
-              "You don't have any cancelled bookings."}
+            {activeTab === "confirmed" &&
+              "You don't have any confirmed bookings."}
+            {activeTab === "pending" && "You don't have any pending requests."}
           </p>
           <Link href="/facilities">
             <Button>Find a Facility</Button>
