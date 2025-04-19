@@ -286,7 +286,7 @@ export default function BookingsClient() {
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            Lobbies in Progress
+            Active Lobbies
             {lobbies.length > 0 && ` (${lobbies.length})`}
           </button>
         </nav>
@@ -321,7 +321,7 @@ export default function BookingsClient() {
               "You don't have any confirmed bookings."}
             {activeTab === "pending" && "You don't have any pending requests."}
           </p>
-          <Link href="/facilities">
+          <Link href="/discover">
             <Button>Find a Facility</Button>
           </Link>
         </div>
