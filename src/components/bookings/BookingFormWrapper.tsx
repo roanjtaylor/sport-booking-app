@@ -50,9 +50,9 @@ export default function BookingFormWrapper({
 
   // Determine the initial booking type based on mode
   const determineInitialBookingType = (): BookingType => {
-    if (mode === "booking") return "full";
-    if (mode === "lobby") return "lobby";
-    // Default to full booking if no mode specified
+    if (typeof mode === "string" && mode.toLowerCase() === "lobby")
+      return "lobby";
+    // Default to full booking for any other mode value
     return "full";
   };
 
@@ -304,7 +304,7 @@ export default function BookingFormWrapper({
   const maxDateString = maxDate.toISOString().split("T")[0];
 
   // If we're in "booking" mode, only show the full booking form
-  if (mode === "booking") {
+  if (!mode || String(mode).toLowerCase() === "booking") {
     return (
       <div>
         {error && (
@@ -413,7 +413,7 @@ export default function BookingFormWrapper({
         </form>
       </div>
     );
-  } else if (mode === "lobby") {
+  } else {
     // Only show lobby options
     return (
       <div>
@@ -686,7 +686,4 @@ export default function BookingFormWrapper({
       </div>
     );
   }
-
-  // Fallback - should never reach here due to the mode checking above
-  return null;
 }
