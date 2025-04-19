@@ -13,8 +13,17 @@ import { LobbyList } from "@/components/lobbies/LobbyList";
 import { joinLobby } from "@/lib/lobbies";
 import { useRouter } from "next/navigation";
 
-// Simple Calendar Component
+type BookingMode = "booking" | "lobby" | null;
+
+interface CalendarViewProps {
+  mode: BookingMode;
+}
+
+// Simple Calendar Component (unchanged)
 function SimpleCalendar({ value, onChange, minDate = new Date(), maxDate }) {
+  // Existing calendar implementation
+  // ...
+
   // Get current month and year
   const [currentMonth, setCurrentMonth] = useState(value.getMonth());
   const [currentYear, setCurrentYear] = useState(value.getFullYear());
@@ -148,7 +157,7 @@ function SimpleCalendar({ value, onChange, minDate = new Date(), maxDate }) {
   );
 }
 
-export default function CalendarView() {
+export default function CalendarView({ mode }: CalendarViewProps) {
   const router = useRouter();
 
   // State for calendar and results
@@ -197,7 +206,7 @@ export default function CalendarView() {
   // Fetch data when date, view mode, or filter changes
   useEffect(() => {
     fetchAvailability();
-  }, [selectedDate, viewMode, sportTypeFilter]);
+  }, [selectedDate, viewMode, sportTypeFilter, mode]);
 
   // Fetch bookings to check facility availability
   const fetchBookings = async (dateRange: {
@@ -257,143 +266,125 @@ export default function CalendarView() {
       const bookings = await fetchBookings(dateRange);
       setExistingBookings(bookings);
 
-      // Fetch all facilities
-      const { data: facilitiesData, error: facilitiesError } = await supabase
-        .from("facilities")
-        .select("*");
+      // Only fetch data needed based on mode
+      if (mode === "booking" || !mode) {
+        // Fetch all facilities
+        const { data: facilitiesData, error: facilitiesError } = await supabase
+          .from("facilities")
+          .select("*");
 
-      if (facilitiesError) throw facilitiesError;
+        if (facilitiesError) throw facilitiesError;
 
-      // Format facility data
-      const formattedFacilities = (facilitiesData || []).map((facility) => ({
-        id: facility.id,
-        name: facility.name,
-        description: facility.description,
-        address: facility.address,
-        city: facility.city,
-        postal_code: facility.postal_code,
-        country: facility.country,
-        imageUrl: facility.image_url,
-        owner_id: facility.owner_id,
-        owner_email: facility.owner_email,
-        operatingHours: facility.operating_hours,
-        price_per_hour: facility.price_per_hour,
-        currency: facility.currency,
-        sportType: facility.sport_type,
-        amenities: facility.amenities || [],
-        min_players: facility.min_players,
-      }));
+        // Format facility data
+        const formattedFacilities = (facilitiesData || []).map((facility) => ({
+          id: facility.id,
+          name: facility.name,
+          description: facility.description,
+          address: facility.address,
+          city: facility.city,
+          postal_code: facility.postal_code,
+          country: facility.country,
+          imageUrl: facility.image_url,
+          owner_id: facility.owner_id,
+          owner_email: facility.owner_email,
+          operatingHours: facility.operating_hours,
+          price_per_hour: facility.price_per_hour,
+          currency: facility.currency,
+          sportType: facility.sport_type,
+          amenities: facility.amenities || [],
+          min_players: facility.min_players,
+        }));
 
-      // Extract sport types for filter
-      const sportTypes = Array.from(
-        new Set(formattedFacilities.flatMap((f) => f.sportType))
-      );
-      setAvailableSportTypes(sportTypes);
+        // Extract sport types for filter
+        const sportTypes = Array.from(
+          new Set(formattedFacilities.flatMap((f) => f.sportType))
+        );
+        setAvailableSportTypes(sportTypes);
 
-      // Filter facilities based on availability and sports type
-      let filteredFacilities: Facility[] = [];
+        // Filter facilities based on availability and sports type
+        let filteredFacilities: Facility[] = [];
 
-      if (viewMode === "day") {
-        // For day view, check just the selected date
-        filteredFacilities = formattedFacilities.filter((facility) => {
-          // Apply sport type filter
-          if (
-            sportTypeFilter &&
-            !facility.sportType.includes(sportTypeFilter)
-          ) {
-            return false;
-          }
-
-          // Check availability
-          return isFacilityAvailable(facility, dateRange.startDate, bookings);
-        });
-      } else {
-        // For week view, include facilities available on any day in the range
-        const weekFacilities = new Map<string, Facility>();
-
-        // Check each day in the date range
-        let currentDate = new Date(dateRange.startDate);
-        const endDateObj = new Date(dateRange.endDate);
-
-        while (currentDate <= endDateObj) {
-          const dateString = currentDate.toISOString().split("T")[0];
-
-          formattedFacilities.forEach((facility) => {
+        if (viewMode === "day") {
+          // For day view, check just the selected date
+          filteredFacilities = formattedFacilities.filter((facility) => {
             // Apply sport type filter
             if (
               sportTypeFilter &&
               !facility.sportType.includes(sportTypeFilter)
             ) {
-              return;
+              return false;
             }
 
-            // Check availability for this date
-            if (isFacilityAvailable(facility, dateString, bookings)) {
-              weekFacilities.set(facility.id, facility);
-            }
+            // Check availability
+            return isFacilityAvailable(facility, dateRange.startDate, bookings);
           });
+        } else {
+          // For week view, include facilities available on any day in the range
+          const weekFacilities = new Map<string, Facility>();
 
-          // Move to next day
-          currentDate.setDate(currentDate.getDate() + 1);
+          // Check each day in the date range
+          let currentDate = new Date(dateRange.startDate);
+          const endDateObj = new Date(dateRange.endDate);
+
+          while (currentDate <= endDateObj) {
+            const dateString = currentDate.toISOString().split("T")[0];
+
+            formattedFacilities.forEach((facility) => {
+              // Apply sport type filter
+              if (
+                sportTypeFilter &&
+                !facility.sportType.includes(sportTypeFilter)
+              ) {
+                return;
+              }
+
+              // Check availability for this date
+              if (isFacilityAvailable(facility, dateString, bookings)) {
+                weekFacilities.set(facility.id, facility);
+              }
+            });
+
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+
+          filteredFacilities = Array.from(weekFacilities.values());
         }
 
-        filteredFacilities = Array.from(weekFacilities.values());
+        setFacilities(filteredFacilities);
+      } else {
+        // Reset facilities if not in booking mode
+        setFacilities([]);
       }
 
-      setFacilities(filteredFacilities);
-
-      // Test query to see what lobbies exist in the system at all
-      const { data: allLobbies, error: allLobbiesError } = await supabase
-        .from("lobbies")
-        .select("id, date, status")
-        .limit(10);
-
-      console.log("All lobbies sample:", allLobbies);
-
-      // Fetch lobbies for the date range
-      const { data: lobbiesData, error: lobbiesError } = await supabase
-        .from("lobbies")
-        .select("*")
-        .limit(50);
-
-      console.log("All lobbies with all fields:", lobbiesData);
-
-      // Now try the filtered query
-      const { data: dateFilteredLobbies, error: dateFilterError } =
-        await supabase
+      // Only fetch lobbies in lobby mode
+      if (mode === "lobby" || !mode) {
+        // Fetch lobbies for the date range
+        const { data: lobbies, error: fullQueryError } = await supabase
           .from("lobbies")
-          .select("*")
+          .select("*, facility:facility_id(*)")
           .gte("date", dateRange.startDate)
-          .lte("dateRange.endDate");
+          .lte("date", dateRange.endDate)
+          .order("date", { ascending: true });
 
-      console.log("Date filtered lobbies:", dateFilteredLobbies);
+        if (fullQueryError) {
+          console.error("Lobby query error:", fullQueryError);
+          throw fullQueryError;
+        }
 
-      // Finally, the full query with all filters
-      const { data: lobbies, error: fullQueryError } = await supabase
-        .from("lobbies")
-        .select("*, facility:facility_id(*)")
-        .gte("date", dateRange.startDate)
-        .lte("date", dateRange.endDate)
-        .order("date", { ascending: true });
+        // Filter lobbies by sport type if needed
+        const filteredLobbies =
+          lobbies && sportTypeFilter
+            ? lobbies.filter((lobby) =>
+                lobby.facility?.sport_type?.includes(sportTypeFilter)
+              )
+            : lobbies || [];
 
-      if (lobbiesError || fullQueryError) {
-        console.error("Lobby query error:", lobbiesError || fullQueryError);
-        throw lobbiesError || fullQueryError;
+        setLobbies(filteredLobbies);
+      } else {
+        // Reset lobbies if not in lobby mode
+        setLobbies([]);
       }
-
-      console.log("Lobbies fetched with full query:", lobbies);
-
-      // Filter lobbies by sport type if needed
-      const filteredLobbies =
-        lobbies && sportTypeFilter
-          ? lobbies.filter((lobby) =>
-              lobby.facility?.sport_type?.includes(sportTypeFilter)
-            )
-          : lobbies || [];
-
-      console.log("Final filtered lobbies:", filteredLobbies);
-
-      setLobbies(filteredLobbies);
     } catch (err) {
       console.error("Error fetching availability:", err);
       setError("Failed to load availability data");
@@ -441,7 +432,7 @@ export default function CalendarView() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push(`/auth/login?redirect=/discover`);
+        router.push(`/auth/login?redirect=/discover?mode=lobby`);
         return;
       }
 
@@ -569,8 +560,8 @@ export default function CalendarView() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Available Facilities Section */}
-          {facilities.length > 0 && (
+          {/* Available Facilities Section - only shown in "booking" mode */}
+          {mode === "booking" && facilities.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4">
                 Available Facilities
@@ -587,7 +578,7 @@ export default function CalendarView() {
                         <img
                           src={facility.imageUrl}
                           alt={facility.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover rounded-lg"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -637,7 +628,7 @@ export default function CalendarView() {
                             facility.operatingHours[
                               getDayOfWeek(getDateRange().startDate)
                             ]?.open || "09:00"
-                          }`}
+                          }&mode=${mode}`}
                         >
                           <Button variant="primary" size="sm">
                             Book Now
@@ -651,8 +642,8 @@ export default function CalendarView() {
             </div>
           )}
 
-          {/* Available Lobbies Section */}
-          {lobbies.length > 0 && (
+          {/* Available Lobbies Section - only shown in "lobby" mode */}
+          {mode === "lobby" && lobbies.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Open Lobbies</h2>
               <LobbyList
@@ -664,8 +655,22 @@ export default function CalendarView() {
             </div>
           )}
 
-          {/* Empty state */}
-          {facilities.length === 0 && lobbies.length === 0 && (
+          {/* Empty state - specific to each mode */}
+          {((mode === "booking" && facilities.length === 0) ||
+            (mode === "lobby" && lobbies.length === 0)) && (
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                No {mode === "booking" ? "facilities" : "lobbies"} available for
+                the selected {viewMode === "day" ? "day" : "week"}.
+              </p>
+              <p className="text-gray-500 mt-2">
+                Try selecting a different date or view mode.
+              </p>
+            </div>
+          )}
+
+          {/* If no mode selected, show combined empty state */}
+          {!mode && facilities.length === 0 && lobbies.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500">
                 No facilities or lobbies available for the selected{" "}

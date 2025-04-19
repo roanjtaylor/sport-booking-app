@@ -17,6 +17,7 @@ type Props = {
   searchParams: {
     date?: string;
     time?: string;
+    mode?: string; // Added mode parameter
   };
 };
 
@@ -32,6 +33,9 @@ export default async function FacilityDetailPage({
   // Important: We create the Supabase client here properly
   const supabase = await createServerSupabaseClient();
   const { id } = params;
+
+  // Get the mode from search params
+  const mode = searchParams.mode || null;
 
   // Fetch specific facility by ID with type safety
   const { data: facility, error } = await supabase
@@ -98,15 +102,23 @@ export default async function FacilityDetailPage({
   const preselectedDate = searchParams.date || null;
   const preselectedTime = searchParams.time || null;
 
+  // Determine the back link based on the mode
+  const backLink = mode ? `/discover?mode=${mode}` : "/discover";
+
   return (
     <div>
-      {/* Back to discover link */}
+      {/* Back to discover link - now includes mode if available */}
       <div className="mb-6">
         <Link
-          href="/discover"
+          href={backLink}
           className="text-primary-600 hover:underline inline-flex items-center"
         >
-          ← Back to Discover
+          ← Back to{" "}
+          {mode === "booking"
+            ? "Facilities"
+            : mode === "lobby"
+            ? "Lobbies"
+            : "Discover"}
         </Link>
       </div>
 
@@ -262,7 +274,14 @@ export default async function FacilityDetailPage({
         <div>
           <Card className="sticky top-24">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Book this facility</h2>
+              {/* Customize title based on mode */}
+              <h2 className="text-xl font-semibold mb-4">
+                {mode === "booking"
+                  ? "Book this facility"
+                  : mode === "lobby"
+                  ? "Join or Create a Lobby"
+                  : "Book this facility"}
+              </h2>
 
               <Suspense fallback={<div>Loading booking form...</div>}>
                 <BookingFormWrapper
@@ -270,6 +289,7 @@ export default async function FacilityDetailPage({
                   existingBookings={formattedBookings}
                   preselectedDate={preselectedDate}
                   preselectedTime={preselectedTime}
+                  mode={mode} // Pass mode to the booking form
                 />
               </Suspense>
             </div>

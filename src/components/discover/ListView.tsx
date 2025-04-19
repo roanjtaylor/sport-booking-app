@@ -1,7 +1,7 @@
+// src/components/discover/ListView.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { ViewToggle } from "@/components/discover/ViewToggle";
 import FacilitiesClient from "@/app/facilities/FacilitiesClient";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { LobbyFilters } from "@/components/lobbies/LobbyFilters";
@@ -13,10 +13,13 @@ import type { Lobby } from "@/types/lobby";
 import { useRouter } from "next/navigation";
 import { joinLobby } from "@/lib/lobbies";
 
-export default function ListView() {
-  const [viewMode, setViewMode] = useState<"facilities" | "lobbies">(
-    "facilities"
-  );
+type BookingMode = "booking" | "lobby" | null;
+
+interface ListViewProps {
+  mode: BookingMode;
+}
+
+export default function ListView({ mode }: ListViewProps) {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [filteredFacilities, setFilteredFacilities] = useState<Facility[]>([]);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
@@ -33,47 +36,55 @@ export default function ListView() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch facilities data
-        const { data: facilitiesData, error: facilitiesError } = await supabase
-          .from("facilities")
-          .select("*")
-          .order("created_at", { ascending: false });
+        // Only fetch what we need based on mode
+        if (mode === "booking" || !mode) {
+          // Fetch facilities data
+          const { data: facilitiesData, error: facilitiesError } =
+            await supabase
+              .from("facilities")
+              .select("*")
+              .order("created_at", { ascending: false });
 
-        if (facilitiesError) throw facilitiesError;
+          if (facilitiesError) throw facilitiesError;
 
-        // Format facilities data
-        const formattedFacilities = (facilitiesData || []).map((facility) => ({
-          id: facility.id,
-          name: facility.name,
-          description: facility.description,
-          address: facility.address,
-          city: facility.city,
-          postal_code: facility.postal_code,
-          country: facility.country,
-          imageUrl: facility.image_url,
-          owner_id: facility.owner_id,
-          owner_email: facility.owner_email,
-          operatingHours: facility.operating_hours,
-          price_per_hour: facility.price_per_hour,
-          currency: facility.currency,
-          sportType: facility.sport_type,
-          amenities: facility.amenities || [],
-          min_players: facility.min_players,
-        }));
+          // Format facilities data
+          const formattedFacilities = (facilitiesData || []).map(
+            (facility) => ({
+              id: facility.id,
+              name: facility.name,
+              description: facility.description,
+              address: facility.address,
+              city: facility.city,
+              postal_code: facility.postal_code,
+              country: facility.country,
+              imageUrl: facility.image_url,
+              owner_id: facility.owner_id,
+              owner_email: facility.owner_email,
+              operatingHours: facility.operating_hours,
+              price_per_hour: facility.price_per_hour,
+              currency: facility.currency,
+              sportType: facility.sport_type,
+              amenities: facility.amenities || [],
+              min_players: facility.min_players,
+            })
+          );
 
-        setFacilities(formattedFacilities);
-        setFilteredFacilities(formattedFacilities);
+          setFacilities(formattedFacilities);
+          setFilteredFacilities(formattedFacilities);
+        }
 
-        // Fetch lobbies data
-        const { data: lobbiesData, error: lobbiesError } = await supabase
-          .from("lobbies")
-          .select(`*, facility:facility_id(*)`)
-          .order("date", { ascending: true });
+        if (mode === "lobby" || !mode) {
+          // Fetch lobbies data
+          const { data: lobbiesData, error: lobbiesError } = await supabase
+            .from("lobbies")
+            .select(`*, facility:facility_id(*)`)
+            .order("date", { ascending: true });
 
-        if (lobbiesError) throw lobbiesError;
+          if (lobbiesError) throw lobbiesError;
 
-        setLobbies(lobbiesData || []);
-        setFilteredLobbies(lobbiesData || []);
+          setLobbies(lobbiesData || []);
+          setFilteredLobbies(lobbiesData || []);
+        }
       } catch (err) {
         console.error("Error fetching data:", err);
         setError("Failed to load data. Please try again.");
@@ -83,7 +94,7 @@ export default function ListView() {
     }
 
     fetchData();
-  }, []);
+  }, [mode]);
 
   // Get unique sport types from facilities
   const sportTypes = Array.from(
@@ -212,7 +223,7 @@ export default function ListView() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push(`/auth/login?redirect=/discover`);
+        router.push(`/auth/login?redirect=/discover?mode=lobby`);
         return;
       }
 
@@ -238,6 +249,9 @@ export default function ListView() {
         setLobbies(updatedLobbies);
         setFilteredLobbies(updatedLobbies);
       }
+
+      // Redirect to the lobby detail page
+      router.push(`/lobbies/${lobbyId}`);
     } catch (err: any) {
       console.error("Error joining lobby:", err);
       setJoinError(err.message || "Failed to join lobby");
@@ -247,48 +261,43 @@ export default function ListView() {
     }
   };
 
-  return (
-    <div>
-      {viewMode === "facilities" ? (
-        <>
-          <div className="mb-8">
-            <FacilityFilters
-              onFilter={handleFacilityFilter}
-              sportTypes={sportTypes}
-              rightContent={
-                <ViewToggle currentView={viewMode} onToggle={setViewMode} />
-              }
-            />
-          </div>
-          <FacilitiesClient
-            initialFacilities={filteredFacilities}
-            isFiltered={true}
+  // Render content based on mode
+  if (mode === "booking") {
+    return (
+      <>
+        <div className="mb-8">
+          <FacilityFilters
+            onFilter={handleFacilityFilter}
+            sportTypes={sportTypes}
           />
-        </>
-      ) : (
-        <>
-          <div className="mb-8">
-            <LobbyFilters
-              onFilter={handleLobbyFilter}
-              sportTypes={sportTypes}
-              rightContent={
-                <ViewToggle currentView={viewMode} onToggle={setViewMode} />
-              }
-            />
+        </div>
+        <FacilitiesClient
+          initialFacilities={filteredFacilities}
+          isFiltered={true}
+        />
+      </>
+    );
+  } else if (mode === "lobby") {
+    return (
+      <>
+        <div className="mb-8">
+          <LobbyFilters onFilter={handleLobbyFilter} sportTypes={sportTypes} />
+        </div>
+        {joinError && (
+          <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
+            {joinError}
           </div>
-          {joinError && (
-            <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
-              {joinError}
-            </div>
-          )}
-          <LobbyList
-            lobbies={filteredLobbies}
-            onJoinLobby={handleJoinLobby}
-            isLoading={isJoiningLobby}
-            gridLayout={true}
-          />
-        </>
-      )}
-    </div>
-  );
+        )}
+        <LobbyList
+          lobbies={filteredLobbies}
+          onJoinLobby={handleJoinLobby}
+          isLoading={isJoiningLobby}
+          gridLayout={true}
+        />
+      </>
+    );
+  }
+
+  // Fallback (should never reach here with proper mode)
+  return null;
 }

@@ -1,3 +1,4 @@
+// src/components/bookings/BookingFormWrapper.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -31,21 +32,31 @@ type BookingFormWrapperProps = {
   }[];
   preselectedDate?: string | null;
   preselectedTime?: string | null;
+  mode?: string | null; // New mode prop
 };
 
 /**
  * Client component wrapper for booking form to handle client-side interactions
- * Now supports both full bookings and lobbies
+ * Now supports mode selection from URL
  */
 export default function BookingFormWrapper({
   facility,
   existingBookings,
   preselectedDate,
   preselectedTime,
+  mode,
 }: BookingFormWrapperProps) {
   const router = useRouter();
 
-  // State for full booking form
+  // Determine the initial booking type based on mode
+  const determineInitialBookingType = (): BookingType => {
+    if (mode === "booking") return "full";
+    if (mode === "lobby") return "lobby";
+    // Default to full booking if no mode specified
+    return "full";
+  };
+
+  // State for form inputs
   const [date, setDate] = useState(preselectedDate || "");
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [notes, setNotes] = useState("");
@@ -53,8 +64,10 @@ export default function BookingFormWrapper({
   const [error, setError] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
 
-  // New state for lobby functionality
-  const [bookingType, setBookingType] = useState<BookingType>("full");
+  // New state for lobby functionality - only initialize if needed
+  const [bookingType, setBookingType] = useState<BookingType>(
+    determineInitialBookingType()
+  );
   const [showLobbyForm, setShowLobbyForm] = useState(false);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoadingLobbies, setIsLoadingLobbies] = useState(false);
@@ -101,6 +114,7 @@ export default function BookingFormWrapper({
         `
         )
         .eq("facility_id", facility.id)
+        .eq("status", "open")
         .order("date", { ascending: true });
 
       if (error) throw error;
@@ -131,27 +145,30 @@ export default function BookingFormWrapper({
     }
   };
 
-  // Handle date change for full booking
+  // Handle date change for form
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
     setDate(newDate);
-    setSelectedSlot(null);
+    setSelectedSlot(null); // Reset selected slot
 
     if (newDate) {
-      // Get the day of the week from the selected date
+      // Get day of week from selected date
       const dayOfWeek = getDayOfWeek(newDate);
 
-      // Filter bookings for the selected date
-      const bookingsForDate = existingBookings.filter(
+      // Make sure operating_hours is in the expected format
+      const operatingHours = facility.operatingHours || {};
+
+      // Filter existing bookings for selected date
+      const dateBookings = existingBookings.filter(
         (booking) => booking.date === newDate
       );
 
-      // Generate time slots based on operating hours and existing bookings
+      // Generate time slots
       const slots = generateTimeSlots(
-        facility.operatingHours,
+        operatingHours,
         dayOfWeek,
-        60, // Default to 1-hour slots
-        bookingsForDate
+        60, // 1-hour slots
+        dateBookings
       );
 
       setTimeSlots(slots);
@@ -159,6 +176,9 @@ export default function BookingFormWrapper({
       setTimeSlots([]);
     }
   };
+
+  // Calculate total price
+  const totalPrice = selectedSlot ? facility.price_per_hour : 0;
 
   // Handle full booking form submission
   const handleFullBookingSubmit = async (e: React.FormEvent) => {
@@ -173,42 +193,51 @@ export default function BookingFormWrapper({
     }
 
     try {
-      // Get the current user
+      // Get current user
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        // If no user is logged in, redirect to login page
-        router.push(`/auth/login?redirect=/facilities/${facility.id}`);
+        router.push(
+          `/auth/login?redirect=/facilities/${facility.id}${
+            mode ? `?mode=${mode}` : ""
+          }`
+        );
         return;
       }
 
-      // Calculate total price based on hourly rate
-      const pricePerHour = facility.price_per_hour;
-
       // Create the booking
-      const { error: bookingError } = await supabase.from("bookings").insert({
-        facility_id: facility.id,
-        user_id: user.id,
-        date,
-        start_time: selectedSlot.startTime,
-        end_time: selectedSlot.endTime,
-        status: "pending",
-        total_price: pricePerHour,
-        notes,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      const { data, error: bookingError } = await supabase
+        .from("bookings")
+        .insert([
+          {
+            facility_id: facility.id,
+            user_id: user.id,
+            date,
+            start_time: selectedSlot.startTime,
+            end_time: selectedSlot.endTime,
+            status: "pending",
+            total_price: totalPrice,
+            notes,
+          },
+        ])
+        .select();
 
-      if (bookingError) throw bookingError;
+      if (bookingError) {
+        console.error("Supabase error:", bookingError);
+        throw new Error("Failed to create booking. Please try again.");
+      }
 
-      // Redirect to bookings page on success
+      // Success - redirect to bookings page
+      alert(
+        "Booking created successfully! The facility owner will review your request."
+      );
       router.push("/bookings");
       router.refresh();
-    } catch (err: any) {
-      console.error("Booking error:", err);
-      setError(err.message || "Failed to create booking");
+    } catch (err) {
+      console.error("Error creating booking:", err);
+      setError(err instanceof Error ? err.message : "Failed to create booking");
     } finally {
       setIsLoading(false);
     }
@@ -226,7 +255,11 @@ export default function BookingFormWrapper({
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push(`/auth/login?redirect=/facilities/${facility.id}`);
+        router.push(
+          `/auth/login?redirect=/facilities/${facility.id}${
+            mode ? `?mode=${mode}` : ""
+          }`
+        );
         return;
       }
 
@@ -237,6 +270,8 @@ export default function BookingFormWrapper({
         alert(
           "Congratulations! The lobby is now full and a booking has been created."
         );
+      } else {
+        alert("You have successfully joined the lobby!");
       }
 
       // Redirect to the lobby detail page
@@ -250,11 +285,14 @@ export default function BookingFormWrapper({
     }
   };
 
-  // Handle booking type change
+  // Handle booking type change - only if not forced by mode
   const handleBookingTypeChange = (type: BookingType) => {
-    setBookingType(type);
-    setShowLobbyForm(false); // Reset lobby form visibility
-    setError(null); // Clear any errors
+    // Only allow changing booking type if there's no mode restriction
+    if (!mode) {
+      setBookingType(type);
+      setShowLobbyForm(false); // Reset lobby form visibility
+      setError(null); // Clear any errors
+    }
   };
 
   // Calculate minimum date (today)
@@ -265,23 +303,26 @@ export default function BookingFormWrapper({
   maxDate.setDate(maxDate.getDate() + 30);
   const maxDateString = maxDate.toISOString().split("T")[0];
 
-  return (
-    <div>
-      {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">
-          {error}
-        </div>
-      )}
+  // If we're in "booking" mode, only show the full booking form
+  if (mode === "booking" || (!mode && bookingType === "full")) {
+    return (
+      <div>
+        {error && (
+          <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">
+            {error}
+          </div>
+        )}
 
-      {/* Booking Type Selector */}
-      <BookingTypeSelector
-        selectedType={bookingType}
-        onChange={handleBookingTypeChange}
-        minPlayers={minPlayers}
-      />
+        {/* Only show booking type selector if no mode is forced */}
+        {!mode && (
+          <BookingTypeSelector
+            selectedType={bookingType}
+            onChange={handleBookingTypeChange}
+            minPlayers={minPlayers}
+          />
+        )}
 
-      {/* Full Booking Form */}
-      {bookingType === "full" && (
+        {/* Full Booking Form */}
         <form onSubmit={handleFullBookingSubmit} className="space-y-4">
           <div>
             <label
@@ -377,261 +418,291 @@ export default function BookingFormWrapper({
             {isLoading ? "Processing..." : "Proceed to Book"}
           </Button>
         </form>
-      )}
+      </div>
+    );
+  }
 
-      {/* Lobby Booking Section */}
-      {bookingType === "lobby" && !showLobbyForm && (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Open Lobbies</h3>
-            <Button onClick={() => setShowLobbyForm(true)} size="sm">
-              Create New Lobby
-            </Button>
+  // If we're in "lobby" mode, only show the lobby options
+  if (mode === "lobby" || (!mode && bookingType === "lobby")) {
+    return (
+      <div>
+        {error && (
+          <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">
+            {error}
           </div>
+        )}
 
-          {isLoadingLobbies ? (
-            <div className="text-center py-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="mt-2 text-gray-500">Loading lobbies...</p>
-            </div>
-          ) : (
-            <LobbyList
-              lobbies={lobbies}
-              onJoinLobby={handleJoinLobby}
-              isLoading={isJoiningLobby}
-            />
-          )}
-        </div>
-      )}
+        {/* Only show booking type selector if no mode is forced */}
+        {!mode && (
+          <BookingTypeSelector
+            selectedType={bookingType}
+            onChange={handleBookingTypeChange}
+            minPlayers={minPlayers}
+          />
+        )}
 
-      {/* Create Lobby Form */}
-      {bookingType === "lobby" && showLobbyForm && (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-lg font-medium mb-4">Create New Lobby</h3>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setIsLoading(true);
-              setError(null);
-
-              try {
-                // Check authentication
-                const {
-                  data: { user },
-                } = await supabase.auth.getUser();
-                if (!user) {
-                  router.push(
-                    `/auth/login?redirect=/facilities/${facility.id}`
-                  );
-                  return;
-                }
-
-                // Validate date and time slot
-                if (!date || !selectedSlot) {
-                  setError("Please select a date and time slot");
-                  return;
-                }
-
-                // Create the lobby
-                const { data, error: lobbyError } = await supabase
-                  .from("lobbies")
-                  .insert({
-                    facility_id: facility.id,
-                    creator_id: user.id,
-                    creator_email: user.email,
-                    date,
-                    start_time: selectedSlot.startTime,
-                    end_time: selectedSlot.endTime,
-                    min_players: minPlayers,
-                    current_players: initialGroupSize, // Use the initial group size
-                    initial_group_size: initialGroupSize,
-                    group_name: groupName || null,
-                    status: initialGroupSize >= minPlayers ? "filled" : "open",
-                    notes: notes || null,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  })
-                  .select()
-                  .single();
-
-                if (lobbyError) throw lobbyError;
-
-                // Add creator as participant
-                const { error: participantError } = await supabase
-                  .from("lobby_participants")
-                  .insert({
-                    lobby_id: data.id,
-                    user_id: user.id,
-                  });
-
-                if (participantError) throw participantError;
-
-                // Redirect to the lobby page
-                router.push(`/lobbies/${data.id}`);
-                router.refresh();
-              } catch (err: any) {
-                console.error("Error creating lobby:", err);
-                setError(err.message || "Failed to create lobby");
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            className="space-y-4"
-          >
-            {/* Date selection */}
-            <div>
-              <label
-                htmlFor="lobby-date"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Date
-              </label>
-              <input
-                type="date"
-                id="lobby-date"
-                value={date}
-                onChange={handleDateChange}
-                min={today}
-                max={maxDateString}
-                required
-                className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-              />
+        {/* Lobby Options */}
+        {!showLobbyForm ? (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Open Lobbies</h3>
+              <Button onClick={() => setShowLobbyForm(true)} size="sm">
+                Create New Lobby
+              </Button>
             </div>
 
-            {/* Time slot selection */}
-            {date && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Available Time Slots
-                </label>
-                {timeSlots.length === 0 ? (
-                  <p className="text-sm text-gray-500">
-                    No available time slots for this day.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {timeSlots.map((slot, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        disabled={!slot.available}
-                        onClick={() => slot.available && setSelectedSlot(slot)}
-                        className={`p-2 text-sm rounded text-center ${
-                          !slot.available
-                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            : selectedSlot?.startTime === slot.startTime
-                            ? "bg-primary-600 text-white"
-                            : "bg-white border border-gray-300 text-gray-700 hover:border-primary-500"
-                        }`}
-                      >
-                        {formatTime(slot.startTime)} -{" "}
-                        {formatTime(slot.endTime)}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            {isLoadingLobbies ? (
+              <div className="text-center py-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                <p className="mt-2 text-gray-500">Loading lobbies...</p>
               </div>
+            ) : (
+              <LobbyList
+                lobbies={lobbies}
+                onJoinLobby={handleJoinLobby}
+                isLoading={isJoiningLobby}
+              />
             )}
+          </div>
+        ) : (
+          // Create Lobby Form
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h3 className="text-lg font-medium mb-4">Create New Lobby</h3>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setError(null);
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                How many players do you already have?
-              </label>
-              <input
-                type="number"
-                min="1"
-                max={minPlayers - 1}
-                value={initialGroupSize}
-                onChange={(e) => setInitialGroupSize(parseInt(e.target.value))}
-                className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Include yourself and friends who are committed to playing
-              </p>
-            </div>
+                try {
+                  // Check authentication
+                  const {
+                    data: { user },
+                  } = await supabase.auth.getUser();
+                  if (!user) {
+                    router.push(
+                      `/auth/login?redirect=/facilities/${facility.id}${
+                        mode ? `?mode=${mode}` : ""
+                      }`
+                    );
+                    return;
+                  }
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Group Name (optional)
-              </label>
-              <input
-                type="text"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                placeholder="e.g. 'Tuesday Regulars'"
-                className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
+                  // Validate date and time slot
+                  if (!date || !selectedSlot) {
+                    setError("Please select a date and time slot");
+                    return;
+                  }
 
-            {/* Notes field */}
-            {selectedSlot && (
+                  // Create the lobby
+                  const { data, error: lobbyError } = await supabase
+                    .from("lobbies")
+                    .insert({
+                      facility_id: facility.id,
+                      creator_id: user.id,
+                      creator_email: user.email,
+                      date,
+                      start_time: selectedSlot.startTime,
+                      end_time: selectedSlot.endTime,
+                      min_players: minPlayers,
+                      current_players: initialGroupSize, // Use the initial group size
+                      initial_group_size: initialGroupSize,
+                      group_name: groupName || null,
+                      status:
+                        initialGroupSize >= minPlayers ? "filled" : "open",
+                      notes: notes || null,
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString(),
+                    })
+                    .select()
+                    .single();
+
+                  if (lobbyError) throw lobbyError;
+
+                  // Add creator as participant
+                  const { error: participantError } = await supabase
+                    .from("lobby_participants")
+                    .insert({
+                      lobby_id: data.id,
+                      user_id: user.id,
+                    });
+
+                  if (participantError) throw participantError;
+
+                  // Redirect to the lobby page
+                  router.push(`/lobbies/${data.id}`);
+                  router.refresh();
+                } catch (err: any) {
+                  console.error("Error creating lobby:", err);
+                  setError(err.message || "Failed to create lobby");
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              {/* Date selection */}
               <div>
                 <label
-                  htmlFor="lobby-notes"
+                  htmlFor="lobby-date"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Notes for other players (optional)
+                  Date
                 </label>
-                <textarea
-                  id="lobby-notes"
-                  rows={3}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Any details for others joining your lobby"
+                <input
+                  type="date"
+                  id="lobby-date"
+                  value={date}
+                  onChange={handleDateChange}
+                  min={today}
+                  max={maxDateString}
+                  required
                   className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
-            )}
 
-            {/* Lobby summary */}
-            {selectedSlot && (
-              <div className="bg-gray-50 p-4 rounded">
-                <h4 className="font-medium mb-2">Lobby Summary</h4>
-                <div className="text-sm space-y-1">
-                  <p>
-                    <span className="text-gray-600">Facility:</span>{" "}
-                    {facility.name}
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Date:</span>{" "}
-                    {formatDate(date)}
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Time:</span>{" "}
-                    {formatTime(selectedSlot.startTime)} -{" "}
-                    {formatTime(selectedSlot.endTime)}
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Players needed:</span>{" "}
-                    {minPlayers}
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Price per player:</span>{" "}
-                    Approximately{" "}
-                    {formatPrice(
-                      facility.price_per_hour / minPlayers,
-                      facility.currency
-                    )}
-                  </p>
+              {/* Time slot selection */}
+              {date && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Available Time Slots
+                  </label>
+                  {timeSlots.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No available time slots for this day.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {timeSlots.map((slot, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          disabled={!slot.available}
+                          onClick={() =>
+                            slot.available && setSelectedSlot(slot)
+                          }
+                          className={`p-2 text-sm rounded text-center ${
+                            !slot.available
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : selectedSlot?.startTime === slot.startTime
+                              ? "bg-primary-600 text-white"
+                              : "bg-white border border-gray-300 text-gray-700 hover:border-primary-500"
+                          }`}
+                        >
+                          {formatTime(slot.startTime)} -{" "}
+                          {formatTime(slot.endTime)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="flex justify-end space-x-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowLobbyForm(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading || !selectedSlot}>
-                {isLoading ? "Creating..." : "Create Lobby"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
-  );
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  How many players do you already have?
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={minPlayers - 1}
+                  value={initialGroupSize}
+                  onChange={(e) =>
+                    setInitialGroupSize(parseInt(e.target.value))
+                  }
+                  className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Include yourself and friends who are committed to playing
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Group Name (optional)
+                </label>
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="e.g. 'Tuesday Regulars'"
+                  className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+
+              {/* Notes field */}
+              {selectedSlot && (
+                <div>
+                  <label
+                    htmlFor="lobby-notes"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Notes for other players (optional)
+                  </label>
+                  <textarea
+                    id="lobby-notes"
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Any details for others joining your lobby"
+                    className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+              )}
+
+              {/* Lobby summary */}
+              {selectedSlot && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <h4 className="font-medium mb-2">Lobby Summary</h4>
+                  <div className="text-sm space-y-1">
+                    <p>
+                      <span className="text-gray-600">Facility:</span>{" "}
+                      {facility.name}
+                    </p>
+                    <p>
+                      <span className="text-gray-600">Date:</span>{" "}
+                      {formatDate(date)}
+                    </p>
+                    <p>
+                      <span className="text-gray-600">Time:</span>{" "}
+                      {formatTime(selectedSlot.startTime)} -{" "}
+                      {formatTime(selectedSlot.endTime)}
+                    </p>
+                    <p>
+                      <span className="text-gray-600">Players needed:</span>{" "}
+                      {minPlayers}
+                    </p>
+                    <p>
+                      <span className="text-gray-600">Price per player:</span>{" "}
+                      Approximately{" "}
+                      {formatPrice(
+                        facility.price_per_hour / minPlayers,
+                        facility.currency
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowLobbyForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading || !selectedSlot}>
+                  {isLoading ? "Creating..." : "Create Lobby"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback - should never reach here due to the mode checking above
+  return null;
 }
