@@ -6,6 +6,7 @@ import ListView from "@/components/discover/ListView";
 import MapView from "@/components/discover/MapView";
 import { Button } from "@/components/ui/Button";
 import CalendarView from "@/components/discover/CalendarView";
+import CreateLobbyView from "@/components/discover/CreateLobbyView";
 import { ModeSelectionScreen } from "@/components/discover/ModeSelectionScreen";
 import { useRouter, useSearchParams } from "next/navigation";
 

@@ -10,6 +10,7 @@ import { Facility } from "@/types/facility";
 import { Lobby } from "@/types/lobby";
 import Link from "next/link";
 import { LobbyList } from "@/components/lobbies/LobbyList";
+import CreateLobbyView from "@/components/discover/CreateLobbyView";
 import { joinLobby } from "@/lib/lobbies";
 import { useRouter } from "next/navigation";
 

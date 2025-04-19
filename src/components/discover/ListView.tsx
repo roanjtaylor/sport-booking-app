@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { FacilityFilters } from "@/components/facilities/FacilityFilters";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import CreateLobbyView from "@/components/discover/CreateLobbyView";
 import type { Facility } from "@/types/facility";
 import type { Lobby } from "@/types/lobby";
 import { useRouter } from "next/navigation";
@@ -286,12 +287,14 @@ export default function ListView({ mode }: ListViewProps) {
           <LobbyFilters onFilter={handleLobbyFilter} sportTypes={sportTypes} />
         </div>
 
-        {/* Add "Create Lobby" button */}
-        <div className="flex justify-end mb-4">
-          <Button onClick={onCreateLobby} variant="primary">
-            Don't see a lobby that suits you? Make one!
-          </Button>
-        </div>
+        {/* Only add this button if onCreateLobby exists */}
+        {onCreateLobby && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={onCreateLobby} variant="primary">
+              Don't see a lobby that suits you? Make one!
+            </Button>
+          </div>
+        )}
 
         <LobbyList
           lobbies={filteredLobbies}
