@@ -650,13 +650,7 @@ export default function CalendarView({
           {/* Available Lobbies Section - only shown in "lobby" mode */}
           {mode === "lobby" && lobbies.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Open Lobbies</h2>
-              {/* Add "Create Lobby" button */}
-              <div className="flex justify-end mb-4">
-                <Button onClick={onCreateLobby} variant="primary">
-                  Don't see a lobby that suits you? Make one!
-                </Button>
-              </div>
+              <h2 className="text-xl font-semibold mb-4">Active Lobbies</h2>
               <LobbyList
                 lobbies={lobbies}
                 onJoinLobby={handleJoinLobby}

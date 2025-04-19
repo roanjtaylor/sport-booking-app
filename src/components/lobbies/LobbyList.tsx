@@ -242,6 +242,19 @@ export function LobbyList({
                     </div>
                   </div>
 
+                  <p className="text-sm text-gray-700 mb-2">
+                    <span className="font-medium">Facility:</span>{" "}
+                    {lobby.facility?.name || "Unknown"}
+                  </p>
+
+                  <div className="text-sm text-gray-500 space-y-1">
+                    <p>
+                      <span className="font-medium">Time:</span>{" "}
+                      {formatTime(lobby.start_time)} -{" "}
+                      {formatTime(lobby.end_time)}
+                    </p>
+                  </div>
+
                   {/* Group name if available */}
                   {lobby.group_name && (
                     <p className="text-sm font-medium text-gray-800 mb-1">
@@ -255,19 +268,6 @@ export function LobbyList({
                       Started with {lobby.initial_group_size} players
                     </p>
                   )}
-
-                  <p className="text-sm text-gray-700 mb-2">
-                    <span className="font-medium">Facility:</span>{" "}
-                    {lobby.facility?.name || "Unknown"}
-                  </p>
-
-                  <div className="text-sm text-gray-500 space-y-1">
-                    <p>
-                      <span className="font-medium">Time:</span>{" "}
-                      {formatTime(lobby.start_time)} -{" "}
-                      {formatTime(lobby.end_time)}
-                    </p>
-                  </div>
                 </div>
 
                 {/* Lobby actions */}

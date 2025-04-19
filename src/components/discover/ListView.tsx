@@ -287,15 +287,6 @@ export default function ListView({ mode, onCreateLobby }: ListViewProps) {
           <LobbyFilters onFilter={handleLobbyFilter} sportTypes={sportTypes} />
         </div>
 
-        {/* Only add this button if onCreateLobby exists */}
-        {onCreateLobby && (
-          <div className="flex justify-end mb-4">
-            <Button onClick={onCreateLobby} variant="primary">
-              Don't see a lobby that suits you? Make one!
-            </Button>
-          </div>
-        )}
-
         <LobbyList
           lobbies={filteredLobbies}
           onJoinLobby={handleJoinLobby}

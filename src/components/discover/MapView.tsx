@@ -117,7 +117,6 @@ export default function MapView({ mode }: MapViewProps) {
               facility:facility_id(*)
             `
             )
-            .eq("status", "open")
             .order("date", { ascending: true });
 
           if (lobbiesError) throw lobbiesError;
