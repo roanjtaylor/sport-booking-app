@@ -159,7 +159,10 @@ function SimpleCalendar({ value, onChange, minDate = new Date(), maxDate }) {
   );
 }
 
-export default function CalendarView({ mode }: CalendarViewProps) {
+export default function CalendarView({
+  mode,
+  onCreateLobby,
+}: CalendarViewProps) {
   const router = useRouter();
 
   // State for calendar and results

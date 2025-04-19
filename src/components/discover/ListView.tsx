@@ -22,7 +22,7 @@ interface ListViewProps {
   onCreateLobby?: () => void;
 }
 
-export default function ListView({ mode }: ListViewProps) {
+export default function ListView({ mode, onCreateLobby }: ListViewProps) {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [filteredFacilities, setFilteredFacilities] = useState<Facility[]>([]);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
