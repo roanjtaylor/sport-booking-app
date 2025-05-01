@@ -3,7 +3,7 @@ import React from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-// import { ExtendedBooking } from '../../types/booking';
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatDate, formatTime, formatPrice } from "@/lib/utils";
 import { Booking } from "@/types/booking";
 
@@ -19,9 +19,6 @@ export function BookingsList({
   bookings,
   showFacilityInfo = true,
 }: BookingsListProps) {
-  // *** DEBUGGING ***
-  console.log("BookingsList received bookings:", bookings);
-
   // Handle case when bookings is undefined or null
   if (!bookings || bookings.length === 0) {
     return (
@@ -36,22 +33,6 @@ export function BookingsList({
       </div>
     );
   }
-
-  // Handle snake_case field names from the database
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "confirmed":
-        return "bg-green-100 text-green-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      case "completed":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
 
   const isLobbyBooking = (booking: Booking) => {
     return (
@@ -73,20 +54,20 @@ export function BookingsList({
                       ? booking.facility?.name
                       : formatDate(booking.date)}
                   </h3>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                      booking.status
-                    )}`}
-                  >
-                    {booking.status.charAt(0).toUpperCase() +
-                      booking.status.slice(1)}
-                  </span>
+                  <StatusBadge
+                    status={
+                      booking.status.charAt(0).toUpperCase() +
+                      booking.status.slice(1)
+                    }
+                  />
 
                   {/* Add lobby badge */}
                   {isLobbyBooking(booking) && (
-                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Group Booking
-                    </span>
+                    <StatusBadge
+                      status="Group Booking"
+                      variant="group"
+                      className="ml-2"
+                    />
                   )}
                 </div>
 

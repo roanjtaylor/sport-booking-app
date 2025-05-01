@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatDate, formatTime } from "@/lib/utils";
 import { Lobby } from "@/types/lobby";
 import { supabase } from "@/lib/supabase";
@@ -106,20 +107,6 @@ export function LobbyList({
     return userWaitingStatuses[lobbyId] || null;
   };
 
-  // Handle snake_case field names from the database
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case "open":
-        return "bg-yellow-100 text-yellow-800";
-      case "filled":
-        return "bg-green-100 text-green-800";
-      case "confirmed":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   // Show a loading state while checking participation
   if (isCheckingParticipation) {
     return (
@@ -212,32 +199,30 @@ export function LobbyList({
                       {formatDate(lobby.date)}
                     </h3>
                     <div className="flex flex-wrap items-center gap-1">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {lobby.current_players}/{lobby.min_players} Players
-                      </span>
+                      <StatusBadge
+                        status={`${lobby.current_players}/${lobby.min_players} Players`}
+                        variant="info"
+                      />
 
                       {/* Show waiting list count if any */}
                       {lobby.waiting_count > 0 && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          +{lobby.waiting_count} waiting
-                        </span>
+                        <StatusBadge
+                          status={`+${lobby.waiting_count} waiting`}
+                          variant="waiting"
+                        />
                       )}
 
                       {/* Show status badge for lobby */}
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                          lobby.status
-                        )}`}
-                      >
-                        {lobby.status.charAt(0).toUpperCase() +
-                          lobby.status.slice(1)}
-                      </span>
+                      <StatusBadge
+                        status={
+                          lobby.status.charAt(0).toUpperCase() +
+                          lobby.status.slice(1)
+                        }
+                      />
 
                       {/* Show enrolled badge if user is in this lobby */}
                       {isUserInLobby(lobby.id) && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          ✓
-                        </span>
+                        <StatusBadge status="✓" variant="success" />
                       )}
                     </div>
                   </div>
