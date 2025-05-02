@@ -4,11 +4,12 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { TimeSlotPicker } from "@/components/facilities/TimeSlotPicker";
-import { formatDate, formatTime, formatPrice } from "@/lib/utils";
-import { Card } from "../ui/Card";
 import { useBookingForm } from "@/hooks/useBookingForm";
+import { DatePickerField } from "@/components/ui/DatePickerField";
+import { NotesField } from "@/components/ui/NotesField";
+import { BookingSummary } from "@/components/bookings/BookingSummary";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 
 type BookingFormProps = {
   facility: any;
@@ -22,13 +23,11 @@ export function BookingForm({ facility, existingBookings }: BookingFormProps) {
   const {
     date,
     selectedSlot,
-    setSelectedSlot, // Make sure to use this properly
+    setSelectedSlot,
     notes,
     setNotes,
     isLoading,
-    setIsLoading,
     error,
-    setError,
     timeSlots,
     today,
     maxDateString,
@@ -72,21 +71,17 @@ export function BookingForm({ facility, existingBookings }: BookingFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md">{error}</div>
-      )}
+      <ErrorDisplay error={error} />
 
       <div className="p-6 bg-white rounded-lg shadow">
         <h2 className="text-lg font-medium mb-4">Make a Booking</h2>
 
-        <Input
+        <DatePickerField
           label="Select Date"
-          name="date"
-          type="date"
           value={date}
           onChange={handleDateChange}
-          min={today}
-          max={maxDateString}
+          minDate={today}
+          maxDate={maxDateString}
           required
         />
 
@@ -99,44 +94,22 @@ export function BookingForm({ facility, existingBookings }: BookingFormProps) {
         )}
 
         {selectedSlot && (
-          <div className="mt-6">
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notes (optional)
-              </label>
-              <textarea
-                name="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                placeholder="Any special requests or information for the facility owner"
-                className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
+          <>
+            <NotesField
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="mt-6"
+            />
 
-            <div className="bg-gray-50 p-4 rounded-md">
-              <h3 className="font-medium mb-2">Booking Summary</h3>
-              <div className="space-y-1 text-sm">
-                <p>
-                  <span className="text-gray-500">Facility:</span>{" "}
-                  {facility.name}
-                </p>
-                <p>
-                  <span className="text-gray-500">Date:</span>{" "}
-                  {formatDate(date)}
-                </p>
-                <p>
-                  <span className="text-gray-500">Time:</span>{" "}
-                  {formatTime(selectedSlot.startTime)} -{" "}
-                  {formatTime(selectedSlot.endTime)}
-                </p>
-                <p className="font-medium mt-2">
-                  <span className="text-gray-500">Total Price:</span>{" "}
-                  {formatPrice(totalPrice, facility?.currency || "USD")}
-                </p>
-              </div>
-            </div>
-          </div>
+            <BookingSummary
+              facilityName={facility.name}
+              date={date}
+              selectedSlot={selectedSlot}
+              price={totalPrice}
+              currency={facility?.currency || "USD"}
+              className="mt-4"
+            />
+          </>
         )}
       </div>
 

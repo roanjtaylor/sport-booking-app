@@ -5,15 +5,17 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { formatDate, formatTime, formatPrice } from "@/lib/utils";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { Lobby } from "@/types/lobby";
 import { joinLobby } from "@/lib/lobbies";
 import { useBookingForm } from "@/hooks/useBookingForm";
-import {
-  BookingTypeSelector,
-  BookingType,
-} from "@/components/bookings/BookingTypeSelector";
+import { BookingType } from "@/components/bookings/BookingTypeSelector";
+import { DatePickerField } from "@/components/ui/DatePickerField";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { TimeSlotPicker } from "@/components/facilities/TimeSlotPicker";
+import { NotesField } from "@/components/ui/NotesField";
+import { BookingSummary } from "@/components/bookings/BookingSummary";
+import { LobbyCreationForm } from "@/components/lobbies/LobbyCreationForm";
 
 // Props type for the BookingFormWrapper component
 type BookingFormWrapperProps = {
@@ -30,7 +32,7 @@ type BookingFormWrapperProps = {
 
 /**
  * Client component wrapper for booking form to handle client-side interactions
- * Now supports mode selection from URL
+ * Now supports mode selection from URL and uses reusable UI components
  */
 export default function BookingFormWrapper({
   facility,
@@ -57,7 +59,7 @@ export default function BookingFormWrapper({
   const {
     date,
     selectedSlot,
-    setSelectedSlot, // Important! This needs to be used properly
+    setSelectedSlot,
     notes,
     setNotes,
     isLoading,
@@ -196,8 +198,8 @@ export default function BookingFormWrapper({
     const success = await createLobby(user.id, user.email || "", router);
 
     if (success) {
-      // Redirect to the lobby page (actual redirect is handled in the hook)
-      router.push(`/lobbies`);
+      // Redirect to the lobby page
+      router.push("/lobbies");
       router.refresh();
     }
   };
@@ -256,101 +258,41 @@ export default function BookingFormWrapper({
   if (!mode || String(mode).toLowerCase() === "booking") {
     return (
       <div>
-        {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">
-            {error}
-          </div>
-        )}
+        <ErrorDisplay error={error} compact={true} className="mb-4" />
 
         {/* Full Booking Form */}
         <form onSubmit={handleFullBookingSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="date"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Date
-            </label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={date}
-              onChange={handleDateChange}
-              min={today}
-              max={maxDateString}
-              required
-              className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+          <DatePickerField
+            value={date}
+            onChange={handleDateChange}
+            minDate={today}
+            maxDate={maxDateString}
+            required
+          />
 
           {date && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Available Time Slots
-              </label>
-              {timeSlots.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  No available time slots for this day.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {timeSlots.map((slot, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      disabled={!slot.available}
-                      onClick={() => slot.available && setSelectedSlot(slot)}
-                      className={`p-2 text-sm rounded text-center ${
-                        !slot.available
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : selectedSlot?.startTime === slot.startTime
-                          ? "bg-primary-600 text-white"
-                          : "bg-white border border-gray-300 text-gray-700 hover:border-primary-500"
-                      }`}
-                    >
-                      {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <TimeSlotPicker
+              timeSlots={timeSlots}
+              selectedSlot={selectedSlot}
+              onSelectSlot={(slot) => setSelectedSlot(slot)}
+            />
           )}
 
           {selectedSlot && (
             <>
-              <div>
-                <label
-                  htmlFor="notes"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Notes (optional)
-                </label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  rows={3}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Any special requests"
-                  className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-                ></textarea>
-              </div>
+              <NotesField
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any special requests"
+              />
 
-              <div className="bg-gray-50 p-4 rounded">
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Price per hour</span>
-                  <span>
-                    {formatPrice(facility.price_per_hour, facility.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between font-medium">
-                  <span>Total</span>
-                  <span>
-                    {formatPrice(facility.price_per_hour, facility.currency)}
-                  </span>
-                </div>
-              </div>
+              <BookingSummary
+                facilityName={facility.name}
+                date={date}
+                selectedSlot={selectedSlot}
+                price={facility.price_per_hour}
+                currency={facility.currency}
+              />
             </>
           )}
 
@@ -364,11 +306,7 @@ export default function BookingFormWrapper({
     // Only show lobby options
     return (
       <div>
-        {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">
-            {error}
-          </div>
-        )}
+        <ErrorDisplay error={error} compact={true} className="mb-4" />
 
         {/* Lobby Options */}
         {!showLobbyForm ? (
@@ -394,167 +332,27 @@ export default function BookingFormWrapper({
             )}
           </div>
         ) : (
-          // Create Lobby Form
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-medium mb-4">Create New Lobby</h3>
-            <form onSubmit={handleCreateLobby} className="space-y-4">
-              {/* Date selection */}
-              <div>
-                <label
-                  htmlFor="lobby-date"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Date
-                </label>
-                <input
-                  type="date"
-                  id="lobby-date"
-                  value={date}
-                  onChange={handleDateChange}
-                  min={today}
-                  max={maxDateString}
-                  required
-                  className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              {/* Time slot selection */}
-              {date && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Available Time Slots
-                  </label>
-                  {timeSlots.length === 0 ? (
-                    <p className="text-sm text-gray-500">
-                      No available time slots for this day.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      {timeSlots.map((slot, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          disabled={!slot.available}
-                          onClick={() =>
-                            slot.available && setSelectedSlot(slot)
-                          }
-                          className={`p-2 text-sm rounded text-center ${
-                            !slot.available
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                              : selectedSlot?.startTime === slot.startTime
-                              ? "bg-primary-600 text-white"
-                              : "bg-white border border-gray-300 text-gray-700 hover:border-primary-500"
-                          }`}
-                        >
-                          {formatTime(slot.startTime)} -{" "}
-                          {formatTime(slot.endTime)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  How many players do you already have?
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max={minPlayers - 1}
-                  value={initialGroupSize}
-                  onChange={(e) =>
-                    setInitialGroupSize(parseInt(e.target.value))
-                  }
-                  className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Include yourself and friends who are committed to playing
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Group Name (optional)
-                </label>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="e.g. 'Tuesday Regulars'"
-                  className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              {/* Notes field */}
-              {selectedSlot && (
-                <div>
-                  <label
-                    htmlFor="lobby-notes"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Notes for other players (optional)
-                  </label>
-                  <textarea
-                    id="lobby-notes"
-                    rows={3}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Any details for others joining your lobby"
-                    className="block w-full rounded-md shadow-sm border-gray-300 focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-              )}
-
-              {/* Lobby summary */}
-              {selectedSlot && (
-                <div className="bg-gray-50 p-4 rounded">
-                  <h4 className="font-medium mb-2">Lobby Summary</h4>
-                  <div className="text-sm space-y-1">
-                    <p>
-                      <span className="text-gray-600">Facility:</span>{" "}
-                      {facility.name}
-                    </p>
-                    <p>
-                      <span className="text-gray-600">Date:</span>{" "}
-                      {formatDate(date)}
-                    </p>
-                    <p>
-                      <span className="text-gray-600">Time:</span>{" "}
-                      {formatTime(selectedSlot.startTime)} -{" "}
-                      {formatTime(selectedSlot.endTime)}
-                    </p>
-                    <p>
-                      <span className="text-gray-600">Players needed:</span>{" "}
-                      {minPlayers}
-                    </p>
-                    <p>
-                      <span className="text-gray-600">Price per player:</span>{" "}
-                      Approximately{" "}
-                      {formatPrice(
-                        facility.price_per_hour / minPlayers,
-                        facility.currency
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setShowLobbyForm(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading || !selectedSlot}>
-                  {isLoading ? "Creating..." : "Create Lobby"}
-                </Button>
-              </div>
-            </form>
-          </div>
+          // Use the extracted LobbyCreationForm component
+          <LobbyCreationForm
+            date={date}
+            onDateChange={handleDateChange}
+            timeSlots={timeSlots}
+            selectedSlot={selectedSlot}
+            onSelectSlot={(slot) => setSelectedSlot(slot)}
+            initialGroupSize={initialGroupSize}
+            onInitialGroupSizeChange={setInitialGroupSize}
+            groupName={groupName}
+            onGroupNameChange={setGroupName}
+            notes={notes}
+            onNotesChange={(e) => setNotes(e.target.value)}
+            facility={facility}
+            minPlayers={minPlayers}
+            onSubmit={handleCreateLobby}
+            onCancel={() => setShowLobbyForm(false)}
+            isLoading={isLoading}
+            minDate={today}
+            maxDate={maxDateString}
+          />
         )}
       </div>
     );
