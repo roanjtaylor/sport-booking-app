@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BookingDetail } from "@/components/bookings/BookingDetail";
-import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
@@ -12,6 +11,7 @@ import { Booking } from "@/types/booking";
 import { LobbyParticipants } from "@/components/bookings/LobbyParticipants";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { authApi, bookingsApi } from "@/lib/api"; // Import from the API layer
 
 interface BookingDetailClientProps {
   id: string;
@@ -34,34 +34,20 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
     async function fetchBookingDetails() {
       try {
         // Check if user is authenticated
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { data: user, error: userError } = await authApi.getCurrentUser();
 
-        if (!user) {
+        if (userError || !user) {
           setError("You must be logged in to view booking details");
           setIsLoading(false);
           return;
         }
 
         // Fetch booking with related information
-        const { data: bookingData, error: bookingError } = await supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            facility:facilities(*)
-          `
-          )
-          .eq("id", id)
-          .single();
+        const { data: bookingData, error: bookingError } =
+          await bookingsApi.getBookingById(id);
 
-        if (bookingError) throw bookingError;
-
-        if (!bookingData) {
-          setError("Booking not found");
-          setIsLoading(false);
-          return;
+        if (bookingError || !bookingData) {
+          throw bookingError || new Error("Booking not found");
         }
 
         // Check if user owns the booking or facility
@@ -90,13 +76,10 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
     setIsProcessing(true);
 
     try {
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          status: "cancelled",
-          updated_at: new Date().toISOString(), // Fix: changed from updatedAt to updated_at
-        })
-        .eq("id", id);
+      const { data, error } = await bookingsApi.updateBookingStatus(
+        id,
+        "cancelled"
+      );
 
       if (error) throw error;
 
@@ -111,7 +94,7 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
           : null
       );
 
-      // Show success message (could use a toast notification in a real app)
+      // Show success message
       alert("Booking cancelled successfully");
     } catch (err) {
       console.error("Error cancelling booking:", err);
@@ -127,13 +110,10 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
     setIsProcessing(true);
 
     try {
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          status: "confirmed",
-          updated_at: new Date().toISOString(), // Fix: changed from updatedAt to updated_at
-        })
-        .eq("id", id);
+      const { data, error } = await bookingsApi.updateBookingStatus(
+        id,
+        "confirmed"
+      );
 
       if (error) throw error;
 
@@ -148,7 +128,7 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
           : null
       );
 
-      // Show success message (could use a toast notification in a real app)
+      // Show success message
       alert("Booking confirmed successfully");
     } catch (err) {
       console.error("Error confirming booking:", err);

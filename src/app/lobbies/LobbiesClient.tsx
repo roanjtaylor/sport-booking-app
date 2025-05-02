@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LobbyList } from "@/components/lobbies/LobbyList";
-import { supabase } from "@/lib/supabase";
-import { joinLobby } from "@/lib/lobbies";
 import { Lobby } from "@/types/lobby";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { authApi, lobbiesApi } from "@/lib/api"; // Import from the API layer
 
 type LobbiesClientProps = {
   initialLobbies: Lobby[];
@@ -24,17 +23,19 @@ export default function LobbiesClient({ initialLobbies }: LobbiesClientProps) {
       setError(null);
 
       // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (!user) {
+      if (userError || !user) {
         router.push(`/auth/login?redirect=/lobbies`);
         return;
       }
 
-      // Use the centralized joinLobby function
-      const result = await joinLobby(lobbyId, user.id, user.email || "");
+      // Use the API service function to join the lobby
+      const result = await lobbiesApi.joinLobby(
+        lobbyId,
+        user.id,
+        user.email || ""
+      );
 
       // Show success message and redirect to lobby
       if (result.isWaiting) {

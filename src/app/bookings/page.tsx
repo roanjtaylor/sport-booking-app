@@ -1,7 +1,6 @@
 // src/app/bookings/page.tsx
 import { Suspense } from "react";
 import BookingsClient from "./BookingsClient";
-import { Card } from "@/components/ui/Card";
 
 /**
  * Server component for the bookings page

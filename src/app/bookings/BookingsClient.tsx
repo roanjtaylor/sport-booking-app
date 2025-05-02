@@ -3,14 +3,12 @@
 // src/app/bookings/BookingsClient.tsx
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { BookingsList } from "@/components/bookings/BookingsList";
 import { UserLobbiesList } from "@/components/bookings/UserLobbiesList";
-import { supabase } from "@/lib/supabase";
-import Link from "next/link";
 import { Lobby } from "@/types/lobby";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { authApi, bookingsApi, lobbiesApi } from "@/lib/api";
 
 /**
  * Client component for handling booking data fetching and interactivity
@@ -30,11 +28,9 @@ export default function BookingsClient() {
     async function fetchUserData() {
       try {
         // Check if user is authenticated
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { data: user, error: userError } = await authApi.getCurrentUser();
 
-        if (!user) {
+        if (userError || !user) {
           setError("You must be logged in to view your bookings");
           setIsLoading(false);
           return;
@@ -72,89 +68,24 @@ export default function BookingsClient() {
     // For "lobbies" tab we don't need to filter bookings
   };
 
-  // Fetch user's bookings
+  // Fetch user's bookings using the API service
   async function fetchBookings(userId: string) {
     try {
-      // First fetch direct bookings
-      const { data: directBookings, error: directBookingsError } =
-        await supabase
-          .from("bookings")
-          .select(
-            `
-          *,
-          facility:facilities(*)
-        `
-          )
-          .eq("user_id", userId)
-          .order("date", { ascending: true });
+      const { data, error } = await bookingsApi.getUserBookings(userId);
 
-      if (directBookingsError) throw directBookingsError;
+      if (error) throw error;
+      if (!data) throw new Error("No booking data returned");
 
-      // Then fetch lobby bookings where user is a participant
-      const { data: lobbyParticipations, error: lobbyError } = await supabase
-        .from("lobby_participants")
-        .select("lobby_id")
-        .eq("user_id", userId)
-        .eq("is_waiting", false); // Only include active participations
+      setBookings(data);
 
-      if (lobbyError) throw lobbyError;
-
-      // If user is part of any lobbies, fetch related bookings
-      let lobbyBookings: any[] = [];
-      if (lobbyParticipations && lobbyParticipations.length > 0) {
-        const lobbyIds = lobbyParticipations.map((p) => p.lobby_id);
-
-        const { data: bookingsFromLobbies, error: lobbyBookingsError } =
-          await supabase
-            .from("bookings")
-            .select(
-              `
-            *,
-            facility:facilities(*)
-          `
-            )
-            .in("lobby_id", lobbyIds)
-            .order("date", { ascending: true });
-
-        if (lobbyBookingsError) throw lobbyBookingsError;
-
-        lobbyBookings = bookingsFromLobbies || [];
-      }
-
-      // Combine both types of bookings, removing duplicates
-      const allBookings = [...(directBookings || [])];
-
-      // Add lobby bookings that aren't already in the list (to avoid duplicates)
-      lobbyBookings.forEach((lobbyBooking) => {
-        if (!allBookings.some((b) => b.id === lobbyBooking.id)) {
-          // Mark that this is a lobby booking the user participated in
-          lobbyBooking.isLobbyParticipant = true;
-          allBookings.push(lobbyBooking);
-        }
-      });
-
-      // Ensure ordered by date and time
-      allBookings.sort((a, b) => {
-        // First compare by date
-        if (a.date < b.date) return -1;
-        if (a.date > b.date) return 1;
-
-        // If same date, compare by start time
-        if (a.start_time < b.start_time) return -1;
-        if (a.start_time > b.start_time) return 1;
-
-        return 0;
-      });
-
-      setBookings(allBookings);
       // Initial filtering based on tab
       if (activeTab === "confirmed") {
         setFilteredBookings(
-          allBookings.filter((booking) => booking.status === "confirmed")
+          data.filter((booking) => booking.status === "confirmed")
         );
       } else if (activeTab === "pending") {
         setFilteredBookings(
-          allBookings.filter((booking) => booking.status === "pending")
+          data.filter((booking) => booking.status === "pending")
         );
       }
     } catch (err) {
@@ -163,61 +94,13 @@ export default function BookingsClient() {
     }
   }
 
-  // New function to fetch user's lobbies
+  // Fetch user's lobbies using the API service
   async function fetchUserLobbies(userId: string) {
     try {
-      // Get all lobby participation records for the user
-      const { data: participations, error: participationsError } =
-        await supabase
-          .from("lobby_participants")
-          .select("lobby_id")
-          .eq("user_id", userId)
-          .eq("is_waiting", false); // Only include active participations
+      const { data, error } = await lobbiesApi.getUserLobbies(userId);
 
-      if (participationsError) throw participationsError;
-
-      if (!participations || participations.length === 0) {
-        setLobbies([]);
-        return;
-      }
-
-      // Get all lobby IDs where the user is a participant
-      const lobbyIds = participations.map((p) => p.lobby_id);
-
-      // Fetch the lobby details with facility information
-      const { data: userLobbies, error: lobbiesError } = await supabase
-        .from("lobbies")
-        .select(
-          `
-          *,
-          facility:facility_id(*)
-        `
-        )
-        .in("id", lobbyIds)
-        .not("status", "in", '("cancelled", "expired")')
-        .order("date", { ascending: true });
-
-      if (lobbiesError) throw lobbiesError;
-
-      // Add creator info to each lobby
-      const lobbiesWithCreators = await Promise.all(
-        (userLobbies || []).map(async (lobby) => {
-          // Get creator info
-          const { data: creatorData } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", lobby.creator_id)
-            .single();
-
-          return {
-            ...lobby,
-            creator: creatorData,
-            isCreator: userId === lobby.creator_id,
-          };
-        })
-      );
-
-      setLobbies(lobbiesWithCreators || []);
+      if (error) throw error;
+      setLobbies(data || []);
     } catch (err) {
       console.error("Error fetching user lobbies:", err);
       throw err;
@@ -304,8 +187,8 @@ export default function BookingsClient() {
       ) : // Render bookings (confirmed or pending)
       filteredBookings.length === 0 ? (
         <EmptyState
-          title="No confirmed bookings found"
-          message="You don't have any confirmed bookings."
+          title="No bookings found"
+          message={`You don't have any ${activeTab} bookings.`}
           actionLink="/discover"
           actionText="Find a Facility"
         />
