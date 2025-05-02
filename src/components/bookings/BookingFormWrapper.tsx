@@ -5,26 +5,19 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import {
-  formatDate,
-  formatTime,
-  getDayOfWeek,
-  generateTimeSlots,
-  formatPrice,
-} from "@/lib/utils";
-import { TimeSlot } from "@/types/booking";
-import { Facility } from "@/types/facility";
+import { formatDate, formatTime, formatPrice } from "@/lib/utils";
+import { LobbyList } from "@/components/lobbies/LobbyList";
+import { Lobby } from "@/types/lobby";
+import { joinLobby } from "@/lib/lobbies";
+import { useBookingForm } from "@/hooks/useBookingForm";
 import {
   BookingTypeSelector,
   BookingType,
 } from "@/components/bookings/BookingTypeSelector";
-import { LobbyList } from "@/components/lobbies/LobbyList";
-import { Lobby } from "@/types/lobby";
-import { joinLobby } from "@/lib/lobbies";
 
 // Props type for the BookingFormWrapper component
 type BookingFormWrapperProps = {
-  facility: Facility;
+  facility: any;
   existingBookings: {
     date: string;
     startTime: string;
@@ -32,7 +25,7 @@ type BookingFormWrapperProps = {
   }[];
   preselectedDate?: string | null;
   preselectedTime?: string | null;
-  mode?: string | null; // New mode prop
+  mode?: string | null; // Mode prop
 };
 
 /**
@@ -56,15 +49,43 @@ export default function BookingFormWrapper({
     return "full";
   };
 
-  // State for form inputs
-  const [date, setDate] = useState(preselectedDate || "");
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  const [notes, setNotes] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  // Convert mode to BookingType
+  const bookingMode =
+    mode === "lobby" ? "lobby" : mode === "booking" ? "booking" : null;
 
-  // New state for lobby functionality - only initialize if needed
+  // Use our custom booking form hook
+  const {
+    date,
+    selectedSlot,
+    setSelectedSlot, // Important! This needs to be used properly
+    notes,
+    setNotes,
+    isLoading,
+    setIsLoading,
+    error,
+    setError,
+    timeSlots,
+    initialGroupSize,
+    setInitialGroupSize,
+    groupName,
+    setGroupName,
+    today,
+    maxDateString,
+    handleDateChange,
+    totalPrice,
+    minPlayers,
+    checkAuthentication,
+    createFullBooking,
+    createLobby,
+  } = useBookingForm({
+    facility,
+    existingBookings,
+    preselectedDate,
+    preselectedTime,
+    mode: bookingMode,
+  });
+
+  // States specific to BookingFormWrapper
   const [bookingType, setBookingType] = useState<BookingType>(
     determineInitialBookingType()
   );
@@ -72,25 +93,6 @@ export default function BookingFormWrapper({
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoadingLobbies, setIsLoadingLobbies] = useState(false);
   const [isJoiningLobby, setIsJoiningLobby] = useState(false);
-
-  const [initialGroupSize, setInitialGroupSize] = useState(1);
-  const [groupName, setGroupName] = useState("");
-
-  // Get min players from facility or default to 10
-  const minPlayers = facility.min_players || 10;
-
-  // If preselected time exists, find the matching time slot
-  useEffect(() => {
-    if (preselectedDate && preselectedTime && timeSlots.length > 0) {
-      const matchingSlot = timeSlots.find(
-        (slot) => slot.startTime === preselectedTime && slot.available
-      );
-
-      if (matchingSlot) {
-        setSelectedSlot(matchingSlot);
-      }
-    }
-  }, [preselectedDate, preselectedTime, timeSlots]);
 
   // Fetch open lobbies for this facility
   useEffect(() => {
@@ -145,101 +147,58 @@ export default function BookingFormWrapper({
     }
   };
 
-  // Handle date change for form
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = e.target.value;
-    setDate(newDate);
-    setSelectedSlot(null); // Reset selected slot
-
-    if (newDate) {
-      // Get day of week from selected date
-      const dayOfWeek = getDayOfWeek(newDate);
-
-      // Make sure operating_hours is in the expected format
-      const operatingHours = facility.operatingHours || {};
-
-      // Filter existing bookings for selected date
-      const dateBookings = existingBookings.filter(
-        (booking) => booking.date === newDate
-      );
-
-      // Generate time slots
-      const slots = generateTimeSlots(
-        operatingHours,
-        dayOfWeek,
-        60, // 1-hour slots
-        dateBookings
-      );
-
-      setTimeSlots(slots);
-    } else {
-      setTimeSlots([]);
-    }
-  };
-
-  // Calculate total price
-  const totalPrice = selectedSlot ? facility.price_per_hour : 0;
-
   // Handle full booking form submission
   const handleFullBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setIsLoading(true);
 
-    if (!selectedSlot) {
-      setError("Please select a time slot");
-      setIsLoading(false);
+    // Check if user is authenticated
+    const user = await checkAuthentication();
+
+    if (!user) {
+      router.push(
+        `/auth/login?redirect=/facilities/${facility.id}${
+          mode ? `?mode=${mode}` : ""
+        }`
+      );
       return;
     }
 
-    try {
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    // Create the booking
+    const success = await createFullBooking(user.id, router);
 
-      if (!user) {
-        router.push(
-          `/auth/login?redirect=/facilities/${facility.id}${
-            mode ? `?mode=${mode}` : ""
-          }`
-        );
-        return;
-      }
-
-      // Create the booking
-      const { data, error: bookingError } = await supabase
-        .from("bookings")
-        .insert([
-          {
-            facility_id: facility.id,
-            user_id: user.id,
-            date,
-            start_time: selectedSlot.startTime,
-            end_time: selectedSlot.endTime,
-            status: "pending",
-            total_price: totalPrice,
-            notes,
-          },
-        ])
-        .select();
-
-      if (bookingError) {
-        console.error("Supabase error:", bookingError);
-        throw new Error("Failed to create booking. Please try again.");
-      }
-
-      // Success - redirect to bookings page
+    if (success) {
+      // Show success message and redirect
       alert(
         "Booking created successfully! The facility owner will review your request."
       );
       router.push("/bookings");
       router.refresh();
-    } catch (err) {
-      console.error("Error creating booking:", err);
-      setError(err instanceof Error ? err.message : "Failed to create booking");
-    } finally {
-      setIsLoading(false);
+    }
+  };
+
+  // Handle lobby creation
+  const handleCreateLobby = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Check if user is authenticated
+    const user = await checkAuthentication();
+
+    if (!user) {
+      router.push(
+        `/auth/login?redirect=/facilities/${facility.id}${
+          mode ? `?mode=${mode}` : ""
+        }`
+      );
+      return;
+    }
+
+    // Create the lobby
+    const success = await createLobby(user.id, user.email || "", router);
+
+    if (success) {
+      // Redirect to the lobby page (actual redirect is handled in the hook)
+      router.push(`/lobbies`);
+      router.refresh();
     }
   };
 
@@ -250,9 +209,7 @@ export default function BookingFormWrapper({
       setError(null);
 
       // Get the current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await checkAuthentication();
 
       if (!user) {
         router.push(
@@ -266,12 +223,12 @@ export default function BookingFormWrapper({
       const result = await joinLobby(lobbyId, user.id, user.email || "");
 
       // Success - refresh or redirect
-      if (result.isFull) {
-        alert(
-          "Congratulations! The lobby is now full and a booking has been created."
-        );
+      if (result.isWaiting) {
+        alert("You've been added to the waiting list!");
+      } else if (result.isFull) {
+        alert("You've joined the lobby! The lobby is now full.");
       } else {
-        alert("You have successfully joined the lobby!");
+        alert("You've joined the lobby successfully!");
       }
 
       // Redirect to the lobby detail page
@@ -295,14 +252,6 @@ export default function BookingFormWrapper({
     }
   };
 
-  // Calculate minimum date (today)
-  const today = new Date().toISOString().split("T")[0];
-
-  // Calculate maximum date (30 days from now)
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 30);
-  const maxDateString = maxDate.toISOString().split("T")[0];
-
   // If we're in "booking" mode, only show the full booking form
   if (!mode || String(mode).toLowerCase() === "booking") {
     return (
@@ -312,8 +261,6 @@ export default function BookingFormWrapper({
             {error}
           </div>
         )}
-
-        {/* Remove the BookingTypeSelector when in forced booking mode */}
 
         {/* Full Booking Form */}
         <form onSubmit={handleFullBookingSubmit} className="space-y-4">
@@ -423,8 +370,6 @@ export default function BookingFormWrapper({
           </div>
         )}
 
-        {/* Remove the BookingTypeSelector when in forced lobby mode */}
-
         {/* Lobby Options */}
         {!showLobbyForm ? (
           <div>
@@ -452,79 +397,7 @@ export default function BookingFormWrapper({
           // Create Lobby Form
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h3 className="text-lg font-medium mb-4">Create New Lobby</h3>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setIsLoading(true);
-                setError(null);
-
-                try {
-                  // Check authentication
-                  const {
-                    data: { user },
-                  } = await supabase.auth.getUser();
-                  if (!user) {
-                    router.push(
-                      `/auth/login?redirect=/facilities/${facility.id}${
-                        mode ? `?mode=${mode}` : ""
-                      }`
-                    );
-                    return;
-                  }
-
-                  // Validate date and time slot
-                  if (!date || !selectedSlot) {
-                    setError("Please select a date and time slot");
-                    return;
-                  }
-
-                  // Create the lobby
-                  const { data, error: lobbyError } = await supabase
-                    .from("lobbies")
-                    .insert({
-                      facility_id: facility.id,
-                      creator_id: user.id,
-                      creator_email: user.email,
-                      date,
-                      start_time: selectedSlot.startTime,
-                      end_time: selectedSlot.endTime,
-                      min_players: minPlayers,
-                      current_players: initialGroupSize, // Use the initial group size
-                      initial_group_size: initialGroupSize,
-                      group_name: groupName || null,
-                      status:
-                        initialGroupSize >= minPlayers ? "filled" : "open",
-                      notes: notes || null,
-                      created_at: new Date().toISOString(),
-                      updated_at: new Date().toISOString(),
-                    })
-                    .select()
-                    .single();
-
-                  if (lobbyError) throw lobbyError;
-
-                  // Add creator as participant
-                  const { error: participantError } = await supabase
-                    .from("lobby_participants")
-                    .insert({
-                      lobby_id: data.id,
-                      user_id: user.id,
-                    });
-
-                  if (participantError) throw participantError;
-
-                  // Redirect to the lobby page
-                  router.push(`/lobbies/${data.id}`);
-                  router.refresh();
-                } catch (err: any) {
-                  console.error("Error creating lobby:", err);
-                  setError(err.message || "Failed to create lobby");
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-              className="space-y-4"
-            >
+            <form onSubmit={handleCreateLobby} className="space-y-4">
               {/* Date selection */}
               <div>
                 <label
