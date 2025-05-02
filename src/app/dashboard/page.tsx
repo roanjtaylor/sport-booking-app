@@ -238,7 +238,6 @@ export default function DashboardPage() {
     }
   };
 
-  // The rest of the component (UI rendering) remains the same
   if (isLoading) {
     return <LoadingIndicator message="Loading your dashboard..." />;
   }
@@ -261,7 +260,6 @@ export default function DashboardPage() {
   // Determine whether to show facility owner or regular user dashboard
   const isFacilityOwner = profile?.role === "facility_owner";
 
-  // Rest of the component JSX (not changing)
   return (
     <div className="space-y-8">
       {/* Header section */}
@@ -594,14 +592,25 @@ export default function DashboardPage() {
                   {facility.address}, {facility.city}
                 </p>
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {facility.sport_type.map((sport) => (
-                    <span
-                      key={sport}
-                      className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
-                    >
-                      {sport}
-                    </span>
-                  ))}
+                  {/* Make sure sportType or sport_type exists before mapping */}
+                  {facility.sportType &&
+                    facility.sportType.map((sport) => (
+                      <span
+                        key={sport}
+                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                      >
+                        {sport}
+                      </span>
+                    ))}
+                  {facility.sport_type &&
+                    facility.sport_type.map((sport) => (
+                      <span
+                        key={sport}
+                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                      >
+                        {sport}
+                      </span>
+                    ))}
                 </div>
                 <div className="flex justify-end">
                   <Link href={`/facilities/${facility.id}`}>
@@ -638,14 +647,25 @@ export default function DashboardPage() {
                   {facility.address}, {facility.city}
                 </p>
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {facility.sport_type.map((sport) => (
-                    <span
-                      key={sport}
-                      className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
-                    >
-                      {sport}
-                    </span>
-                  ))}
+                  {/* Make sure sportType or sport_type exists before mapping */}
+                  {facility.sportType &&
+                    facility.sportType.map((sport) => (
+                      <span
+                        key={sport}
+                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                      >
+                        {sport}
+                      </span>
+                    ))}
+                  {facility.sport_type &&
+                    facility.sport_type.map((sport) => (
+                      <span
+                        key={sport}
+                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                      >
+                        {sport}
+                      </span>
+                    ))}
                 </div>
                 <div className="flex justify-end">
                   <Link href={`/facilities/${facility.id}`}>
