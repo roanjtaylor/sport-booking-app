@@ -9,8 +9,9 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Booking } from "@/types/booking";
-import { Facility } from "@/types/facility";
 import { LobbyParticipants } from "@/components/bookings/LobbyParticipants";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface BookingDetailClientProps {
   id: string;
@@ -158,30 +159,28 @@ export default function BookingDetailClient({ id }: BookingDetailClientProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading booking details...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading booking details..." />;
   }
 
   if (error) {
     return (
       <div className="py-12">
-        <Card className="p-6 max-w-md mx-auto text-center">
-          <h2 className="text-xl font-semibold mb-2">Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <div className="flex justify-center space-x-4">
-            <Link href="/bookings">
-              <Button variant="secondary">My Bookings</Button>
-            </Link>
-            <Link href="/auth/login">
-              <Button>Sign In</Button>
-            </Link>
-          </div>
+        <Card className="p-6 max-w-md mx-auto">
+          <EmptyState
+            title="Error"
+            message={error}
+            variant="compact"
+            children={
+              <div className="flex justify-center space-x-4 mt-4">
+                <Link href="/bookings">
+                  <Button variant="secondary">My Bookings</Button>
+                </Link>
+                <Link href="/auth/login">
+                  <Button>Sign In</Button>
+                </Link>
+              </div>
+            }
+          />
         </Card>
       </div>
     );

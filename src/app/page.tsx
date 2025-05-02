@@ -9,6 +9,7 @@ import { OnboardingTimeline } from "@/components/onboarding/OnboardingTimeline";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/utils";
 import { Facility } from "@/types/facility";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 
 /**
  * Home page component with improved onboarding experience
@@ -119,9 +120,10 @@ export default function HomePage() {
   // If still checking auth status, show loading indicator
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
+      <LoadingIndicator
+        message="" // Empty message to hide the text
+        className="min-h-screen p-0" // Override padding and set full height
+      />
     );
   }
 

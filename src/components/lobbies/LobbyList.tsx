@@ -9,6 +9,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatDate, formatTime } from "@/lib/utils";
 import { Lobby } from "@/types/lobby";
 import { supabase } from "@/lib/supabase";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type LobbyListProps = {
   lobbies: Lobby[];
@@ -109,46 +111,16 @@ export function LobbyList({
 
   // Show a loading state while checking participation
   if (isCheckingParticipation) {
-    return (
-      <div className="space-y-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <Card key={index} className="animate-pulse">
-            <div
-              className={
-                gridLayout
-                  ? "flex flex-col h-full"
-                  : "flex flex-col md:flex-row"
-              }
-            >
-              <div
-                className={`bg-gray-200 h-48 relative ${
-                  gridLayout ? "w-full" : "md:w-1/3"
-                }`}
-              ></div>
-              <div className={`p-4 ${gridLayout ? "flex-grow" : "md:w-2/3"}`}>
-                <div className="h-6 bg-gray-200 rounded mb-3 w-1/4"></div>
-                <div className="h-4 bg-gray-200 rounded mb-2 w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded mb-2 w-1/2"></div>
-                <div className="h-10 bg-gray-200 rounded w-full mt-4"></div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-    );
+    return <LoadingIndicator message="Loading lobbies..." />;
   }
 
   // If no lobbies are found, display a message
   if (!processedLobbies || processedLobbies.length === 0) {
     return (
-      <div className="text-center py-8">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          No open lobbies found
-        </h3>
-        <p className="text-gray-500 mb-6">
-          Be the first to create a lobby for a facility!
-        </p>
-      </div>
+      <EmptyState
+        title="No open lobbies found"
+        message="Be the first to create a lobby for a facility!"
+      />
     );
   }
 

@@ -8,7 +8,6 @@ import { formatDate, formatTime } from "@/lib/utils";
 import Link from "next/link";
 import { FacilityBookingsFilter } from "@/components/facilities/FacilityBookingsFilter";
 import {
-  addDays,
   startOfWeek,
   endOfWeek,
   startOfMonth,
@@ -16,6 +15,8 @@ import {
   format,
 } from "date-fns";
 import { Booking } from "@/types/booking";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface FacilityBasic {
   id: string;
@@ -260,21 +261,13 @@ export default function FacilityBookingsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading facility bookings...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading facility bookings..." />;
   }
 
   if (error) {
     return (
       <Card className="p-6">
-        <h2 className="text-xl font-bold mb-2">Error</h2>
-        <p className="text-red-500">{error}</p>
+        <EmptyState title="Error" message={error} variant="compact" />
       </Card>
     );
   }

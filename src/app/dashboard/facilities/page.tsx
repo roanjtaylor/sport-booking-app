@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 import { Facility } from "@/types/facility";
 import { formatPrice } from "@/lib/utils";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 
 export default function ManageFacilitiesPage() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -74,14 +75,7 @@ export default function ManageFacilitiesPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your facilities...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading your facilities..." />;
   }
 
   return (

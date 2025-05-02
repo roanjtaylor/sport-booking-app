@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
 import { format } from "date-fns";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface Profile {
   id: string;
@@ -306,26 +308,20 @@ export default function DashboardPage() {
 
   // Loading state UI- animation
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading your dashboard..." />;
   }
 
   // Error state UI
   if (error) {
     return (
       <div className="py-12">
-        <Card className="p-6 max-w-md mx-auto text-center">
-          <h2 className="text-xl font-semibold mb-2">Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Link href="/auth/login">
-            <Button>Sign In</Button>
-          </Link>
+        <Card className="p-6 max-w-md mx-auto">
+          <EmptyState
+            title="Error"
+            message={error}
+            actionLink="/auth/login"
+            actionText="Sign In"
+          />
         </Card>
       </div>
     );

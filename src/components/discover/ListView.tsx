@@ -8,12 +8,12 @@ import { LobbyFilters } from "@/components/lobbies/LobbyFilters";
 import { supabase } from "@/lib/supabase";
 import { FacilityFilters } from "@/components/facilities/FacilityFilters";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import CreateLobbyView from "@/components/discover/CreateLobbyView";
 import type { Facility } from "@/types/facility";
 import type { Lobby } from "@/types/lobby";
 import { useRouter } from "next/navigation";
 import { joinLobby } from "@/lib/lobbies";
+import { LoadingIndicator } from "../ui/LoadingIndicator";
+import { EmptyState } from "../ui/EmptyState";
 
 type BookingMode = "booking" | "lobby" | null;
 
@@ -191,26 +191,25 @@ export default function ListView({ mode, onCreateLobby }: ListViewProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading data..." />;
   }
 
   if (error) {
     return (
-      <Card className="p-6 text-center">
-        <p className="text-red-600 mb-4">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="text-primary-600 hover:underline"
-        >
-          Try again
-        </button>
+      <Card className="p-6">
+        <EmptyState
+          title="Error"
+          message={error}
+          variant="compact"
+          children={
+            <button
+              onClick={() => window.location.reload()}
+              className="text-primary-600 hover:underline mt-4"
+            >
+              Try again
+            </button>
+          }
+        />
       </Card>
     );
   }

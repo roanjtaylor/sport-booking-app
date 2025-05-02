@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Facility } from "@/types/facility";
 import { formatPrice } from "@/lib/utils";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function FacilitiesClient({
   initialFacilities,
@@ -26,12 +28,7 @@ export default function FacilitiesClient({
 
   return (
     <div>
-      {isLoading && (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-          <p className="mt-2 text-gray-600">Loading facilities...</p>
-        </div>
-      )}
+      {isLoading && <LoadingIndicator message="Loading facilities..." />}
 
       {error && (
         <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
@@ -102,10 +99,12 @@ export default function FacilitiesClient({
               </Card>
             ))
           ) : (
-            <div className="col-span-3 py-8 text-center">
-              <p className="text-gray-500">
-                No facilities found. Try adjusting your search filters.
-              </p>
+            <div className="col-span-3">
+              <EmptyState
+                title="No facilities found"
+                message="Try adjusting your search filters."
+                variant="expanded"
+              />
             </div>
           )}
         </div>

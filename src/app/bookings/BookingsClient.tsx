@@ -9,6 +9,8 @@ import { UserLobbiesList } from "@/components/bookings/UserLobbiesList";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Lobby } from "@/types/lobby";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 /**
  * Client component for handling booking data fetching and interactivity
@@ -223,25 +225,19 @@ export default function BookingsClient() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your bookings...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading your bookings..." />;
   }
 
   if (error) {
     return (
       <div className="py-12">
-        <Card className="p-6 max-w-md mx-auto text-center">
-          <h2 className="text-xl font-semibold mb-2">Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Link href="/auth/login">
-            <Button>Sign In</Button>
-          </Link>
+        <Card className="p-6 max-w-md mx-auto">
+          <EmptyState
+            title="Error"
+            message={error}
+            actionLink="/auth/login"
+            actionText="Sign In"
+          />
         </Card>
       </div>
     );
@@ -296,35 +292,23 @@ export default function BookingsClient() {
       {activeTab === "lobbies" ? (
         // Render lobbies
         lobbies.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No active lobbies found
-            </h3>
-            <p className="text-gray-500 mb-6">
-              You are not currently part of any lobby groups.
-            </p>
-            <Link href="/discover">
-              <Button>Find Lobbies</Button>
-            </Link>
-          </div>
+          <EmptyState
+            title="No active lobbies found"
+            message="You are not currently part of any lobby groups."
+            actionLink="/discover"
+            actionText="Find Lobbies"
+          />
         ) : (
           <UserLobbiesList lobbies={lobbies} />
         )
       ) : // Render bookings (confirmed or pending)
       filteredBookings.length === 0 ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No {activeTab} bookings found
-          </h3>
-          <p className="text-gray-500 mb-6">
-            {activeTab === "confirmed" &&
-              "You don't have any confirmed bookings."}
-            {activeTab === "pending" && "You don't have any pending requests."}
-          </p>
-          <Link href="/discover">
-            <Button>Find a Facility</Button>
-          </Link>
-        </div>
+        <EmptyState
+          title="No confirmed bookings found"
+          message="You don't have any confirmed bookings."
+          actionLink="/discover"
+          actionText="Find a Facility"
+        />
       ) : (
         <BookingsList bookings={filteredBookings} />
       )}

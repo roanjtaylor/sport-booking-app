@@ -7,9 +7,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { supabase } from "@/lib/supabase";
 import { UserRole } from "@/types/user";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -152,11 +152,7 @@ export default function SettingsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <LoadingIndicator message="" />;
   }
 
   const roleOptions = [

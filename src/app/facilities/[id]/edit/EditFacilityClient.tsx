@@ -4,9 +4,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
 import { FacilityForm } from "@/components/facilities/FacilityForm";
 import { supabase } from "@/lib/supabase";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface EditFacilityClientProps {
   id: string;
@@ -85,24 +86,18 @@ export default function EditFacilityClient({ id }: EditFacilityClientProps) {
   }, [id, router]);
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading facility data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading facility data..." />;
   }
 
   if (error) {
     return (
-      <div className="p-6 max-w-md mx-auto text-center">
-        <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
-        <p className="text-gray-700 mb-6">{error}</p>
-        <Link href="/facilities">
-          <Button>Return to Facilities</Button>
-        </Link>
+      <div className="p-6 max-w-md mx-auto">
+        <EmptyState
+          title="Error"
+          message={error}
+          actionLink="/facilities"
+          actionText="Return to Facilities"
+        />
       </div>
     );
   }

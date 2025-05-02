@@ -1,10 +1,10 @@
 // src/components/bookings/LobbyParticipants.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/Card';
-import { supabase } from '@/lib/supabase';
-import { formatDate } from '@/lib/utils';
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/Card";
+import { supabase } from "@/lib/supabase";
+import { formatDate } from "@/lib/utils";
 
 type LobbyParticipantsProps = {
   lobbyId: string;
@@ -19,36 +19,37 @@ export function LobbyParticipants({ lobbyId }: LobbyParticipantsProps) {
     async function fetchParticipants() {
       try {
         setIsLoading(true);
-        
+
         // First, fetch just the participants without trying to join with profiles
-        const { data: participantsData, error: participantsError } = await supabase
-          .from('lobby_participants')
-          .select('*')
-          .eq('lobby_id', lobbyId);
-          
+        const { data: participantsData, error: participantsError } =
+          await supabase
+            .from("lobby_participants")
+            .select("*")
+            .eq("lobby_id", lobbyId);
+
         if (participantsError) throw participantsError;
-        
+
         // Then fetch profile data for each participant separately
         const participantsWithProfiles = await Promise.all(
           (participantsData || []).map(async (participant) => {
             // Get profile data for this user_id
             const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', participant.user_id)
+              .from("profiles")
+              .select("*")
+              .eq("id", participant.user_id)
               .single();
-              
+
             return {
               ...participant,
-              user: profileData || { email: 'Unknown' }
+              user: profileData || { email: "Unknown" },
             };
           })
         );
-        
+
         setParticipants(participantsWithProfiles);
       } catch (err) {
-        console.error('Error fetching lobby participants:', err);
-        setError('Failed to load participants');
+        console.error("Error fetching lobby participants:", err);
+        setError("Failed to load participants");
       } finally {
         setIsLoading(false);
       }
@@ -70,21 +71,27 @@ export function LobbyParticipants({ lobbyId }: LobbyParticipantsProps) {
 
   return (
     <Card className="p-4 mt-6">
-      <h4 className="font-medium text-gray-900 mb-3">Group Booking Participants</h4>
-      
+      <h4 className="font-medium text-gray-900 mb-3">
+        Group Booking Participants
+      </h4>
+
       {participants.length > 0 ? (
         <ul className="divide-y divide-gray-200">
           {participants.map((participant) => (
             <li key={participant.id} className="py-3 flex items-center">
               <div className="h-8 w-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mr-3">
-                {(participant.user?.name || participant.user?.email || '?')[0].toUpperCase()}
+                {(participant.user?.name ||
+                  participant.user?.email ||
+                  "?")[0].toUpperCase()}
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  {participant.user?.name || participant.user?.email || 'Unknown User'}
+                  {participant.user?.name ||
+                    participant.user?.email ||
+                    "Unknown User"}
                 </p>
                 <p className="text-xs text-gray-500">
-                  Joined {formatDate(participant.joined_at, 'PP')}
+                  Joined {formatDate(participant.joined_at, "PP")}
                 </p>
               </div>
             </li>

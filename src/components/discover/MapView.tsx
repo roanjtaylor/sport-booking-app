@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { joinLobby } from "@/lib/lobbies";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -202,19 +204,21 @@ export default function MapView({ mode }: MapViewProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading map...</p>
-      </div>
-    );
+    return <LoadingIndicator message="Loading map..." />;
   }
 
   if (error) {
     return (
-      <Card className="p-6 text-center">
-        <p className="text-red-600 mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>Try again</Button>
+      <Card className="p-6">
+        <EmptyState
+          title="Error"
+          message={error}
+          actionText="Try again"
+          actionLink="#"
+          variant="compact"
+          className="text-red-600"
+          icon={null}
+        />
       </Card>
     );
   }

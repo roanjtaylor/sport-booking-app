@@ -10,6 +10,8 @@ import { Lobby, LobbyParticipant } from "@/types/lobby";
 import { formatDate, formatTime, formatPrice } from "@/lib/utils";
 import Link from "next/link";
 import { joinLobby, leaveLobby } from "@/lib/lobbies";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type LobbyDetailClientProps = {
   lobby: Lobby;
@@ -368,21 +370,21 @@ export default function LobbyDetailClient({ lobby }: LobbyDetailClientProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Loading lobby details...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading lobby details..." />;
   }
 
   if (error) {
     return (
-      <Card className="p-6 text-center">
-        <div className="text-red-600 mb-4">{error}</div>
-        <Button onClick={() => setError(null)}>Dismiss</Button>
+      <Card className="p-6">
+        <EmptyState
+          title="Error"
+          message={error}
+          variant="compact"
+          className="mb-2"
+        />
+        <div className="flex justify-center">
+          <Button onClick={() => setError(null)}>Dismiss</Button>
+        </div>
       </Card>
     );
   }

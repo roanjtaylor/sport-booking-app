@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
-import { User, AuthChangeEvent } from '@supabase/supabase-js';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useRouter } from "next/navigation";
+import { User, AuthChangeEvent } from "@supabase/supabase-js";
 
 export function AuthStatus() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,42 +17,47 @@ export function AuthStatus() {
     // Check authentication state when component mounts
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
         if (error) throw error;
         setUser(session?.user || null);
       } catch (error) {
-        console.error('Error checking auth status:', error);
+        console.error("Error checking auth status:", error);
       } finally {
         setIsLoading(false);
       }
-      
+
       // Set up listener for auth state changes
       const {
         data: { subscription: authListener },
-      } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session) => {
-        setUser(session?.user || null);
-      });
-      
+      } = supabase.auth.onAuthStateChange(
+        (_event: AuthChangeEvent, session) => {
+          setUser(session?.user || null);
+        }
+      );
+
       // Clean up the listener when component unmounts
       return () => {
         authListener.unsubscribe();
       };
     };
-    
+
     checkAuth();
   }, [supabase.auth, router]);
 
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
-      
+
       // Sign out from Supabase
-      await supabase.auth.signOut({ scope: 'global' });
-      
+      await supabase.auth.signOut({ scope: "global" });
+
       // Clear all storage, not just the token
       localStorage.clear();
       sessionStorage.clear();
-    
+
       // Clear cookies by setting past expiration date
       document.cookie.split(";").forEach((cookie) => {
         const name = cookie.split("=")[0].trim();
@@ -60,9 +65,9 @@ export function AuthStatus() {
       });
 
       // Force a complete page reload rather than client-side navigation
-      window.location.href = '/';
+      window.location.href = "/";
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     } finally {
       setIsLoading(false);
     }
@@ -83,11 +88,7 @@ export function AuthStatus() {
           </p>
         </div>
         <div className="h-8 w-0.5 bg-gray-200 mx-3 hidden md:block"></div>
-        <Button 
-          variant="secondary"
-          onClick={handleSignOut}
-          size="sm"
-        >
+        <Button variant="secondary" onClick={handleSignOut} size="sm">
           Sign Out
         </Button>
       </div>
@@ -97,16 +98,14 @@ export function AuthStatus() {
   // User is not logged in - show login/signup buttons
   return (
     <div className="flex items-center space-x-4">
-      <Link 
-        href="/auth/login" 
+      <Link
+        href="/auth/login"
         className="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium"
       >
         Log in
       </Link>
       <Link href="/auth/register">
-        <Button size="sm">
-          Sign up
-        </Button>
+        <Button size="sm">Sign up</Button>
       </Link>
     </div>
   );
