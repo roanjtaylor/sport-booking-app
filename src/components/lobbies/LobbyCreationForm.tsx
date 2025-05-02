@@ -6,7 +6,6 @@ import { TimeSlotPicker } from "@/components/facilities/TimeSlotPicker";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { NotesField } from "@/components/ui/NotesField";
 import { BookingSummary } from "@/components/bookings/BookingSummary";
-import { formatTime } from "@/lib/utils";
 
 interface LobbyCreationFormProps {
   date: string;

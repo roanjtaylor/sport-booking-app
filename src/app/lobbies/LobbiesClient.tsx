@@ -6,6 +6,7 @@ import { LobbyList } from "@/components/lobbies/LobbyList";
 import { supabase } from "@/lib/supabase";
 import { joinLobby } from "@/lib/lobbies";
 import { Lobby } from "@/types/lobby";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 
 type LobbiesClientProps = {
   initialLobbies: Lobby[];
@@ -56,11 +57,7 @@ export default function LobbiesClient({ initialLobbies }: LobbiesClientProps) {
 
   return (
     <>
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
-          {error}
-        </div>
-      )}
+      <ErrorDisplay error={error} className="mb-6" />
       <LobbyList
         lobbies={lobbies}
         onJoinLobby={handleJoinLobby}

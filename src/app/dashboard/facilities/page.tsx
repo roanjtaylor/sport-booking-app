@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { Facility } from "@/types/facility";
 import { formatPrice } from "@/lib/utils";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 
 export default function ManageFacilitiesPage() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -90,11 +91,7 @@ export default function ManageFacilitiesPage() {
         </Link>
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
-          {error}
-        </div>
-      )}
+      <ErrorDisplay error={error} className="mb-6" />
 
       {facilities.length === 0 ? (
         <Card className="p-6 text-center">

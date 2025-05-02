@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { supabase } from "@/lib/supabase";
 import { UserRole } from "@/types/user";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -175,11 +176,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
-          {error}
-        </div>
-      )}
+      <ErrorDisplay error={error} className="mb-6" />
 
       {successMessage && (
         <div className="bg-green-50 text-green-700 p-4 rounded-md mb-6">

@@ -9,6 +9,7 @@ import { Facility } from "@/types/facility";
 import { formatPrice } from "@/lib/utils";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 
 export default function FacilitiesClient({
   initialFacilities,
@@ -30,11 +31,7 @@ export default function FacilitiesClient({
     <div>
       {isLoading && <LoadingIndicator message="Loading facilities..." />}
 
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
-          {error}
-        </div>
-      )}
+      <ErrorDisplay error={error} className="mb-6" />
 
       {/* Facilities grid */}
       {!isLoading && (

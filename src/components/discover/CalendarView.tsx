@@ -4,15 +4,16 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { formatDate, formatTime, formatPrice, getDayOfWeek } from "@/lib/utils";
+import { formatDate, formatPrice, getDayOfWeek } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { Facility } from "@/types/facility";
 import { Lobby } from "@/types/lobby";
 import Link from "next/link";
 import { LobbyList } from "@/components/lobbies/LobbyList";
-import CreateLobbyView from "@/components/discover/CreateLobbyView";
 import { joinLobby } from "@/lib/lobbies";
 import { useRouter } from "next/navigation";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 
 type BookingMode = "booking" | "lobby" | null;
 
@@ -23,9 +24,6 @@ interface CalendarViewProps {
 
 // Simple Calendar Component (unchanged)
 function SimpleCalendar({ value, onChange, minDate = new Date(), maxDate }) {
-  // Existing calendar implementation
-  // ...
-
   // Get current month and year
   const [currentMonth, setCurrentMonth] = useState(value.getMonth());
   const [currentYear, setCurrentYear] = useState(value.getFullYear());
@@ -553,16 +551,9 @@ export default function CalendarView({
 
       {/* Loading State */}
       {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading availability...</p>
-          </div>
-        </div>
+        <LoadingIndicator message="Loading availability..." />
       ) : error ? (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
-          {error}
-        </div>
+        <ErrorDisplay error={error} className="mb-6" />
       ) : (
         <div className="space-y-8">
           {/* Available Facilities Section - only shown in "booking" mode */}

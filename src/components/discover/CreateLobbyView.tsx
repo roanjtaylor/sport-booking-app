@@ -15,6 +15,7 @@ import {
   generateTimeSlots,
 } from "@/lib/utils";
 import { TimeSlot } from "@/types/booking";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 
 export default function CreateLobbyView() {
   const router = useRouter();
@@ -233,11 +234,7 @@ export default function CreateLobbyView() {
     <div>
       <h2 className="text-xl font-semibold mb-6">Create a New Lobby</h2>
 
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
-          {error}
-        </div>
-      )}
+      <ErrorDisplay error={error} className="mb-6" />
 
       {!selectedFacility ? (
         // Facility selection step
