@@ -2,9 +2,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { notFound } from "next/navigation";
 import LobbyDetailClient from "./LobbyDetailClient";
+import { lobbiesApi } from "@/lib/api"; // Import from the API layer
 
 interface PageProps {
   params:
@@ -28,54 +28,14 @@ export default async function LobbyDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const supabase = await createServerSupabaseClient();
+  try {
+    // Use the API layer to fetch lobby details
+    const { data: lobby, error } = await lobbiesApi.getLobbyById(id);
 
-  // Fetch the lobby with related information
-  const { data: lobby, error } = await supabase
-    .from("lobbies")
-    .select(
-      `
-      *,
-      facility:facility_id(*)
-    `
-    )
-    .eq("id", id)
-    .single();
-
-  if (error || !lobby) {
-    console.error("Error fetching lobby:", error);
-    notFound();
-  }
-
-  // Fetch participants for this lobby
-  const { data: participants, error: participantsError } = await supabase
-    .from("lobby_participants")
-    .select("*")
-    .eq("lobby_id", id);
-
-  // Then fetch user details separately for each participant
-  if (participants) {
-    // Fetch the user information for all participants
-    const participantsWithUsers = await Promise.all(
-      participants.map(async (participant) => {
-        const { data: userData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", participant.user_id)
-          .single();
-
-        return {
-          ...participant,
-          user: userData,
-        };
-      })
-    );
-
-    // Add participants to the lobby object
-    const lobbyWithParticipants = {
-      ...lobby,
-      participants: participantsWithUsers || [],
-    };
+    if (error || !lobby) {
+      console.error("Error fetching lobby:", error);
+      notFound();
+    }
 
     return (
       <div>
@@ -99,9 +59,12 @@ export default async function LobbyDetailPage({ params }: PageProps) {
             </div>
           }
         >
-          <LobbyDetailClient lobby={lobbyWithParticipants} />
+          <LobbyDetailClient lobby={lobby} />
         </Suspense>
       </div>
     );
+  } catch (err) {
+    console.error("Error in lobby page:", err);
+    notFound();
   }
 }

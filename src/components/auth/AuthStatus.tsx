@@ -3,69 +3,63 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
-import { User, AuthChangeEvent } from "@supabase/supabase-js";
+import { User } from "@supabase/supabase-js";
+import { authApi } from "@/lib/api";
 
 export function AuthStatus() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     // Check authentication state when component mounts
     const checkAuth = async () => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
+        // Use the authApi instead of direct Supabase calls
+        const { data: currentUser, error } = await authApi.getCurrentUser();
         if (error) throw error;
-        setUser(session?.user || null);
+        setUser(currentUser);
       } catch (error) {
         console.error("Error checking auth status:", error);
       } finally {
         setIsLoading(false);
       }
-
-      // Set up listener for auth state changes
-      const {
-        data: { subscription: authListener },
-      } = supabase.auth.onAuthStateChange(
-        (_event: AuthChangeEvent, session) => {
-          setUser(session?.user || null);
-        }
-      );
-
-      // Clean up the listener when component unmounts
-      return () => {
-        authListener.unsubscribe();
-      };
     };
 
     checkAuth();
-  }, [supabase.auth, router]);
+
+    // Set up an interval to periodically check for auth changes
+    const authCheckInterval = setInterval(checkAuth, 5000);
+
+    // Clean up the interval when component unmounts
+    return () => {
+      clearInterval(authCheckInterval);
+    };
+  }, [router]);
 
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
 
-      // Sign out from Supabase
-      await supabase.auth.signOut({ scope: "global" });
+      // Use the authApi.signOut method instead of direct Supabase call
+      const { success, error } = await authApi.signOut();
 
-      // Clear all storage, not just the token
-      localStorage.clear();
-      sessionStorage.clear();
+      if (error) throw error;
+      if (success) {
+        // Clear all storage, not just the token
+        localStorage.clear();
+        sessionStorage.clear();
 
-      // Clear cookies by setting past expiration date
-      document.cookie.split(";").forEach((cookie) => {
-        const name = cookie.split("=")[0].trim();
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-      });
+        // Clear cookies by setting past expiration date
+        document.cookie.split(";").forEach((cookie) => {
+          const name = cookie.split("=")[0].trim();
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        });
 
-      // Force a complete page reload rather than client-side navigation
-      window.location.href = "/";
+        // Force a complete page reload rather than client-side navigation
+        window.location.href = "/";
+      }
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {

@@ -5,9 +5,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FacilityForm } from "@/components/facilities/FacilityForm";
-import { supabase } from "@/lib/supabase";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { authApi, facilitiesApi } from "@/lib/api";
 
 interface EditFacilityClientProps {
   id: string;
@@ -25,53 +25,42 @@ export default function EditFacilityClient({ id }: EditFacilityClientProps) {
       try {
         setIsLoading(true);
 
-        // Check authentication
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
+        // Check authentication using the API layer
+        const { data: user, error: authError } = await authApi.getCurrentUser();
 
         if (authError || !user) {
           router.push(`/auth/login?redirect=/facilities/${id}/edit`);
           return;
         }
 
-        // Fetch facility data
-        const { data: facility, error } = await supabase
-          .from("facilities")
-          .select("*")
-          .eq("id", id)
-          .single();
+        // Fetch facility data using the API layer
+        const { data: facilityData, error: facilityError } =
+          await facilitiesApi.getFacilityById(id);
 
-        if (error) {
-          console.error("Facility fetch error:", error);
+        if (facilityError) {
+          console.error("Facility fetch error:", facilityError);
           setError(
             "Facility not found or you do not have permission to edit it"
           );
           return;
         }
 
-        // Format the facility for the form
-        const formattedFacility = {
-          id: facility.id,
-          name: facility.name,
-          description: facility.description,
-          address: facility.address,
-          city: facility.city,
-          postal_code: facility.postal_code,
-          country: facility.country,
-          imageUrl: facility.image_url,
-          owner_id: facility.owner_id,
-          operatingHours: facility.operating_hours,
-          price_per_hour: facility.price_per_hour,
-          currency: facility.currency,
-          sportType: facility.sport_type,
-          amenities: facility.amenities || [],
-          min_players: facility.min_players,
-        };
+        if (!facilityData) {
+          setError("Facility not found");
+          return;
+        }
 
-        setFacility(formattedFacility);
-        setIsOwner(user.id === facility.owner_id);
+        setFacility(facilityData);
+
+        // Check if user is the owner using the API layer
+        const { isOwner: ownerStatus, error: ownerError } =
+          await facilitiesApi.checkFacilityOwnership(id, user.id);
+
+        if (ownerError) {
+          console.error("Error checking ownership:", ownerError);
+        }
+
+        setIsOwner(ownerStatus);
       } catch (err: any) {
         console.error("Error loading facility:", err);
         setError(err.message || "An error occurred while loading the facility");

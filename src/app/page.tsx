@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
 import { OnboardingTimeline } from "@/components/onboarding/OnboardingTimeline";
-import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/utils";
 import { Facility } from "@/types/facility";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { authApi, facilitiesApi } from "@/lib/api"; // Import from the API layer
 
 /**
  * Home page component with improved onboarding experience
@@ -25,9 +25,13 @@ export default function HomePage() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        // Use the API layer to get current user
+        const { data: user, error: userError } = await authApi.getCurrentUser();
+
+        if (userError) {
+          console.error("Error checking auth status:", userError);
+        }
+
         if (user) {
           router.push("/dashboard");
         }
@@ -47,38 +51,16 @@ export default function HomePage() {
       try {
         setFacilitiesLoading(true);
 
-        // Query 3 facilities ordered by most recent
-        const { data, error } = await supabase
-          .from("facilities")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(3);
+        // Use the API layer to get all facilities
+        const { data, error: facilitiesError } =
+          await facilitiesApi.getAllFacilities();
 
-        if (error) throw error;
+        if (facilitiesError) {
+          throw facilitiesError;
+        }
 
-        // Convert to our Facility type
-        const formattedFacilities: Facility[] = (data || []).map(
-          (facility) => ({
-            id: facility.id,
-            name: facility.name,
-            description: facility.description,
-            address: facility.address,
-            city: facility.city,
-            postal_code: facility.postal_code,
-            country: facility.country,
-            imageUrl: facility.image_url,
-            owner_id: facility.owner_id,
-            owner_email: facility.owner_email,
-            operatingHours: facility.operating_hours,
-            price_per_hour: facility.price_per_hour,
-            currency: facility.currency,
-            sportType: facility.sport_type,
-            amenities: facility.amenities || [],
-            min_players: facility.min_players,
-          })
-        );
-
-        setFacilities(formattedFacilities);
+        // Take the first 3 facilities as featured
+        setFacilities(data?.slice(0, 3) || []);
       } catch (err) {
         console.error("Error fetching facilities:", err);
         setError("Failed to load facilities");

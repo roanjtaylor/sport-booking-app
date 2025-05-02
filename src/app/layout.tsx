@@ -6,8 +6,8 @@ import Link from "next/link";
 import { AuthStatus } from "@/components/auth/AuthStatus";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { usePathname } from "next/navigation";
+import { authApi, usersApi } from "@/lib/api"; // Import API services
 
 // Load the Inter font with Latin subset for optimal performance
 const inter = Inter({ subsets: ["latin"] });
@@ -23,8 +23,6 @@ export default function RootLayout({
 }) {
   // Track authentication state
   const [user, setUser] = useState<User | null>(null);
-  // Create the Supabase client specifically for client components
-  const supabase = createClientComponentClient();
   // Add state for mobile menu visibility
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // Add state for scroll position
@@ -33,7 +31,7 @@ export default function RootLayout({
   const pathname = usePathname();
   // Track user role to adjust navbar
   const [userRole, setUserRole] = useState<string | null>(null);
-  // Add isLoading state - This is what was missing
+  // Add isLoading state
   const [isLoading, setIsLoading] = useState(true);
 
   // Check if we're on the homepage
@@ -49,55 +47,45 @@ export default function RootLayout({
     // Initial auth check
     const checkAuth = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        // Use authApi to get the session
+        const { data: session } = await authApi.getSession();
         setUser(session?.user || null);
 
-        // If user is authenticated, fetch their role
+        // If user is authenticated, fetch their role using the API layer
         if (session?.user) {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", session.user.id)
-            .single();
-
-          setUserRole(profileData?.role || null);
+          const { role } = await usersApi.getUserRole(session.user.id);
+          setUserRole(role || null);
         } else {
           setUserRole(null);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
       } finally {
-        setIsLoading(false); // This line was causing the error because setIsLoading wasn't defined
+        setIsLoading(false);
       }
     };
 
-    // Subscribe to auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user || null);
+    // Subscribe to auth changes with a custom event-based approach
+    // Since we're moving away from direct supabase client access
+    const checkAuthInterval = setInterval(async () => {
+      const { data: currentUser } = await authApi.getCurrentUser();
 
-      // Update role when auth state changes
-      if (session?.user) {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
-
-        setUserRole(profileData?.role || null);
-      } else {
-        setUserRole(null);
+      // Only update if there's an actual change in auth state
+      if (
+        (currentUser && !user) ||
+        (!currentUser && user) ||
+        (currentUser && user && currentUser.id !== user.id)
+      ) {
+        checkAuth();
       }
-    });
+    }, 5000); // Check every 5 seconds
 
+    // Initial check
     checkAuth();
 
-    // Clean up subscription on unmount
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+    // Clean up interval on unmount
+    return () => clearInterval(checkAuthInterval);
+  }, [user]);
 
   // Track scroll position for revealing the navbar on homepage
   useEffect(() => {
