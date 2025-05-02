@@ -7,10 +7,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
 import { UserRole } from "@/types/user";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { authApi, usersApi } from "@/lib/api";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -36,23 +36,17 @@ export default function SettingsPage() {
         setIsLoading(true);
 
         // Get current authenticated user
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
+        const { data: user, error: userError } = await authApi.getCurrentUser();
 
-        if (authError) throw authError;
-        if (!user) {
+        if (userError || !user) {
           router.push("/auth/login?redirect=/dashboard/settings");
           return;
         }
 
-        // Get profile data from profiles table
-        const { data, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        // Get profile data using the API
+        const { data, error: profileError } = await usersApi.getUserProfile(
+          user.id
+        );
 
         if (profileError) throw profileError;
 
@@ -94,30 +88,22 @@ export default function SettingsPage() {
 
     try {
       // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (!user) {
+      if (userError || !user) {
         throw new Error("You must be logged in to update your profile");
       }
 
       // Update profile information
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          name: profile.name,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
+      const { error: updateError } = await usersApi.updateUserProfile(user.id, {
+        name: profile.name,
+      });
 
       if (updateError) throw updateError;
 
       // If email has changed, update auth email
       if (profile.email !== user.email) {
-        const { error: emailError } = await supabase.auth.updateUser({
-          email: profile.email,
-        });
+        const { error: emailError } = await authApi.updateEmail(profile.email);
 
         if (emailError) throw emailError;
       }
@@ -137,8 +123,8 @@ export default function SettingsPage() {
     setIsDeleting(true);
 
     try {
-      // Sign out the user first
-      await supabase.auth.signOut();
+      // Sign out the user
+      await authApi.signOut();
 
       // Redirect to home page with message
       alert(
@@ -152,17 +138,14 @@ export default function SettingsPage() {
     }
   };
 
+  // The rest of the component (UI rendering) remains the same
   if (isLoading) {
     return <LoadingIndicator message="" />;
   }
 
-  const roleOptions = [
-    { value: "user", label: "Regular User" },
-    { value: "facility_owner", label: "Facility Owner" },
-  ];
-
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Component JSX remains the same */}
       <div className="mb-8">
         <Link
           href="/dashboard"

@@ -1,22 +1,16 @@
+// src/app/dashboard/facility-bookings/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formatDate, formatTime } from "@/lib/utils";
 import Link from "next/link";
 import { FacilityBookingsFilter } from "@/components/facilities/FacilityBookingsFilter";
-import {
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  format,
-} from "date-fns";
 import { Booking } from "@/types/booking";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { authApi, facilitiesApi, bookingsApi, usersApi } from "@/lib/api";
 
 interface FacilityBasic {
   id: string;
@@ -40,77 +34,76 @@ export default function FacilityBookingsPage() {
       setIsLoading(true);
       setError(null);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      // Get current user
+      const { data: user, error: userError } = await authApi.getCurrentUser();
+
+      if (userError || !user) {
         setError("You must be logged in to view booking details");
         return;
       }
 
       // Get facilities owned by the user
-      const { data: facilities, error: facilitiesError } = await supabase
-        .from("facilities")
-        .select("id, name")
-        .eq("owner_id", user.id);
+      const { data: userFacilities, error: facilitiesError } =
+        await facilitiesApi.getUserFacilities(user.id);
 
       if (facilitiesError) throw facilitiesError;
 
-      setFacilities(facilities || []);
+      // Extract basic facility info for the filter component
+      const facilitiesBasic: FacilityBasic[] = (userFacilities || []).map(
+        (f) => ({
+          id: f.id,
+          name: f.name,
+        })
+      );
 
-      if (!facilities?.length) {
+      setFacilities(facilitiesBasic);
+
+      if (!userFacilities?.length) {
         setBookings([]);
         setFilteredBookings([]);
         return;
       }
 
-      const facilityIds = facilities.map((f) => f.id);
+      const facilityIds = userFacilities.map((f) => f.id);
 
-      // Get all bookings for these facilities
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from("bookings")
-        .select(
-          `
-          *,
-          facility:facilities(*)
-        `
-        )
-        .in("facility_id", facilityIds)
-        .order("date", { ascending: true });
+      // Loop through each facility to get its bookings
+      const allBookings: Booking[] = [];
 
-      if (bookingsError) throw bookingsError;
+      for (const facilityId of facilityIds) {
+        const { data: facilityBookings, error: bookingsError } =
+          await bookingsApi.getFacilityBookings(facilityId);
 
-      // Fetch user emails for each booking
+        if (bookingsError) {
+          console.error(
+            `Error fetching bookings for facility ${facilityId}:`,
+            bookingsError
+          );
+          continue;
+        }
+
+        if (facilityBookings) {
+          allBookings.push(...facilityBookings);
+        }
+      }
+
+      // Process bookings to add facility and user info
       const processedBookings = await Promise.all(
-        (bookingsData || []).map(async (booking) => {
-          // Fetch user email from auth.users or profiles table
-          const { data: userData, error: userError } = await supabase
-            .from("profiles")
-            .select("email, name")
-            .eq("id", booking.user_id)
-            .single();
+        allBookings.map(async (booking) => {
+          // Get facility info
+          const facility = userFacilities.find(
+            (f) => f.id === booking.facility_id
+          ) || {
+            id: booking.facility_id,
+            name: "Unknown Facility",
+          };
 
-          if (userError) {
-            console.log(
-              `Error fetching user for booking ${booking.id}:`,
-              userError
-            );
-            return {
-              ...booking,
-              facility: booking.facility || {
-                id: booking.facility_id,
-                name: "Unknown Facility",
-              },
-              user: { id: booking.user_id, email: "Unknown User" },
-            };
-          }
+          // Get user info
+          const { data: userData, error: userError } =
+            await usersApi.getUserProfile(booking.user_id);
 
           return {
             ...booking,
-            facility: booking.facility || {
-              id: booking.facility_id,
-              name: "Unknown Facility",
-            },
+            facility,
             user: userData || { id: booking.user_id, email: "Unknown User" },
           };
         })
@@ -131,40 +124,15 @@ export default function FacilityBookingsPage() {
     newStatus: "pending" | "confirmed" | "cancelled"
   ) => {
     try {
-      // Get the booking (still need this for UI updates)
-      const { data: booking, error: bookingError } = await supabase
-        .from("bookings")
-        .select("*, facility:facility_id(*)")
-        .eq("id", bookingId)
-        .single();
+      // Update the booking status
+      const { data, error } = await bookingsApi.updateBookingStatus(
+        bookingId,
+        newStatus
+      );
 
-      if (bookingError) throw bookingError;
+      if (error) throw error;
 
-      // Use the custom function if this is a lobby booking being confirmed
-      if (booking.lobby_id && newStatus === "confirmed") {
-        const { error: rpcError } = await supabase.rpc(
-          "update_booking_status",
-          {
-            booking_id: bookingId,
-            new_status: newStatus,
-          }
-        );
-
-        if (rpcError) throw rpcError;
-      } else {
-        // Standard update for non-lobby bookings or when cancelling
-        const { error: updateError } = await supabase
-          .from("bookings")
-          .update({
-            status: newStatus,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", bookingId);
-
-        if (updateError) throw updateError;
-      }
-
-      // Update local state (rest of your existing code...)
+      // Update local state
       const updatedBookings = bookings.map((b) =>
         b.id === bookingId ? { ...b, status: newStatus } : b
       );
@@ -184,11 +152,10 @@ export default function FacilityBookingsPage() {
     } catch (err) {
       console.error(`Error updating booking status:`, err);
       alert("Failed to update booking status");
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  // The filter and tab handlers remain the same
   const handleTabChange = (tab: "all" | "pending") => {
     setActiveTab(tab);
 
@@ -224,7 +191,6 @@ export default function FacilityBookingsPage() {
     if (status) {
       filtered = filtered.filter((booking) => booking.status === status);
     } else if (activeTab === "pending") {
-      // If we're on the pending tab but no status filter is specified, maintain the pending filter
       filtered = filtered.filter((booking) => booking.status === "pending");
     }
 
@@ -238,16 +204,18 @@ export default function FacilityBookingsPage() {
         startDate = today;
         endDate = today;
       } else if (dateRange === "week") {
-        startDate = startOfWeek(today);
-        endDate = endOfWeek(today);
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - today.getDay() + 1); // Monday of current week
+        endDate = new Date(today);
+        endDate.setDate(startDate.getDate() + 6); // Sunday of current week
       } else if (dateRange === "month") {
-        startDate = startOfMonth(today);
-        endDate = endOfMonth(today);
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
       }
 
       if (startDate !== undefined && endDate !== undefined) {
-        const formattedStartDate = format(startDate, "yyyy-MM-dd");
-        const formattedEndDate = format(endDate, "yyyy-MM-dd");
+        const formattedStartDate = startDate.toISOString().split("T")[0];
+        const formattedEndDate = endDate.toISOString().split("T")[0];
 
         filtered = filtered.filter(
           (booking) =>
@@ -260,6 +228,7 @@ export default function FacilityBookingsPage() {
     setFilteredBookings(filtered);
   };
 
+  // UI rendering code remains mostly the same
   if (isLoading) {
     return <LoadingIndicator message="Loading facility bookings..." />;
   }
@@ -272,6 +241,7 @@ export default function FacilityBookingsPage() {
     );
   }
 
+  // The rest of the component (tabs, booking list rendering, etc.) stays the same
   return (
     <div>
       <div className="mb-8 flex justify-between items-center">

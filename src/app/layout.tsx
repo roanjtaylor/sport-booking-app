@@ -7,7 +7,6 @@ import { AuthStatus } from "@/components/auth/AuthStatus";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { AuthenticatedLink } from "@/components/ui/AuthenticatedLink";
 import { usePathname } from "next/navigation";
 
 // Load the Inter font with Latin subset for optimal performance
@@ -34,6 +33,8 @@ export default function RootLayout({
   const pathname = usePathname();
   // Track user role to adjust navbar
   const [userRole, setUserRole] = useState<string | null>(null);
+  // Add isLoading state - This is what was missing
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check if we're on the homepage
   const isHomePage = pathname === "/";
@@ -68,7 +69,7 @@ export default function RootLayout({
       } catch (error) {
         console.error("Auth check failed:", error);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // This line was causing the error because setIsLoading wasn't defined
       }
     };
 

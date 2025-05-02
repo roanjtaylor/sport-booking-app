@@ -5,11 +5,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
 import { Facility } from "@/types/facility";
 import { formatPrice } from "@/lib/utils";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { authApi, facilitiesApi } from "@/lib/api";
 
 export default function ManageFacilitiesPage() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -24,49 +24,20 @@ export default function ManageFacilitiesPage() {
     try {
       setIsLoading(true);
 
-      // Get current user
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      // Get current user using the auth API
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (userError) throw userError;
-      if (!user) {
+      if (userError || !user) {
         setError("You must be logged in to view your facilities");
-        setIsLoading(false);
         return;
       }
 
-      // Fetch facilities owned by the current user
-      const { data, error: facilitiesError } = await supabase
-        .from("facilities")
-        .select("*")
-        .eq("owner_id", user.id)
-        .order("created_at", { ascending: false });
+      // Fetch facilities owned by the user using the facilities API
+      const { data, error: facilitiesError } =
+        await facilitiesApi.getUserFacilities(user.id);
 
       if (facilitiesError) throw facilitiesError;
-
-      // Convert to our Facility type
-      const formattedFacilities: Facility[] = (data || []).map((facility) => ({
-        id: facility.id,
-        name: facility.name,
-        description: facility.description,
-        address: facility.address,
-        city: facility.city,
-        postal_code: facility.postal_code,
-        country: facility.country,
-        imageUrl: facility.image_url,
-        owner_id: facility.owner_id,
-        owner_email: facility.owner_email,
-        operatingHours: facility.operating_hours,
-        price_per_hour: facility.price_per_hour,
-        currency: facility.currency,
-        sportType: facility.sport_type,
-        amenities: facility.amenities || [],
-        min_players: facility.min_players,
-      }));
-
-      setFacilities(formattedFacilities);
+      setFacilities(data || []);
     } catch (err) {
       console.error("Error fetching facilities:", err);
       setError("Failed to load your facilities");
@@ -75,6 +46,7 @@ export default function ManageFacilitiesPage() {
     }
   }
 
+  // The rest of the component remains the same
   if (isLoading) {
     return <LoadingIndicator message="Loading your facilities..." />;
   }
@@ -93,6 +65,7 @@ export default function ManageFacilitiesPage() {
 
       <ErrorDisplay error={error} className="mb-6" />
 
+      {/* Render facilities grid or empty state */}
       {facilities.length === 0 ? (
         <Card className="p-6 text-center">
           <h3 className="text-lg font-medium mb-2">No facilities found</h3>

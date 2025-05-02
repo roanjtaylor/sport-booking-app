@@ -5,11 +5,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
 import { format } from "date-fns";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { authApi, bookingsApi, facilitiesApi, usersApi } from "@/lib/api";
 
 interface Profile {
   id: string;
@@ -25,32 +25,8 @@ interface DashboardStats {
   pendingRequests?: number;
 }
 
-interface Booking {
-  id: string;
-  facility_id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  status: string;
-  facility?: {
-    name: string;
-  };
-}
-
-interface Facility {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  sport_type: string[];
-}
-
-/**
- * Dashboard page for users to see an overview of their account
- * Displays different views based on user role (regular user or facility owner)
- */
 export default function DashboardPage() {
-  // State management for user data, loading states, and statistics
+  // State management
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,21 +37,21 @@ export default function DashboardPage() {
     facilities: 0,
     pendingRequests: 0,
   });
-  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
-  const [facilityList, setFacilityList] = useState<Facility[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<Booking[]>([]);
+  const [recentBookings, setRecentBookings] = useState<any[]>([]);
+  const [facilityList, setFacilityList] = useState<any[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   useEffect(() => {
     // Fetch user data and statistics on component mount
     async function fetchUserData() {
       try {
-        const {
-          data: { user: authUser },
-          error: authError,
-        } = await supabase.auth.getUser();
+        setIsLoading(true);
 
-        if (authError) throw authError;
-        if (!authUser) {
+        // Get the current user
+        const { data: authUser, error: authError } =
+          await authApi.getCurrentUser();
+
+        if (authError || !authUser) {
           setError("You must be logged in to view your dashboard");
           return;
         }
@@ -83,24 +59,22 @@ export default function DashboardPage() {
         setUser(authUser);
 
         // Fetch user profile with role information
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", authUser.id)
-          .single();
+        const { data: profileData, error: profileError } =
+          await usersApi.getUserProfile(authUser.id);
 
         if (profileError) throw profileError;
         if (!profileData) throw new Error("Profile not found");
 
-        setProfile(profileData);
+        setProfile({
+          ...profileData,
+          email: authUser.email || "",
+        });
 
         // Calculate statistics and fetch relevant data based on user role
-        const today = new Date().toISOString().split("T")[0];
-
         if (profileData.role === "facility_owner") {
-          await fetchFacilityOwnerData(authUser.id, today);
+          await fetchFacilityOwnerData(authUser.id);
         } else {
-          await fetchRegularUserData(authUser.id, today);
+          await fetchRegularUserData(authUser.id);
         }
       } catch (err) {
         console.error("Error fetching user data:", err);
@@ -118,99 +92,70 @@ export default function DashboardPage() {
   /**
    * Fetches all necessary data for facility owners
    */
-  const fetchFacilityOwnerData = async (userId: string, today: string) => {
+  const fetchFacilityOwnerData = async (userId: string) => {
     try {
-      // Get facilities owned by the user
-      const { data: facilities, error: facilitiesError } = await supabase
-        .from("facilities")
-        .select("id, name, address, city, sport_type")
-        .eq("owner_id", userId);
+      // Get owner statistics
+      const { data: statData, error: statError } =
+        await usersApi.getFacilityOwnerStats(userId);
+
+      if (statError) throw statError;
+
+      if (statData) {
+        setStats(statData);
+      }
+
+      // Get facilities owned by user
+      const { data: userFacilities, error: facilitiesError } =
+        await facilitiesApi.getUserFacilities(userId);
 
       if (facilitiesError) throw facilitiesError;
 
-      setFacilityList(facilities || []);
+      setFacilityList(userFacilities || []);
 
-      if (!facilities || facilities.length === 0) {
-        setStats({
-          facilities: 0,
-          totalBookings: 0,
-          upcomingBookings: 0,
-          pendingRequests: 0,
-        });
+      // If there are no facilities, we're done
+      if (!userFacilities || userFacilities.length === 0) {
         return;
       }
 
-      const facilityIds = facilities.map((f) => f.id);
-
-      // Fetch all statistics in parallel
-      const [
-        facilitiesCount,
-        totalBookings,
-        upcomingBookings,
-        pendingRequestsCount,
-      ] = await Promise.all([
-        supabase
-          .from("facilities")
-          .select("id", { count: "exact" })
-          .eq("owner_id", userId),
-        supabase
-          .from("bookings")
-          .select("id", { count: "exact" })
-          .in("facility_id", facilityIds),
-        supabase
-          .from("bookings")
-          .select("id", { count: "exact" })
-          .in("facility_id", facilityIds)
-          .gte("date", today)
-          .eq("status", "confirmed"),
-        supabase
-          .from("bookings")
-          .select("id", { count: "exact" })
-          .in("facility_id", facilityIds)
-          .eq("status", "pending"),
-      ]);
-
-      setStats({
-        facilities: facilitiesCount.count ?? 0,
-        totalBookings: totalBookings.count ?? 0,
-        upcomingBookings: upcomingBookings.count ?? 0,
-        pendingRequests: pendingRequestsCount.count ?? 0,
-      });
+      // Get facility IDs for query
+      const facilityIds = userFacilities.map((f) => f.id);
 
       // Fetch recent pending requests
-      const { data: requests, error: requestsError } = await supabase
-        .from("bookings")
-        .select(
-          `
-          id, 
-          facility_id, 
-          date, 
-          start_time, 
-          end_time, 
-          status,
-          facility:facility_id (
-            id,
-            name
-          )
-        `
-        )
-        .in("facility_id", facilityIds)
-        .eq("status", "pending")
-        .order("date", { ascending: true })
-        .limit(5);
+      const pendingBookingsPromises = facilityIds.map((facilityId) =>
+        bookingsApi.getFacilityBookings(facilityId)
+      );
 
-      if (requestsError) {
-        console.error("Error fetching booking requests:", requestsError);
-      }
+      const pendingResults = await Promise.all(pendingBookingsPromises);
 
-      // Ensure facility property exists on each booking
-      const safeRequests = (requests || []).map((booking) => ({
-        ...booking,
-        facility: booking.facility || { name: "Unknown" },
-      }));
+      // Combine results and filter for pending status
+      let allPendingBookings: any[] = [];
+      pendingResults.forEach((result) => {
+        if (result.data) {
+          allPendingBookings = [
+            ...allPendingBookings,
+            ...result.data.filter((booking) => booking.status === "pending"),
+          ];
+        }
+      });
 
-      // Set the pendingRequests state
-      setPendingRequests(safeRequests);
+      // Sort by date (ascending) and limit to 5
+      allPendingBookings.sort((a, b) => a.date.localeCompare(b.date));
+
+      // Limit to 5 most recent
+      const recentPendingBookings = allPendingBookings.slice(0, 5);
+
+      // Add facility info to each booking
+      const pendingWithFacility = recentPendingBookings.map((booking) => {
+        const facility = userFacilities.find(
+          (f) => f.id === booking.facility_id
+        );
+        return {
+          ...booking,
+          facility: facility || { name: "Unknown" },
+        };
+      });
+
+      setPendingRequests(pendingWithFacility);
     } catch (error) {
       console.error("Error fetching facility owner data:", error);
       // Set default values in case of error
@@ -226,58 +171,45 @@ export default function DashboardPage() {
   /**
    * Fetches all necessary data for regular users
    */
-  const fetchRegularUserData = async (userId: string, today: string) => {
+  const fetchRegularUserData = async (userId: string) => {
     try {
-      // Fetch booking statistics and recent bookings in parallel
-      const [totalBookings, upcomingBookings, recentBookingsData] =
-        await Promise.all([
-          supabase
-            .from("bookings")
-            .select("id", { count: "exact" })
-            .eq("user_id", userId),
-          supabase
-            .from("bookings")
-            .select("id", { count: "exact" })
-            .eq("user_id", userId)
-            .gte("date", today)
-            .not("status", "eq", "cancelled"),
-          supabase
-            .from("bookings")
-            .select(
-              `
-            *,
-            facility:facilities(*)
-          `
-            )
-            .eq("user_id", userId)
-            .gte("date", today)
-            .not("status", "eq", "cancelled")
-            .order("date", { ascending: true })
-            .limit(5),
-        ]);
+      // Get user booking stats
+      const { data: statData, error: statError } =
+        await usersApi.getUserBookingStats(userId);
 
-      setStats({
-        facilities: 0,
-        totalBookings: totalBookings.count ?? 0,
-        upcomingBookings: upcomingBookings.count ?? 0,
-      });
+      if (statError) throw statError;
 
-      // Process and set the recent bookings
-      const safeBookings = (recentBookingsData.data || []).map((booking) => ({
-        ...booking,
-        facility: booking.facility || { name: "Unknown" },
-      }));
+      if (statData) {
+        setStats({
+          ...stats,
+          totalBookings: statData.totalBookings,
+          upcomingBookings: statData.upcomingBookings,
+        });
+      }
 
-      // Set the recentBookings state
-      setRecentBookings(safeBookings);
+      // Get recent upcoming bookings
+      const { data: userBookings, error: bookingsError } =
+        await bookingsApi.getUserBookings(userId);
 
-      // Also fetch some recommended facilities
-      const { data: facilities } = await supabase
-        .from("facilities")
-        .select("id, name, address, city, sport_type")
-        .limit(3);
+      if (bookingsError) throw bookingsError;
 
-      setFacilityList(facilities || []);
+      // Filter for upcoming bookings that aren't cancelled
+      const today = new Date().toISOString().split("T")[0];
+      const upcomingBookings = (userBookings || [])
+        .filter((b) => b.date >= today && b.status !== "cancelled")
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(0, 5);
+
+      setRecentBookings(upcomingBookings);
+
+      // Fetch some recommended facilities
+      const { data: facilities, error: facilitiesError } =
+        await facilitiesApi.getAllFacilities();
+
+      if (facilitiesError) throw facilitiesError;
+
+      // Just take the first 3 facilities for recommendations
+      setFacilityList(facilities?.slice(0, 3) || []);
     } catch (error) {
       console.error("Error fetching user data:", error);
       // Set default values in case of error
@@ -306,12 +238,11 @@ export default function DashboardPage() {
     }
   };
 
-  // Loading state UI- animation
+  // The rest of the component (UI rendering) remains the same
   if (isLoading) {
     return <LoadingIndicator message="Loading your dashboard..." />;
   }
 
-  // Error state UI
   if (error) {
     return (
       <div className="py-12">
@@ -330,6 +261,7 @@ export default function DashboardPage() {
   // Determine whether to show facility owner or regular user dashboard
   const isFacilityOwner = profile?.role === "facility_owner";
 
+  // Rest of the component JSX (not changing)
   return (
     <div className="space-y-8">
       {/* Header section */}
@@ -344,7 +276,7 @@ export default function DashboardPage() {
 
       {/* Statistics cards */}
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Show different stats based on user role */}
+        {/* Show different stats based on user role - example cards */}
         {isFacilityOwner ? (
           // Facility Owner Statistics
           <>
@@ -400,7 +332,7 @@ export default function DashboardPage() {
             </Link>
           </>
         ) : (
-          // Regular User Main Action Cards (Updated)
+          // Regular User Main Action Cards
           <>
             <Link href="/discover" className="block">
               <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-orange-500">
@@ -454,7 +386,7 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {pendingRequests.length > 0 ? (
+          {pendingRequests && pendingRequests.length > 0 ? (
             <Card>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -543,7 +475,7 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {recentBookings.length > 0 ? (
+          {recentBookings && recentBookings.length > 0 ? (
             <Card>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -633,7 +565,7 @@ export default function DashboardPage() {
       )}
 
       {/* Facility list for owner / Recommended facilities for user */}
-      {isFacilityOwner && facilityList.length > 0 && (
+      {isFacilityOwner && facilityList && facilityList.length > 0 && (
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Your Facilities</h2>
@@ -684,7 +616,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {!isFacilityOwner && facilityList.length > 0 && (
+      {!isFacilityOwner && facilityList && facilityList.length > 0 && (
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Recommended Facilities</h2>
