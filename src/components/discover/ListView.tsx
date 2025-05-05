@@ -5,15 +5,14 @@ import { useState, useEffect } from "react";
 import FacilitiesClient from "@/app/facilities/FacilitiesClient";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { LobbyFilters } from "@/components/lobbies/LobbyFilters";
-import { supabase } from "@/lib/supabase";
 import { FacilityFilters } from "@/components/facilities/FacilityFilters";
 import { Card } from "@/components/ui/Card";
 import type { Facility } from "@/types/facility";
 import type { Lobby } from "@/types/lobby";
 import { useRouter } from "next/navigation";
-import { joinLobby } from "@/lib/lobbies";
 import { LoadingIndicator } from "../ui/LoadingIndicator";
 import { EmptyState } from "../ui/EmptyState";
+import { facilitiesApi, lobbiesApi, authApi } from "@/lib/api";
 
 type BookingMode = "booking" | "lobby" | null;
 
@@ -41,47 +40,20 @@ export default function ListView({ mode, onCreateLobby }: ListViewProps) {
 
         // Only fetch what we need based on mode
         if (mode === "booking" || !mode) {
-          // Fetch facilities data
+          // Fetch facilities data using API service
           const { data: facilitiesData, error: facilitiesError } =
-            await supabase
-              .from("facilities")
-              .select("*")
-              .order("created_at", { ascending: false });
+            await facilitiesApi.getAllFacilities();
 
           if (facilitiesError) throw facilitiesError;
 
-          // Format facilities data
-          const formattedFacilities = (facilitiesData || []).map(
-            (facility) => ({
-              id: facility.id,
-              name: facility.name,
-              description: facility.description,
-              address: facility.address,
-              city: facility.city,
-              postal_code: facility.postal_code,
-              country: facility.country,
-              imageUrl: facility.image_url,
-              owner_id: facility.owner_id,
-              owner_email: facility.owner_email,
-              operatingHours: facility.operating_hours,
-              price_per_hour: facility.price_per_hour,
-              currency: facility.currency,
-              sportType: facility.sport_type,
-              amenities: facility.amenities || [],
-              min_players: facility.min_players,
-            })
-          );
-
-          setFacilities(formattedFacilities);
-          setFilteredFacilities(formattedFacilities);
+          setFacilities(facilitiesData || []);
+          setFilteredFacilities(facilitiesData || []);
         }
 
         if (mode === "lobby" || !mode) {
-          // Fetch lobbies data
-          const { data: lobbiesData, error: lobbiesError } = await supabase
-            .from("lobbies")
-            .select(`*, facility:facility_id(*)`)
-            .order("date", { ascending: true });
+          // Fetch lobbies data using API service
+          const { data: lobbiesData, error: lobbiesError } =
+            await lobbiesApi.getOpenLobbies();
 
           if (lobbiesError) throw lobbiesError;
 
@@ -104,90 +76,40 @@ export default function ListView({ mode, onCreateLobby }: ListViewProps) {
     new Set(facilities.flatMap((f) => f.sportType || []))
   );
 
-  const handleFacilityFilter = (filters: {
+  const handleFacilityFilter = async (filters: {
     search: string;
     sportType: string;
     priceSort: string;
   }) => {
-    let filtered = [...facilities];
+    try {
+      // Use the API service for filtering
+      const { data: filtered, error: filterError } =
+        await facilitiesApi.filterFacilities(filters);
 
-    // Apply search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (facility) =>
-          facility.name.toLowerCase().includes(searchLower) ||
-          facility.description.toLowerCase().includes(searchLower) ||
-          facility.address.toLowerCase().includes(searchLower) ||
-          facility.city.toLowerCase().includes(searchLower)
-      );
+      if (filterError) throw filterError;
+      setFilteredFacilities(filtered || []);
+    } catch (err) {
+      console.error("Error filtering facilities:", err);
+      setError("Failed to filter facilities");
     }
-
-    // Apply sport type filter
-    if (filters.sportType) {
-      filtered = filtered.filter((facility) =>
-        facility.sportType.includes(filters.sportType)
-      );
-    }
-
-    // Apply price sorting
-    if (filters.priceSort === "low") {
-      filtered.sort((a, b) => a.price_per_hour - b.price_per_hour);
-    } else if (filters.priceSort === "high") {
-      filtered.sort((a, b) => b.price_per_hour - a.price_per_hour);
-    }
-
-    setFilteredFacilities(filtered);
   };
 
-  const handleLobbyFilter = (filters: {
+  const handleLobbyFilter = async (filters: {
     search: string;
     sportType: string;
     dateRange: string;
   }) => {
-    let filtered = [...lobbies];
+    try {
+      // Use the API service for filtering
+      const { data: filtered, error: filterError } =
+        await lobbiesApi.filterLobbies(filters);
 
-    // Apply search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (lobby) =>
-          lobby.facility?.name?.toLowerCase().includes(searchLower) ||
-          lobby.facility?.address?.toLowerCase().includes(searchLower) ||
-          lobby.notes?.toLowerCase().includes(searchLower)
-      );
+      if (filterError) throw filterError;
+      setFilteredLobbies(filtered || []);
+    } catch (err) {
+      console.error("Error filtering lobbies:", err);
+      setError("Failed to filter lobbies");
     }
-
-    // Apply sport type filter
-    if (filters.sportType) {
-      filtered = filtered.filter((lobby) =>
-        lobby.facility?.sportType?.includes(filters.sportType)
-      );
-    }
-
-    // Apply date range filter
-    if (filters.dateRange) {
-      const today = new Date().toISOString().split("T")[0];
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split("T")[0];
-
-      filtered = filtered.filter((lobby) => {
-        if (filters.dateRange === "today") {
-          return lobby.date === today;
-        } else if (filters.dateRange === "tomorrow") {
-          return lobby.date === tomorrowStr;
-        } else if (filters.dateRange === "week") {
-          const lobbyDate = new Date(lobby.date);
-          const weekFromNow = new Date();
-          weekFromNow.setDate(weekFromNow.getDate() + 7);
-          return lobbyDate <= weekFromNow;
-        }
-        return true;
-      });
-    }
-
-    setFilteredLobbies(filtered);
   };
 
   if (isLoading) {
@@ -219,18 +141,20 @@ export default function ListView({ mode, onCreateLobby }: ListViewProps) {
       setIsJoiningLobby(true);
       setJoinError(null);
 
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Get current user using auth API
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (!user) {
+      if (userError || !user) {
         router.push(`/auth/login?redirect=/discover?mode=lobby`);
         return;
       }
 
-      // Use the centralised joinLobby function
-      const result = await joinLobby(lobbyId, user.id, user.email || "");
+      // Use the lobbies API service to join the lobby
+      const result = await lobbiesApi.joinLobby(
+        lobbyId,
+        user.id,
+        user.email || ""
+      );
 
       // Show success message
       if (result.isWaiting) {
@@ -242,10 +166,7 @@ export default function ListView({ mode, onCreateLobby }: ListViewProps) {
       }
 
       // Refresh the lobbies data to show updated status
-      const { data: updatedLobbies } = await supabase
-        .from("lobbies")
-        .select(`*, facility:facility_id(*)`)
-        .order("date", { ascending: true });
+      const { data: updatedLobbies } = await lobbiesApi.getOpenLobbies();
 
       if (updatedLobbies) {
         setLobbies(updatedLobbies);

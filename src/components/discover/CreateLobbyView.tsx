@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Facility } from "@/types/facility";
 import {
@@ -16,6 +15,7 @@ import {
 } from "@/lib/utils";
 import { TimeSlot } from "@/types/booking";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { authApi, facilitiesApi, lobbiesApi, bookingsApi } from "@/lib/api";
 
 export default function CreateLobbyView() {
   const router = useRouter();
@@ -43,34 +43,13 @@ export default function CreateLobbyView() {
       try {
         setIsLoading(true);
 
-        const { data, error } = await supabase
-          .from("facilities")
-          .select("*")
-          .order("created_at", { ascending: false });
+        // Use the API service to fetch facilities
+        const { data, error } = await facilitiesApi.getAllFacilities();
 
         if (error) throw error;
 
-        const formattedFacilities = (data || []).map((facility) => ({
-          id: facility.id,
-          name: facility.name,
-          description: facility.description,
-          address: facility.address,
-          city: facility.city,
-          postal_code: facility.postal_code,
-          country: facility.country,
-          imageUrl: facility.image_url,
-          owner_id: facility.owner_id,
-          owner_email: facility.owner_email,
-          operatingHours: facility.operating_hours,
-          price_per_hour: facility.price_per_hour,
-          currency: facility.currency,
-          sportType: facility.sport_type,
-          amenities: facility.amenities || [],
-          min_players: facility.min_players,
-        }));
-
-        setFacilities(formattedFacilities);
-        setFilteredFacilities(formattedFacilities);
+        setFacilities(data || []);
+        setFilteredFacilities(data || []);
       } catch (err) {
         console.error("Error fetching facilities:", err);
         setError("Failed to load facilities");
@@ -109,11 +88,10 @@ export default function CreateLobbyView() {
     setTimeSlots([]);
 
     try {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("facility_id", facility.id)
-        .in("status", ["confirmed", "pending"]);
+      // Use the API service to get bookings for this facility
+      const { data, error } = await bookingsApi.getFacilityBookings(
+        facility.id
+      );
 
       if (error) throw error;
 
@@ -163,11 +141,10 @@ export default function CreateLobbyView() {
     setError(null);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Get current user using auth API
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (!user) {
+      if (userError || !user) {
         router.push("/auth/login?redirect=/discover?mode=lobby");
         return;
       }
@@ -177,42 +154,21 @@ export default function CreateLobbyView() {
         return;
       }
 
-      // Create the lobby
-      const { data, error: lobbyError } = await supabase
-        .from("lobbies")
-        .insert({
-          facility_id: selectedFacility.id,
-          creator_id: user.id,
-          creator_email: user.email,
-          date,
-          start_time: selectedSlot.startTime,
-          end_time: selectedSlot.endTime,
-          min_players: selectedFacility.min_players,
-          current_players: initialGroupSize,
-          initial_group_size: initialGroupSize,
-          group_name: groupName || null,
-          status:
-            initialGroupSize >= selectedFacility.min_players
-              ? "filled"
-              : "open",
-          notes: notes || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      // Use lobbies API to create the lobby
+      const { data, error: lobbyError } = await lobbiesApi.createLobby({
+        facility_id: selectedFacility.id,
+        creator_id: user.id,
+        creator_email: user.email || "",
+        date,
+        start_time: selectedSlot.startTime,
+        end_time: selectedSlot.endTime,
+        min_players: selectedFacility.min_players,
+        initial_group_size: initialGroupSize,
+        group_name: groupName || undefined,
+        notes: notes || undefined,
+      });
 
       if (lobbyError) throw lobbyError;
-
-      // Add creator as participant
-      const { error: participantError } = await supabase
-        .from("lobby_participants")
-        .insert({
-          lobby_id: data.id,
-          user_id: user.id,
-        });
-
-      if (participantError) throw participantError;
 
       router.push(`/lobbies/${data.id}`);
       router.refresh();
@@ -291,7 +247,7 @@ export default function CreateLobbyView() {
                         {facility.sportType.slice(0, 3).map((sport) => (
                           <span
                             key={sport}
-                            className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-0.5 rounded"
+                            className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
                           >
                             {sport}
                           </span>

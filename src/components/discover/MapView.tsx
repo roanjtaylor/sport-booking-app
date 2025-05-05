@@ -5,14 +5,13 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { LobbyList } from "@/components/lobbies/LobbyList";
-import { joinLobby } from "@/lib/lobbies";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { facilitiesApi, lobbiesApi, authApi } from "@/lib/api";
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -88,11 +87,8 @@ export default function MapView({ mode }: MapViewProps) {
         setError(null);
 
         // Always fetch facilities with coordinates
-        const { data: facilitiesData, error: facilitiesError } = await supabase
-          .from("facilities")
-          .select("*")
-          .not("latitude", "is", null)
-          .not("longitude", "is", null);
+        const { data: facilitiesData, error: facilitiesError } =
+          await facilitiesApi.getFacilitiesWithCoordinates();
 
         if (facilitiesError) throw facilitiesError;
         setFacilities(facilitiesData || []);
@@ -115,29 +111,12 @@ export default function MapView({ mode }: MapViewProps) {
         }
 
         if (mode === "lobby" || !mode) {
-          // Fetch lobbies and their associated facilities (with coordinates)
-          const { data: lobbiesData, error: lobbiesError } = await supabase
-            .from("lobbies")
-            .select(
-              `
-              *,
-              facility:facility_id(*)
-            `
-            )
-            .eq("status", "open")
-            .order("date", { ascending: true });
+          // Fetch lobbies using API service
+          const { data: lobbiesData, error: lobbiesError } =
+            await lobbiesApi.getLobbiesWithCoordinates();
 
           if (lobbiesError) throw lobbiesError;
-
-          // Filter lobbies to only include those with facilities that have coordinates
-          const lobbiesWithCoordinates = (lobbiesData || []).filter(
-            (lobby) =>
-              lobby.facility &&
-              lobby.facility.latitude &&
-              lobby.facility.longitude
-          );
-
-          setLobbies(lobbiesWithCoordinates);
+          setLobbies(lobbiesData || []);
         }
       } catch (err) {
         console.error("Error fetching data for map:", err);
@@ -171,18 +150,20 @@ export default function MapView({ mode }: MapViewProps) {
     try {
       setIsJoiningLobby(true);
 
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Get current user using auth API
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (!user) {
+      if (userError || !user) {
         router.push(`/auth/login?redirect=/discover?mode=lobby`);
         return;
       }
 
-      // Use the centralized joinLobby function
-      const result = await joinLobby(lobbyId, user.id, user.email || "");
+      // Use the lobbies API service to join the lobby
+      const result = await lobbiesApi.joinLobby(
+        lobbyId,
+        user.id,
+        user.email || ""
+      );
 
       // Show success message
       if (result.isWaiting) {
@@ -322,7 +303,7 @@ export default function MapView({ mode }: MapViewProps) {
                               {marker.data.address}
                             </p>
                             <div className="flex flex-wrap gap-1 mb-2">
-                              {marker.data.sport_type
+                              {marker.data.sportType
                                 ?.slice(0, 2)
                                 .map((sport) => (
                                   <span
@@ -358,7 +339,7 @@ export default function MapView({ mode }: MapViewProps) {
                               {marker.data.address}
                             </p>
                             <div className="flex flex-wrap gap-1 mb-2">
-                              {marker.data.sport_type
+                              {marker.data.sportType
                                 ?.slice(0, 2)
                                 .map((sport) => (
                                   <span

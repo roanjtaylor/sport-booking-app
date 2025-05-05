@@ -281,3 +281,112 @@ export async function checkFacilityOwnership(
     return { isOwner: false, error };
   }
 }
+
+/**
+ * Fetches facilities with coordinates (non-null latitude and longitude)
+ */
+export async function getFacilitiesWithCoordinates() {
+  try {
+    const { data, error } = await supabase
+      .from("facilities")
+      .select("*")
+      .not("latitude", "is", null)
+      .not("longitude", "is", null);
+
+    if (error) throw error;
+
+    // Format the facilities to match the expected Facility type
+    const formattedFacilities: Facility[] = (data || []).map((facility) => ({
+      id: facility.id,
+      name: facility.name,
+      description: facility.description,
+      address: facility.address,
+      city: facility.city,
+      postal_code: facility.postal_code,
+      country: facility.country,
+      imageUrl: facility.image_url,
+      owner_id: facility.owner_id,
+      owner_email: facility.owner_email,
+      operatingHours: facility.operating_hours,
+      price_per_hour: facility.price_per_hour,
+      currency: facility.currency,
+      sportType: facility.sport_type,
+      amenities: facility.amenities || [],
+      min_players: facility.min_players,
+      latitude: facility.latitude,
+      longitude: facility.longitude,
+    }));
+
+    return { data: formattedFacilities, error: null };
+  } catch (error) {
+    console.error("Error fetching facilities with coordinates:", error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Get all sport types from facilities
+ */
+export async function getAllSportTypes() {
+  try {
+    const { data: facilities, error } = await getAllFacilities();
+    if (error) throw error;
+
+    // Extract all sport types and remove duplicates
+    const sportTypes = Array.from(
+      new Set(facilities.flatMap((f) => f.sportType || []))
+    );
+
+    return { data: sportTypes, error: null };
+  } catch (error) {
+    console.error("Error fetching sport types:", error);
+    return { data: [], error };
+  }
+}
+
+/**
+ * Filter facilities based on user criteria
+ */
+export async function filterFacilities(criteria: {
+  search?: string;
+  sportType?: string;
+  priceSort?: string;
+}) {
+  try {
+    const { data: facilities, error } = await getAllFacilities();
+    if (error) throw error;
+
+    let filtered = [...facilities];
+
+    // Apply search filter
+    if (criteria.search) {
+      const searchLower = criteria.search.toLowerCase();
+      filtered = filtered.filter(
+        (facility) =>
+          facility.name.toLowerCase().includes(searchLower) ||
+          facility.description.toLowerCase().includes(searchLower) ||
+          facility.address.toLowerCase().includes(searchLower) ||
+          facility.city.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply sport type filter
+    if (criteria.sportType) {
+      filtered = filtered.filter((facility) =>
+        facility.sportType.includes(criteria.sportType)
+      );
+    }
+
+    // Apply price sorting
+    if (criteria.priceSort === "low") {
+      filtered.sort((a, b) => a.price_per_hour - b.price_per_hour);
+    } else if (criteria.priceSort === "high") {
+      filtered.sort((a, b) => b.price_per_hour - a.price_per_hour);
+    }
+
+    return { data: filtered, error: null };
+  } catch (error) {
+    console.error("Error filtering facilities:", error);
+    return { data: null, error };
+  }
+}

@@ -4,16 +4,16 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { formatDate, formatPrice, getDayOfWeek } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { formatDate, formatTime, formatPrice, getDayOfWeek } from "@/lib/utils";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { LobbyList } from "@/components/lobbies/LobbyList";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { authApi, bookingsApi, facilitiesApi, lobbiesApi } from "@/lib/api";
 import { Facility } from "@/types/facility";
 import { Lobby } from "@/types/lobby";
-import Link from "next/link";
-import { LobbyList } from "@/components/lobbies/LobbyList";
-import { joinLobby } from "@/lib/lobbies";
-import { useRouter } from "next/navigation";
-import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
-import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 
 type BookingMode = "booking" | "lobby" | null;
 
@@ -211,27 +211,6 @@ export default function CalendarView({
     fetchAvailability();
   }, [selectedDate, viewMode, sportTypeFilter, mode]);
 
-  // Fetch bookings to check facility availability
-  const fetchBookings = async (dateRange: {
-    startDate: string;
-    endDate: string;
-  }) => {
-    try {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("*")
-        .gte("date", dateRange.startDate)
-        .lte("date", dateRange.endDate)
-        .in("status", ["confirmed", "pending"]);
-
-      if (error) throw error;
-      return data || [];
-    } catch (err) {
-      console.error("Error fetching bookings:", err);
-      return [];
-    }
-  };
-
   // Check if a facility is available on a given date
   const isFacilityAvailable = (
     facility: Facility,
@@ -266,42 +245,28 @@ export default function CalendarView({
       console.log("Fetching for date range:", dateRange);
 
       // Fetch bookings to check availability
-      const bookings = await fetchBookings(dateRange);
-      setExistingBookings(bookings);
+      const { data: bookings, error: bookingsError } =
+        await bookingsApi.getCurrentDateRangeBookings(
+          dateRange.startDate,
+          dateRange.endDate
+        );
+
+      if (bookingsError) throw bookingsError;
+      setExistingBookings(bookings || []);
 
       // Only fetch data needed based on mode
       if (mode === "booking" || !mode) {
         // Fetch all facilities
-        const { data: facilitiesData, error: facilitiesError } = await supabase
-          .from("facilities")
-          .select("*");
+        const { data: facilitiesData, error: facilitiesError } =
+          await facilitiesApi.getAllFacilities();
 
         if (facilitiesError) throw facilitiesError;
 
-        // Format facility data
-        const formattedFacilities = (facilitiesData || []).map((facility) => ({
-          id: facility.id,
-          name: facility.name,
-          description: facility.description,
-          address: facility.address,
-          city: facility.city,
-          postal_code: facility.postal_code,
-          country: facility.country,
-          imageUrl: facility.image_url,
-          owner_id: facility.owner_id,
-          owner_email: facility.owner_email,
-          operatingHours: facility.operating_hours,
-          price_per_hour: facility.price_per_hour,
-          currency: facility.currency,
-          sportType: facility.sport_type,
-          amenities: facility.amenities || [],
-          min_players: facility.min_players,
-        }));
-
         // Extract sport types for filter
-        const sportTypes = Array.from(
-          new Set(formattedFacilities.flatMap((f) => f.sportType))
-        );
+        const { data: sportTypes, error: sportTypesError } =
+          await facilitiesApi.getAllSportTypes();
+
+        if (sportTypesError) throw sportTypesError;
         setAvailableSportTypes(sportTypes);
 
         // Filter facilities based on availability and sports type
@@ -309,7 +274,7 @@ export default function CalendarView({
 
         if (viewMode === "day") {
           // For day view, check just the selected date
-          filteredFacilities = formattedFacilities.filter((facility) => {
+          filteredFacilities = (facilitiesData || []).filter((facility) => {
             // Apply sport type filter
             if (
               sportTypeFilter &&
@@ -319,7 +284,11 @@ export default function CalendarView({
             }
 
             // Check availability
-            return isFacilityAvailable(facility, dateRange.startDate, bookings);
+            return isFacilityAvailable(
+              facility,
+              dateRange.startDate,
+              bookings || []
+            );
           });
         } else {
           // For week view, include facilities available on any day in the range
@@ -332,7 +301,7 @@ export default function CalendarView({
           while (currentDate <= endDateObj) {
             const dateString = currentDate.toISOString().split("T")[0];
 
-            formattedFacilities.forEach((facility) => {
+            (facilitiesData || []).forEach((facility) => {
               // Apply sport type filter
               if (
                 sportTypeFilter &&
@@ -342,7 +311,7 @@ export default function CalendarView({
               }
 
               // Check availability for this date
-              if (isFacilityAvailable(facility, dateString, bookings)) {
+              if (isFacilityAvailable(facility, dateString, bookings || [])) {
                 weekFacilities.set(facility.id, facility);
               }
             });
@@ -363,25 +332,21 @@ export default function CalendarView({
       // Only fetch lobbies in lobby mode
       if (mode === "lobby" || !mode) {
         // Fetch lobbies for the date range
-        const { data: lobbies, error: fullQueryError } = await supabase
-          .from("lobbies")
-          .select("*, facility:facility_id(*)")
-          .gte("date", dateRange.startDate)
-          .lte("date", dateRange.endDate)
-          .order("date", { ascending: true });
+        const { data: lobbiesData, error: lobbiesError } =
+          await lobbiesApi.getLobbiesForDateRange(
+            dateRange.startDate,
+            dateRange.endDate
+          );
 
-        if (fullQueryError) {
-          console.error("Lobby query error:", fullQueryError);
-          throw fullQueryError;
-        }
+        if (lobbiesError) throw lobbiesError;
 
         // Filter lobbies by sport type if needed
         const filteredLobbies =
-          lobbies && sportTypeFilter
-            ? lobbies.filter((lobby) =>
+          lobbiesData && sportTypeFilter
+            ? lobbiesData.filter((lobby) =>
                 lobby.facility?.sport_type?.includes(sportTypeFilter)
               )
-            : lobbies || [];
+            : lobbiesData || [];
 
         setLobbies(filteredLobbies);
       } else {
@@ -429,20 +394,22 @@ export default function CalendarView({
       setIsJoiningLobby(true);
       setError(null);
 
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Get current user using authApi
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (!user) {
+      if (userError || !user) {
         router.push(`/auth/login?redirect=/discover?mode=lobby`);
         return;
       }
 
-      // Use existing join function
-      const result = await joinLobby(lobbyId, user.id, user.email || "");
+      // Use lobbiesApi to join the lobby
+      const result = await lobbiesApi.joinLobby(
+        lobbyId,
+        user.id,
+        user.email || ""
+      );
 
-      // Show success message
+      // Show success message and redirect to lobby
       if (result.isWaiting) {
         alert("You've been added to the waiting list!");
       } else if (result.isFull) {
@@ -451,7 +418,7 @@ export default function CalendarView({
         alert("You've joined the lobby successfully!");
       }
 
-      // Redirect to lobby details
+      // Redirect to the lobby detail page
       router.push(`/lobbies/${lobbyId}`);
     } catch (err: any) {
       console.error("Error joining lobby:", err);

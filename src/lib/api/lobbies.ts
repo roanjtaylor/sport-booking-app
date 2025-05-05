@@ -552,3 +552,95 @@ export async function getUserLobbies(userId: string) {
     return { data: null, error };
   }
 }
+
+/**
+ * Fetches lobbies with facilities that have coordinates
+ */
+export async function getLobbiesWithCoordinates() {
+  try {
+    const { data, error } = await supabase
+      .from("lobbies")
+      .select(
+        `
+        *,
+        facility:facility_id(*)
+      `
+      )
+      .eq("status", "open");
+
+    if (error) throw error;
+
+    // Filter to only include lobbies with facilities that have coordinates
+    const lobbiesWithCoordinates = (data || []).filter(
+      (lobby) =>
+        lobby.facility && lobby.facility.latitude && lobby.facility.longitude
+    );
+
+    return { data: lobbiesWithCoordinates, error: null };
+  } catch (error) {
+    console.error("Error fetching lobbies with coordinates:", error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Filter lobbies based on user criteria
+ */
+export async function filterLobbies(criteria: {
+  search?: string;
+  sportType?: string;
+  dateRange?: string;
+}) {
+  try {
+    // Get all open lobbies with facility information
+    const { data: lobbies, error } = await getOpenLobbies();
+    if (error) throw error;
+
+    let filtered = [...(lobbies || [])];
+
+    // Apply search filter
+    if (criteria.search) {
+      const searchLower = criteria.search.toLowerCase();
+      filtered = filtered.filter(
+        (lobby) =>
+          lobby.facility?.name?.toLowerCase().includes(searchLower) ||
+          lobby.facility?.address?.toLowerCase().includes(searchLower) ||
+          lobby.notes?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply sport type filter
+    if (criteria.sportType) {
+      filtered = filtered.filter((lobby) =>
+        lobby.facility?.sportType?.includes(criteria.sportType)
+      );
+    }
+
+    // Apply date range filter
+    if (criteria.dateRange) {
+      const today = new Date().toISOString().split("T")[0];
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+      filtered = filtered.filter((lobby) => {
+        if (criteria.dateRange === "today") {
+          return lobby.date === today;
+        } else if (criteria.dateRange === "tomorrow") {
+          return lobby.date === tomorrowStr;
+        } else if (criteria.dateRange === "week") {
+          const lobbyDate = new Date(lobby.date);
+          const weekFromNow = new Date();
+          weekFromNow.setDate(weekFromNow.getDate() + 7);
+          return lobbyDate <= weekFromNow;
+        }
+        return true;
+      });
+    }
+
+    return { data: filtered, error: null };
+  } catch (error) {
+    console.error("Error filtering lobbies:", error);
+    return { data: null, error };
+  }
+}

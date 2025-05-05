@@ -205,3 +205,75 @@ export async function getBookingsForDateRange(
     return { data: null, error };
   }
 }
+
+/**
+ * Checks facility availability for a date range
+ */
+export async function checkFacilityAvailability(
+  facilityId: string,
+  startDate: string,
+  endDate: string
+) {
+  try {
+    // Get all bookings for this facility in the date range
+    const { data: bookings, error } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("facility_id", facilityId)
+      .gte("date", startDate)
+      .lte("date", endDate)
+      .in("status", ["confirmed", "pending"]);
+
+    if (error) throw error;
+
+    // Group bookings by date
+    const bookingsByDate: { [date: string]: any[] } = {};
+
+    (bookings || []).forEach((booking) => {
+      if (!bookingsByDate[booking.date]) {
+        bookingsByDate[booking.date] = [];
+      }
+      bookingsByDate[booking.date].push({
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+        date: booking.date,
+      });
+    });
+
+    return {
+      data: {
+        bookings: bookings || [],
+        bookingsByDate,
+      },
+      error: null,
+    };
+  } catch (error) {
+    console.error("Error checking facility availability:", error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Get bookings for the current date range
+ */
+export async function getCurrentDateRangeBookings(
+  startDate: string,
+  endDate: string,
+  status: string[] = ["confirmed", "pending"]
+) {
+  try {
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("*")
+      .gte("date", startDate)
+      .lte("date", endDate)
+      .in("status", status);
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error fetching date range bookings:", error);
+    return { data: null, error };
+  }
+}
