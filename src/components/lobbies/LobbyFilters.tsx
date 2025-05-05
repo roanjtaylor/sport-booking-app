@@ -14,6 +14,9 @@ interface LobbyFiltersProps {
   rightContent?: React.ReactNode;
 }
 
+/**
+ * Component for filtering lobbies based on search, sport type, and date range
+ */
 export function LobbyFilters({
   onFilter,
   sportTypes,
@@ -23,6 +26,7 @@ export function LobbyFilters({
   const [selectedSportType, setSelectedSportType] = useState("");
   const [dateRange, setDateRange] = useState("");
 
+  // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onFilter({
@@ -32,6 +36,7 @@ export function LobbyFilters({
     });
   };
 
+  // Reset filters
   const handleReset = () => {
     setSearch("");
     setSelectedSportType("");

@@ -8,9 +8,9 @@ import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatDate, formatTime } from "@/lib/utils";
 import { Lobby } from "@/types/lobby";
-import { supabase } from "@/lib/supabase";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { usersApi } from "@/lib/api";
 
 type LobbyListProps = {
   lobbies: Lobby[];
@@ -44,12 +44,11 @@ export function LobbyList({
       try {
         setIsCheckingParticipation(true);
 
-        // Get current user
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        // Get current user from the auth API
+        const { data: user, error: userError } =
+          await usersApi.getCurrentUser();
 
-        if (!user) {
+        if (userError || !user) {
           setIsCheckingParticipation(false);
           setProcessedLobbies(lobbies);
           return;
@@ -57,26 +56,36 @@ export function LobbyList({
 
         setUserId(user.id);
 
-        // Get all lobbies the user is part of
-        const { data: participations } = await supabase
-          .from("lobby_participants")
-          .select("lobby_id, is_waiting")
-          .eq("user_id", user.id);
-
-        // Create map of lobby IDs to participation status
+        // Create maps to track participation
         const participationMap: { [lobbyId: string]: boolean } = {};
         const waitingStatusMap: { [lobbyId: string]: number | null } = {};
 
-        if (participations) {
-          participations.forEach((p) => {
-            if (p.is_waiting) {
-              // Track waiting list status
-              waitingStatusMap[p.lobby_id] = p.waiting_position;
-            } else {
-              // Only count as active participant if not on waiting list
-              participationMap[p.lobby_id] = true;
-            }
-          });
+        // Check participation status for each lobby
+        for (const lobby of lobbies) {
+          const {
+            isParticipant,
+            isWaiting,
+            waitingPosition,
+            error: participationError,
+          } = await usersApi.isLobbyParticipant(user.id, lobby.id);
+
+          if (participationError) {
+            console.error(
+              "Error checking lobby participation:",
+              participationError
+            );
+            continue;
+          }
+
+          // Store participation status
+          if (isParticipant) {
+            participationMap[lobby.id] = true;
+          }
+
+          // Store waiting list status
+          if (isWaiting) {
+            waitingStatusMap[lobby.id] = waitingPosition;
+          }
         }
 
         setUserParticipations(participationMap);
@@ -232,10 +241,10 @@ export function LobbyList({
                   className={`flex space-x-2 ${gridLayout ? "mt-auto" : ""}`}
                 >
                   {/* Show Join button only if:
-      1. onJoinLobby is provided
-      2. User is not already an active participant
-      3. User is not on the waiting list
-      4. Not already in process of joining */}
+                      1. onJoinLobby is provided
+                      2. User is not already an active participant
+                      3. User is not on the waiting list
+                      4. Not already in process of joining */}
                   {onJoinLobby &&
                     !isUserInLobby(lobby.id) &&
                     !isUserWaiting(lobby.id) &&
