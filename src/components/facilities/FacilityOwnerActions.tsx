@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
 import { DeleteFacilityButton } from "./DeleteFacilityButton";
+import { authApi, facilitiesApi } from "@/lib/api";
 
 interface FacilityOwnerActionsProps {
   facilityId: string;
@@ -24,10 +24,30 @@ export function FacilityOwnerActions({
   useEffect(() => {
     const checkOwnership = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        setIsOwner(user?.id === ownerId);
+        setIsLoading(true);
+
+        // Get current user using the API service
+        const { data: user, error: userError } = await authApi.getCurrentUser();
+
+        if (userError) {
+          console.error("Error getting current user:", userError);
+          return;
+        }
+
+        if (!user) {
+          setIsOwner(false);
+          return;
+        }
+
+        // Check if user is the owner using the API service
+        const { isOwner: ownerStatus, error: ownershipError } =
+          await facilitiesApi.checkFacilityOwnership(facilityId, user.id);
+
+        if (ownershipError) {
+          console.error("Error checking ownership:", ownershipError);
+        }
+
+        setIsOwner(ownerStatus);
       } catch (error) {
         console.error("Error checking ownership:", error);
       } finally {
@@ -36,7 +56,7 @@ export function FacilityOwnerActions({
     };
 
     checkOwnership();
-  }, [ownerId]);
+  }, [facilityId, ownerId]);
 
   if (isLoading) {
     return null; // Don't show anything while loading

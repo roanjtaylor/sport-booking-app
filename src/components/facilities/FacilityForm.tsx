@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
 import { OperatingHours, SportType, Facility } from "@/types/facility";
-import { supabase } from "@/lib/supabase";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
+import { authApi, facilitiesApi } from "@/lib/api";
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -321,11 +321,10 @@ export function FacilityForm({
     setIsLoading(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Get current user using the API service
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (!user) {
+      if (userError || !user) {
         router.push(
           `/auth/login?redirect=${encodeURIComponent(
             isEdit && facility?.id
@@ -343,27 +342,27 @@ export function FacilityForm({
         city,
         postal_code: postalCode,
         country,
-        image_url: imageUrl,
-        operating_hours: operatingHours,
+        imageUrl,
+        operatingHours,
         price_per_hour: Number(parseFloat(pricePerHour)),
         currency,
-        sport_type: sportTypes,
+        sportType: sportTypes,
         min_players: Number(parseInt(minPlayers)),
         amenities,
         owner_id: user.id,
         owner_email: user.email,
-        updated_at: new Date().toISOString(),
         latitude,
         longitude,
       };
 
       if (isEdit && facility?.id) {
-        const { error: updateError } = await supabase
-          .from("facilities")
-          .update(facilityData)
-          .eq("id", facility.id);
+        // Update existing facility using the API service
+        const { error: updateError } = await facilitiesApi.updateFacility(
+          facility.id,
+          facilityData
+        );
 
-        if (updateError) throw new Error(updateError.message);
+        if (updateError) throw updateError;
         setSuccessMessage("Facility updated successfully");
 
         setTimeout(() => {
@@ -371,15 +370,12 @@ export function FacilityForm({
           router.push(`/facilities/${facility.id}`);
         }, 1500);
       } else {
-        const { data, error: insertError } = await supabase
-          .from("facilities")
-          .insert({
-            ...facilityData,
-            created_at: new Date().toISOString(),
-          })
-          .select();
+        // Create new facility using the API service
+        const { data, error: insertError } = await facilitiesApi.createFacility(
+          facilityData as Omit<Facility, "id">
+        );
 
-        if (insertError) throw new Error(insertError.message);
+        if (insertError) throw insertError;
 
         setSuccessMessage("Facility created successfully");
 
@@ -667,7 +663,6 @@ export function FacilityForm({
       </Card>
 
       {/* Sports Types Section */}
-      {/* ... Rest of the component with existing sports types, amenities and operating hours sections ... */}
       <Card className="overflow-hidden">
         <div className="p-6">
           <h2 className="text-lg font-medium mb-4">Game Tags</h2>
