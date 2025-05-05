@@ -4,10 +4,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { Lobby } from "@/types/lobby";
-import { joinLobby } from "@/lib/lobbies";
 import { useBookingForm } from "@/hooks/useBookingForm";
 import { BookingType } from "@/components/bookings/BookingTypeSelector";
 import { DatePickerField } from "@/components/ui/DatePickerField";
@@ -16,6 +14,7 @@ import { TimeSlotPicker } from "@/components/facilities/TimeSlotPicker";
 import { NotesField } from "@/components/ui/NotesField";
 import { BookingSummary } from "@/components/bookings/BookingSummary";
 import { LobbyCreationForm } from "@/components/lobbies/LobbyCreationForm";
+import { authApi, lobbiesApi } from "@/lib/api";
 
 // Props type for the BookingFormWrapper component
 type BookingFormWrapperProps = {
@@ -108,39 +107,11 @@ export default function BookingFormWrapper({
     try {
       setIsLoadingLobbies(true);
 
-      // Fetch lobbies with facility information
-      const { data: lobbiesData, error } = await supabase
-        .from("lobbies")
-        .select(
-          `
-          *,
-          facility:facility_id(*)
-        `
-        )
-        .eq("facility_id", facility.id)
-        .eq("status", "open")
-        .order("date", { ascending: true });
+      // Use the lobbies API service to fetch lobbies for this facility
+      const { data, error } = await lobbiesApi.getFacilityLobbies(facility.id);
 
       if (error) throw error;
-
-      // For each lobby, fetch the creator info
-      const lobbiesWithCreators = await Promise.all(
-        (lobbiesData || []).map(async (lobby) => {
-          // Get creator info
-          const { data: creator } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", lobby.creator_id)
-            .single();
-
-          return {
-            ...lobby,
-            creator,
-          };
-        })
-      );
-
-      setLobbies(lobbiesWithCreators || []);
+      setLobbies(data || []);
     } catch (err) {
       console.error("Error fetching lobbies:", err);
       setError("Failed to load lobbies");
@@ -152,6 +123,7 @@ export default function BookingFormWrapper({
   // Handle full booking form submission
   const handleFullBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     // Check if user is authenticated
     const user = await checkAuthentication();
@@ -211,9 +183,9 @@ export default function BookingFormWrapper({
       setError(null);
 
       // Get the current user
-      const user = await checkAuthentication();
+      const { data: user, error: userError } = await authApi.getCurrentUser();
 
-      if (!user) {
+      if (userError || !user) {
         router.push(
           `/auth/login?redirect=/facilities/${facility.id}${
             mode ? `?mode=${mode}` : ""
@@ -222,7 +194,12 @@ export default function BookingFormWrapper({
         return;
       }
 
-      const result = await joinLobby(lobbyId, user.id, user.email || "");
+      // Use the lobbies API service to join a lobby
+      const result = await lobbiesApi.joinLobby(
+        lobbyId,
+        user.id,
+        user.email || ""
+      );
 
       // Success - refresh or redirect
       if (result.isWaiting) {

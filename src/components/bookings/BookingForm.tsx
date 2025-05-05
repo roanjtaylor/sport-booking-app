@@ -71,6 +71,7 @@ export function BookingForm({ facility, existingBookings }: BookingFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Display error message if there is one */}
       <ErrorDisplay error={error} />
 
       <div className="p-6 bg-white rounded-lg shadow">

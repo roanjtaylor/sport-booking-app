@@ -1,15 +1,9 @@
 // src/hooks/useBookingForm.ts
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { Facility } from "@/types/facility";
 import { TimeSlot } from "@/types/booking";
-import {
-  formatDate,
-  formatTime,
-  formatPrice,
-  getDayOfWeek,
-  generateTimeSlots,
-} from "@/lib/utils";
+import { getDayOfWeek, generateTimeSlots } from "@/lib/utils";
+import { authApi, bookingsApi, lobbiesApi } from "@/lib/api";
 
 type BookingMode = "booking" | "lobby" | null;
 
@@ -114,25 +108,18 @@ export function useBookingForm({
       setIsLoading(true);
       setError(null);
 
-      // Create the booking
-      const { data, error: bookingError } = await supabase
-        .from("bookings")
-        .insert([
-          {
-            facility_id: facility.id,
-            user_id: userId,
-            date,
-            start_time: selectedSlot.startTime,
-            end_time: selectedSlot.endTime,
-            status: "pending",
-            total_price: totalPrice,
-            notes,
-          },
-        ])
-        .select();
+      // Use the bookings API service to create a booking
+      const { data, error: bookingError } = await bookingsApi.createBooking({
+        facility_id: facility.id,
+        user_id: userId,
+        date,
+        start_time: selectedSlot.startTime,
+        end_time: selectedSlot.endTime,
+        total_price: totalPrice,
+        notes,
+      });
 
       if (bookingError) {
-        console.error("Supabase error:", bookingError);
         throw new Error("Failed to create booking. Please try again.");
       }
 
@@ -162,40 +149,21 @@ export function useBookingForm({
       setIsLoading(true);
       setError(null);
 
-      // Create the lobby
-      const { data, error: lobbyError } = await supabase
-        .from("lobbies")
-        .insert({
-          facility_id: facility.id,
-          creator_id: userId,
-          creator_email: userEmail,
-          date,
-          start_time: selectedSlot.startTime,
-          end_time: selectedSlot.endTime,
-          min_players: minPlayers,
-          current_players: initialGroupSize,
-          initial_group_size: initialGroupSize,
-          group_name: groupName || null,
-          status: initialGroupSize >= minPlayers ? "filled" : "open",
-          notes: notes || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      // Use the lobbies API service to create a lobby
+      const { data, error: lobbyError } = await lobbiesApi.createLobby({
+        facility_id: facility.id,
+        creator_id: userId,
+        creator_email: userEmail,
+        date,
+        start_time: selectedSlot.startTime,
+        end_time: selectedSlot.endTime,
+        min_players: minPlayers,
+        initial_group_size: initialGroupSize,
+        group_name: groupName || undefined,
+        notes: notes || undefined,
+      });
 
       if (lobbyError) throw lobbyError;
-
-      // Add creator as participant
-      const { error: participantError } = await supabase
-        .from("lobby_participants")
-        .insert({
-          lobby_id: data.id,
-          user_id: userId,
-          participant_email: userEmail,
-        });
-
-      if (participantError) throw participantError;
 
       return true;
     } catch (err) {
@@ -210,9 +178,8 @@ export function useBookingForm({
   // Function to check if user is authenticated
   const checkAuthentication = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Use the auth API service to get current user
+      const { data: user, error } = await authApi.getCurrentUser();
       return user;
     } catch (error) {
       console.error("Authentication error:", error);

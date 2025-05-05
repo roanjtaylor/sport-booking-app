@@ -61,7 +61,7 @@ export function UserLobbiesList({ lobbies }: UserLobbiesListProps) {
               {/* Lobby details */}
               <div className="mb-4 sm:mb-0">
                 <div className="flex flex-wrap items-center mb-2 gap-2">
-                  <h3 className="text-lg font-medium text-gray-900">
+                  <h3 className="text-lg font-medium text-gray-900 mr-3">
                     {formatDate(lobby.date)}
                   </h3>
                   <span
@@ -103,6 +103,7 @@ export function UserLobbiesList({ lobbies }: UserLobbiesListProps) {
                     )}
                   </p>
 
+                  {/* Group name if available */}
                   {lobby.group_name && (
                     <p>
                       <span className="font-medium">Group:</span>{" "}

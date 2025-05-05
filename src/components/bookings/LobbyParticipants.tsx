@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
+import { usersApi } from "@/lib/api";
 
 type LobbyParticipantsProps = {
   lobbyId: string;
@@ -19,34 +19,17 @@ export function LobbyParticipants({ lobbyId }: LobbyParticipantsProps) {
     async function fetchParticipants() {
       try {
         setIsLoading(true);
+        setError(null);
 
-        // First, fetch just the participants without trying to join with profiles
-        const { data: participantsData, error: participantsError } =
-          await supabase
-            .from("lobby_participants")
-            .select("*")
-            .eq("lobby_id", lobbyId);
+        // Use the API service to fetch lobby participants
+        const { data, error: participantsError } =
+          await usersApi.getLobbyParticipants(lobbyId);
 
-        if (participantsError) throw participantsError;
+        if (participantsError) {
+          throw participantsError;
+        }
 
-        // Then fetch profile data for each participant separately
-        const participantsWithProfiles = await Promise.all(
-          (participantsData || []).map(async (participant) => {
-            // Get profile data for this user_id
-            const { data: profileData, error: profileError } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", participant.user_id)
-              .single();
-
-            return {
-              ...participant,
-              user: profileData || { email: "Unknown" },
-            };
-          })
-        );
-
-        setParticipants(participantsWithProfiles);
+        setParticipants(data || []);
       } catch (err) {
         console.error("Error fetching lobby participants:", err);
         setError("Failed to load participants");
@@ -60,7 +43,6 @@ export function LobbyParticipants({ lobbyId }: LobbyParticipantsProps) {
     }
   }, [lobbyId]);
 
-  // Rest of the component remains the same
   if (isLoading) {
     return <div className="text-center py-4">Loading participants...</div>;
   }
