@@ -1,4 +1,4 @@
-// src/app/dashboard/facility-bookings/page.tsx
+// src/app/dashboard/facility-bookings/page.tsx - Refactored
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,6 +11,7 @@ import { Booking } from "@/types/booking";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { authApi, facilitiesApi, bookingsApi, usersApi } from "@/lib/api";
+import { DashboardLayout } from "@/components/layouts";
 
 interface FacilityBasic {
   id: string;
@@ -241,16 +242,14 @@ export default function FacilityBookingsPage() {
     );
   }
 
-  // The rest of the component (tabs, booking list rendering, etc.) stays the same
-  return (
-    <div>
-      <div className="mb-8 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Manage Bookings</h1>
-        <Link href="/dashboard">
-          <Button variant="outline">Back to Dashboard</Button>
-        </Link>
-      </div>
+  const dashboardButton = (
+    <Link href="/dashboard">
+      <Button variant="outline">Back to Dashboard</Button>
+    </Link>
+  );
 
+  return (
+    <DashboardLayout title="Manage Bookings" actions={dashboardButton}>
       {/* Filter component */}
       <FacilityBookingsFilter facilities={facilities} onFilter={handleFilter} />
 
@@ -402,6 +401,6 @@ export default function FacilityBookingsPage() {
           </div>
         </Card>
       )}
-    </div>
+    </DashboardLayout>
   );
 }

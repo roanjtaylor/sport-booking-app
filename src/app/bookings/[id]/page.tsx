@@ -1,8 +1,8 @@
-// src/app/bookings/[id]/page.tsx
+// src/app/bookings/[id]/page.tsx - Refactored
 import { Suspense } from "react";
-import Link from "next/link";
 import BookingDetailClient from "./BookingDetailClient";
 import { notFound } from "next/navigation";
+import { DetailLayout } from "@/components/layouts";
 
 interface PageProps {
   params: Promise<{
@@ -23,17 +23,11 @@ export default async function BookingDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div>
-      <div className="mb-8">
-        <Link
-          href="/bookings"
-          className="text-primary-600 hover:underline inline-flex items-center"
-        >
-          ← Back to Bookings
-        </Link>
-        <h1 className="text-3xl font-bold mt-2">Booking Details</h1>
-      </div>
-
+    <DetailLayout
+      title="Booking Details"
+      backLink="/bookings"
+      backText="Back to Bookings"
+    >
       <Suspense
         fallback={
           <div className="flex justify-center items-center py-12">
@@ -46,6 +40,6 @@ export default async function BookingDetailPage({ params }: PageProps) {
       >
         <BookingDetailClient id={bookingId} />
       </Suspense>
-    </div>
+    </DetailLayout>
   );
 }

@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { authApi, bookingsApi, facilitiesApi, usersApi } from "@/lib/api";
+import { DashboardLayout } from "@/components/layouts";
 
 interface Profile {
   id: string;
@@ -261,257 +262,257 @@ export default function DashboardPage() {
   const isFacilityOwner = profile?.role === "facility_owner";
 
   return (
-    <div className="space-y-8">
-      {/* Header section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-gray-600">
-            Welcome back, {profile?.name || user?.email}
-          </p>
-        </div>
-      </div>
-
-      {/* Statistics cards */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Show different stats based on user role - example cards */}
-        {isFacilityOwner ? (
-          // Facility Owner Statistics
-          <>
-            <Card className="p-6 border-l-4 border-orange-500">
-              <h3 className="text-lg font-medium mb-2">Your Facilities</h3>
-              <p className="text-3xl font-bold text-primary-600">
-                {stats.facilities}
-              </p>
-              <div
-                style={{ display: "flex", flexDirection: "row", gap: "1rem" }}
-              >
-                <div className="mt-4">
-                  <Link href="/facilities/add">
-                    <Button variant="outline" size="sm">
-                      Add Facility
-                    </Button>
-                  </Link>
+    <DashboardLayout
+      title="Dashboard"
+      description={`Welcome back, ${profile?.name || user?.email}`}
+    >
+      <div className="space-y-8">
+        {/* Statistics cards */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Show different stats based on user role - example cards */}
+          {isFacilityOwner ? (
+            // Facility Owner Statistics
+            <>
+              <Card className="p-6 border-l-4 border-orange-500">
+                <h3 className="text-lg font-medium mb-2">Your Facilities</h3>
+                <p className="text-3xl font-bold text-primary-600">
+                  {stats.facilities}
+                </p>
+                <div
+                  style={{ display: "flex", flexDirection: "row", gap: "1rem" }}
+                >
+                  <div className="mt-4">
+                    <Link href="/facilities/add">
+                      <Button variant="outline" size="sm">
+                        Add Facility
+                      </Button>
+                    </Link>
+                  </div>
+                  <div className="mt-4">
+                    <Link href="/dashboard/facilities" className="block">
+                      <Button variant="outline" size="sm">
+                        Manage Facilities
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-                <div className="mt-4">
-                  <Link href="/dashboard/facilities" className="block">
+              </Card>
+
+              <Link href="/dashboard/facility-bookings">
+                <Card className="p-6 border-l-4 border-green-500">
+                  <h3 className="text-lg font-medium mb-2">
+                    Upcoming Bookings
+                  </h3>
+                  <p className="text-3xl font-bold text-primary-600">
+                    {stats.upcomingBookings}
+                  </p>
+                  <div className="mt-4">
                     <Button variant="outline" size="sm">
+                      View Bookings
+                    </Button>
+                  </div>
+                </Card>
+              </Link>
+
+              <Link href="/dashboard/settings" className="block">
+                <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-purple-500">
+                  <h3 className="text-lg font-medium mb-2">Profile Settings</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Update your personal information and preferences
+                  </p>
+                  <Button variant="outline" size="sm">
+                    Settings
+                  </Button>
+                </Card>
+              </Link>
+            </>
+          ) : (
+            // Regular User Main Action Cards
+            <>
+              <Link href="/discover" className="block">
+                <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-orange-500">
+                  <h3 className="text-lg font-medium mb-2">Discover</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Find facilities and lobbies
+                  </p>
+                  <Button variant="outline" size="sm">
+                    Explore
+                  </Button>
+                </Card>
+              </Link>
+
+              <Link href="/bookings" className="block">
+                <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-green-500">
+                  <h3 className="text-lg font-medium mb-2">My Bookings</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    View and manage your bookings
+                  </p>
+                  <Button variant="outline" size="sm">
+                    Bookings
+                  </Button>
+                </Card>
+              </Link>
+
+              <Link href="/dashboard/settings" className="block">
+                <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-purple-500">
+                  <h3 className="text-lg font-medium mb-2">Profile Settings</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Update your personal information and preferences
+                  </p>
+                  <Button variant="outline" size="sm">
+                    Settings
+                  </Button>
+                </Card>
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Recent activity section - different for each user type */}
+        {isFacilityOwner ? (
+          // Facility Owner - Recent Booking Requests
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Recent Booking Requests</h2>
+              <Link href="/dashboard/facility-bookings">
+                <Button variant="outline" size="sm">
+                  View All
+                </Button>
+              </Link>
+            </div>
+
+            {pendingRequests && pendingRequests.length > 0 ? (
+              <Card>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Facility
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Time
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {pendingRequests.map((booking) => (
+                        <tr key={booking.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            {booking.facility
+                              ? booking.facility.name
+                              : "Unknown"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDate(booking.date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatTime(booking.start_time)} -{" "}
+                            {formatTime(booking.end_time)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                              Pending
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <Link
+                              href={`/dashboard/facility-bookings#${booking.id}`}
+                            >
+                              <Button variant="outline" size="sm">
+                                Review
+                              </Button>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {pendingRequests.length === 0 && (
+                  <div className="text-center py-6">
+                    <p className="text-gray-500">No pending booking requests</p>
+                  </div>
+                )}
+              </Card>
+            ) : (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500">
+                  You don't have any pending booking requests
+                </p>
+                <div className="mt-4">
+                  <Link href="/dashboard/facilities">
+                    <Button variant="primary" size="sm">
                       Manage Facilities
                     </Button>
                   </Link>
                 </div>
-              </div>
-            </Card>
-
-            <Link href="/dashboard/facility-bookings">
-              <Card className="p-6 border-l-4 border-green-500">
-                <h3 className="text-lg font-medium mb-2">Upcoming Bookings</h3>
-                <p className="text-3xl font-bold text-primary-600">
-                  {stats.upcomingBookings}
-                </p>
-                <div className="mt-4">
-                  <Button variant="outline" size="sm">
-                    View Bookings
-                  </Button>
-                </div>
               </Card>
-            </Link>
-
-            <Link href="/dashboard/settings" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-purple-500">
-                <h3 className="text-lg font-medium mb-2">Profile Settings</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Update your personal information and preferences
-                </p>
-                <Button variant="outline" size="sm">
-                  Settings
-                </Button>
-              </Card>
-            </Link>
-          </>
+            )}
+          </div>
         ) : (
-          // Regular User Main Action Cards
-          <>
-            <Link href="/discover" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-orange-500">
-                <h3 className="text-lg font-medium mb-2">Discover</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Find facilities and lobbies
-                </p>
+          // Regular User - Upcoming Bookings
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Your Upcoming Bookings</h2>
+              <Link href="/bookings">
                 <Button variant="outline" size="sm">
-                  Explore
+                  View All
                 </Button>
-              </Card>
-            </Link>
+              </Link>
+            </div>
 
-            <Link href="/bookings" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-green-500">
-                <h3 className="text-lg font-medium mb-2">My Bookings</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  View and manage your bookings
-                </p>
-                <Button variant="outline" size="sm">
-                  Bookings
-                </Button>
-              </Card>
-            </Link>
-
-            <Link href="/dashboard/settings" className="block">
-              <Card className="p-6 h-full hover:shadow-md transition border-l-4 border-purple-500">
-                <h3 className="text-lg font-medium mb-2">Profile Settings</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Update your personal information and preferences
-                </p>
-                <Button variant="outline" size="sm">
-                  Settings
-                </Button>
-              </Card>
-            </Link>
-          </>
-        )}
-      </div>
-
-      {/* Recent activity section - different for each user type */}
-      {isFacilityOwner ? (
-        // Facility Owner - Recent Booking Requests
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Recent Booking Requests</h2>
-            <Link href="/dashboard/facility-bookings">
-              <Button variant="outline" size="sm">
-                View All
-              </Button>
-            </Link>
-          </div>
-
-          {pendingRequests && pendingRequests.length > 0 ? (
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Facility
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Time
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {pendingRequests.map((booking) => (
-                      <tr key={booking.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {booking.facility ? booking.facility.name : "Unknown"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(booking.date)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatTime(booking.start_time)} -{" "}
-                          {formatTime(booking.end_time)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Pending
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <Link
-                            href={`/dashboard/facility-bookings#${booking.id}`}
-                          >
-                            <Button variant="outline" size="sm">
-                              Review
-                            </Button>
-                          </Link>
-                        </td>
+            {recentBookings && recentBookings.length > 0 ? (
+              <Card>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Facility
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Time
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {pendingRequests.length === 0 && (
-                <div className="text-center py-6">
-                  <p className="text-gray-500">No pending booking requests</p>
-                </div>
-              )}
-            </Card>
-          ) : (
-            <Card className="p-6 text-center">
-              <p className="text-gray-500">
-                You don't have any pending booking requests
-              </p>
-              <div className="mt-4">
-                <Link href="/dashboard/facilities">
-                  <Button variant="primary" size="sm">
-                    Manage Facilities
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          )}
-        </div>
-      ) : (
-        // Regular User - Upcoming Bookings
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Your Upcoming Bookings</h2>
-            <Link href="/bookings">
-              <Button variant="outline" size="sm">
-                View All
-              </Button>
-            </Link>
-          </div>
-
-          {recentBookings && recentBookings.length > 0 ? (
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Facility
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Time
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {recentBookings.map((booking) => (
-                      <tr key={booking.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {booking.facility ? booking.facility.name : "Unknown"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(booking.date)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatTime(booking.start_time)} -{" "}
-                          {formatTime(booking.end_time)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {recentBookings.map((booking) => (
+                        <tr key={booking.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            {booking.facility
+                              ? booking.facility.name
+                              : "Unknown"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDate(booking.date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatTime(booking.start_time)} -{" "}
+                            {formatTime(booking.end_time)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                             ${
                               booking.status === "confirmed"
                                 ? "bg-green-100 text-green-800"
@@ -519,166 +520,169 @@ export default function DashboardPage() {
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
-                          >
-                            {booking.status.charAt(0).toUpperCase() +
-                              booking.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <Link href={`/bookings/${booking.id}`}>
-                            <Button variant="outline" size="sm">
-                              View
-                            </Button>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {recentBookings.length === 0 && (
-                <div className="text-center py-6">
-                  <p className="text-gray-500">
-                    You don't have any upcoming bookings
-                  </p>
+                            >
+                              {booking.status.charAt(0).toUpperCase() +
+                                booking.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <Link href={`/bookings/${booking.id}`}>
+                              <Button variant="outline" size="sm">
+                                View
+                              </Button>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </Card>
-          ) : (
-            <Card className="p-6 text-center">
-              <p className="text-gray-500">
-                You don't have any upcoming bookings
-              </p>
-              <div className="mt-4">
-                <Link href="/discover">
-                  <Button variant="primary" size="sm">
-                    Browse Facilities & Lobbies
+
+                {recentBookings.length === 0 && (
+                  <div className="text-center py-6">
+                    <p className="text-gray-500">
+                      You don't have any upcoming bookings
+                    </p>
+                  </div>
+                )}
+              </Card>
+            ) : (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500">
+                  You don't have any upcoming bookings
+                </p>
+                <div className="mt-4">
+                  <Link href="/discover">
+                    <Button variant="primary" size="sm">
+                      Browse Facilities & Lobbies
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Facility list for owner / Recommended facilities for user */}
+        {isFacilityOwner && facilityList && facilityList.length > 0 && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Your Facilities</h2>
+              <div
+                style={{ display: "flex", flexDirection: "row", gap: "1rem" }}
+              >
+                <Link href="/facilities/add">
+                  <Button variant="outline" size="sm">
+                    Add Facility
+                  </Button>
+                </Link>
+                <Link href="/dashboard/facilities" className="block">
+                  <Button variant="outline" size="sm">
+                    Manage Facilities
                   </Button>
                 </Link>
               </div>
-            </Card>
-          )}
-        </div>
-      )}
+            </div>
 
-      {/* Facility list for owner / Recommended facilities for user */}
-      {isFacilityOwner && facilityList && facilityList.length > 0 && (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Your Facilities</h2>
-            <div style={{ display: "flex", flexDirection: "row", gap: "1rem" }}>
-              <Link href="/facilities/add">
+            <div className="grid md:grid-cols-3 gap-4">
+              {facilityList.map((facility) => (
+                <Card
+                  key={facility.id}
+                  className="p-4 hover:shadow-md transition"
+                >
+                  <h3 className="font-medium mb-1">{facility.name}</h3>
+                  <p className="text-sm text-gray-500 mb-3">
+                    {facility.address}, {facility.city}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {/* Make sure sportType or sport_type exists before mapping */}
+                    {facility.sportType &&
+                      facility.sportType.map((sport) => (
+                        <span
+                          key={sport}
+                          className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                        >
+                          {sport}
+                        </span>
+                      ))}
+                    {facility.sport_type &&
+                      facility.sport_type.map((sport) => (
+                        <span
+                          key={sport}
+                          className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                        >
+                          {sport}
+                        </span>
+                      ))}
+                  </div>
+                  <div className="flex justify-end">
+                    <Link href={`/facilities/${facility.id}`}>
+                      <Button variant="outline" size="sm">
+                        View
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!isFacilityOwner && facilityList && facilityList.length > 0 && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Recommended Facilities</h2>
+              <Link href="/discover">
                 <Button variant="outline" size="sm">
-                  Add Facility
-                </Button>
-              </Link>
-              <Link href="/dashboard/facilities" className="block">
-                <Button variant="outline" size="sm">
-                  Manage Facilities
+                  View All
                 </Button>
               </Link>
             </div>
-          </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
-            {facilityList.map((facility) => (
-              <Card
-                key={facility.id}
-                className="p-4 hover:shadow-md transition"
-              >
-                <h3 className="font-medium mb-1">{facility.name}</h3>
-                <p className="text-sm text-gray-500 mb-3">
-                  {facility.address}, {facility.city}
-                </p>
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {/* Make sure sportType or sport_type exists before mapping */}
-                  {facility.sportType &&
-                    facility.sportType.map((sport) => (
-                      <span
-                        key={sport}
-                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
-                      >
-                        {sport}
-                      </span>
-                    ))}
-                  {facility.sport_type &&
-                    facility.sport_type.map((sport) => (
-                      <span
-                        key={sport}
-                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
-                      >
-                        {sport}
-                      </span>
-                    ))}
-                </div>
-                <div className="flex justify-end">
-                  <Link href={`/facilities/${facility.id}`}>
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            ))}
+            <div className="grid md:grid-cols-3 gap-4">
+              {facilityList.map((facility) => (
+                <Card
+                  key={facility.id}
+                  className="p-4 hover:shadow-md transition"
+                >
+                  <h3 className="font-medium mb-1">{facility.name}</h3>
+                  <p className="text-sm text-gray-500 mb-3">
+                    {facility.address}, {facility.city}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {/* Make sure sportType or sport_type exists before mapping */}
+                    {facility.sportType &&
+                      facility.sportType.map((sport) => (
+                        <span
+                          key={sport}
+                          className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                        >
+                          {sport}
+                        </span>
+                      ))}
+                    {facility.sport_type &&
+                      facility.sport_type.map((sport) => (
+                        <span
+                          key={sport}
+                          className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                        >
+                          {sport}
+                        </span>
+                      ))}
+                  </div>
+                  <div className="flex justify-end">
+                    <Link href={`/facilities/${facility.id}`}>
+                      <Button variant="primary" size="sm">
+                        Book Now
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-
-      {!isFacilityOwner && facilityList && facilityList.length > 0 && (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Recommended Facilities</h2>
-            <Link href="/discover">
-              <Button variant="outline" size="sm">
-                View All
-              </Button>
-            </Link>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-4">
-            {facilityList.map((facility) => (
-              <Card
-                key={facility.id}
-                className="p-4 hover:shadow-md transition"
-              >
-                <h3 className="font-medium mb-1">{facility.name}</h3>
-                <p className="text-sm text-gray-500 mb-3">
-                  {facility.address}, {facility.city}
-                </p>
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {/* Make sure sportType or sport_type exists before mapping */}
-                  {facility.sportType &&
-                    facility.sportType.map((sport) => (
-                      <span
-                        key={sport}
-                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
-                      >
-                        {sport}
-                      </span>
-                    ))}
-                  {facility.sport_type &&
-                    facility.sport_type.map((sport) => (
-                      <span
-                        key={sport}
-                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
-                      >
-                        {sport}
-                      </span>
-                    ))}
-                </div>
-                <div className="flex justify-end">
-                  <Link href={`/facilities/${facility.id}`}>
-                    <Button variant="primary" size="sm">
-                      Book Now
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }

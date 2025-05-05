@@ -2,8 +2,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { authApi, facilitiesApi } from "@/lib/api";
 
+/**
+ * Hook to check if the current user is the owner of a facility
+ */
 export function useFacilityOwnership(facilityId: string) {
   const [isOwner, setIsOwner] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,11 +19,8 @@ export function useFacilityOwnership(facilityId: string) {
         setIsLoading(true);
         setError(null);
 
-        // Get current user
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+        // Get current user using auth API
+        const { data: user, error: userError } = await authApi.getCurrentUser();
 
         if (userError) {
           throw new Error("Failed to get current user");
@@ -31,20 +31,25 @@ export function useFacilityOwnership(facilityId: string) {
           return;
         }
 
-        // Get facility details
-        const { data: facility, error: facilityError } = await supabase
-          .from("facilities")
-          .select("owner_id")
-          .eq("id", facilityId)
-          .single();
+        // Check facility ownership using facilities API
+        const { isOwner: ownerStatus, error: facilityError } =
+          await facilitiesApi.checkFacilityOwnership(facilityId, user.id);
 
         if (facilityError) {
           throw new Error("Failed to fetch facility details");
         }
 
+        // Get the facility details to get the owner ID
+        const { data: facility, error: facilityDetailsError } =
+          await facilitiesApi.getFacilityById(facilityId);
+
+        if (facilityDetailsError) {
+          throw new Error("Failed to fetch facility owner details");
+        }
+
         // Set ownership status and owner ID
         setOwnerId(facility.owner_id);
-        setIsOwner(user.id === facility.owner_id);
+        setIsOwner(ownerStatus);
       } catch (err) {
         console.error("Error checking facility ownership:", err);
         setError(err instanceof Error ? err.message : "Unknown error occurred");

@@ -1,6 +1,5 @@
-// src/app/facilities/[id]/page.tsx
+// src/app/facilities/[id]/page.tsx - Refactored
 import { Suspense } from "react";
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { formatPrice, formatTime } from "@/lib/utils";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
@@ -8,6 +7,7 @@ import { notFound } from "next/navigation";
 import BookingFormWrapper from "@/components/bookings/BookingFormWrapper";
 import { FacilityOwnerActions } from "@/components/facilities/FacilityOwnerActions";
 import { Facility } from "@/types/facility";
+import { DetailLayout } from "@/components/layouts";
 
 // Define the expected params type
 type Props = {
@@ -104,31 +104,23 @@ export default async function FacilityDetailPage({
 
   // Determine the back link based on the mode
   const backLink = mode ? `/discover?mode=${mode}` : "/discover";
+  const backText =
+    mode === "booking"
+      ? "Back to Facilities"
+      : mode === "lobby"
+      ? "Back to Lobbies"
+      : "Back to Discover";
 
   return (
-    <div>
-      {/* Back to discover link - now includes mode if available */}
-      <div className="mb-6">
-        <Link
-          href={backLink}
-          className="text-primary-600 hover:underline inline-flex items-center"
-        >
-          ← Back to{" "}
-          {mode === "booking"
-            ? "Facilities"
-            : mode === "lobby"
-            ? "Lobbies"
-            : "Discover"}
-        </Link>
-      </div>
-
+    <DetailLayout
+      title={formattedFacility.name}
+      backLink={backLink}
+      backText={backText}
+    >
       <div className="grid md:grid-cols-3 gap-8">
         {/* Facility details - takes up 2/3 of the width on medium+ screens */}
         <div className="md:col-span-2 space-y-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {formattedFacility.name}
-            </h1>
             <p className="text-gray-600">
               {formattedFacility.address}, {formattedFacility.city},{" "}
               {formattedFacility.postal_code}
@@ -296,6 +288,6 @@ export default async function FacilityDetailPage({
           </Card>
         </div>
       </div>
-    </div>
+    </DetailLayout>
   );
 }

@@ -1,4 +1,4 @@
-// src/app/dashboard/facilities/page.tsx
+// src/app/dashboard/facilities/page.tsx - Refactored
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/utils";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { authApi, facilitiesApi } from "@/lib/api";
+import { DashboardLayout } from "@/components/layouts";
 
 export default function ManageFacilitiesPage() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -46,23 +47,22 @@ export default function ManageFacilitiesPage() {
     }
   }
 
-  // The rest of the component remains the same
   if (isLoading) {
     return <LoadingIndicator message="Loading your facilities..." />;
   }
 
-  return (
-    <div>
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">My Facilities</h1>
-          <p className="text-gray-600">Edit and manage your facilities</p>
-        </div>
-        <Link href="/facilities/add">
-          <Button>Add New Facility</Button>
-        </Link>
-      </div>
+  const addFacilityButton = (
+    <Link href="/facilities/add">
+      <Button>Add New Facility</Button>
+    </Link>
+  );
 
+  return (
+    <DashboardLayout
+      title="My Facilities"
+      description="Edit and manage your facilities"
+      actions={addFacilityButton}
+    >
       <ErrorDisplay error={error} className="mb-6" />
 
       {/* Render facilities grid or empty state */}
@@ -143,6 +143,6 @@ export default function ManageFacilitiesPage() {
           ))}
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 }
