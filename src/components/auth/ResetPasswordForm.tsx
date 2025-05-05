@@ -7,8 +7,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { authApi } from "@/lib/api";
 
 /**
  * Form component for handling password reset
@@ -46,11 +46,8 @@ export function ResetPasswordForm() {
       // Set session with the token
       (async () => {
         try {
-          // Set the Supabase session with the recovery token
-          const { error } = await supabase.auth.setSession({
-            access_token: token as string,
-            refresh_token: "", // We don't have a refresh token in this flow
-          });
+          // Use the API service instead of direct Supabase call
+          const { error } = await authApi.setSession(token as string);
 
           if (error) {
             console.error("Error setting session:", error);
@@ -71,7 +68,7 @@ export function ResetPasswordForm() {
     } else {
       setIsRecoveryMode(false);
     }
-  }, [type, token, supabase.auth]);
+  }, [type, token]);
 
   // Handle requesting a password reset
   const handleRequestReset = async (e: React.FormEvent) => {
@@ -87,10 +84,8 @@ export function ResetPasswordForm() {
     }
 
     try {
-      // Use Supabase's password reset functionality
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
+      // Use the API service instead of direct Supabase call
+      const { success, error } = await authApi.resetPasswordRequest(userEmail);
 
       if (error) throw error;
 
@@ -125,8 +120,8 @@ export function ResetPasswordForm() {
     }
 
     try {
-      // Update the user's password - we've already set the session with the token above
-      const { error } = await supabase.auth.updateUser({ password });
+      // Use the API service instead of direct Supabase call
+      const { error } = await authApi.updatePassword(password);
 
       if (error) throw error;
 

@@ -57,6 +57,9 @@ export function AuthStatus() {
           document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
         });
 
+        // Set user to null to immediately reflect the signed out state
+        setUser(null);
+
         // Force a complete page reload rather than client-side navigation
         window.location.href = "/";
       }

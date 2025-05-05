@@ -7,9 +7,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { supabase } from "@/lib/supabase";
 import { UserRole } from "@/types/user";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { authApi } from "@/lib/api";
 
 /**
  * Registration form component for new user sign-up
@@ -44,39 +44,16 @@ export function RegisterForm() {
     }
 
     try {
-      // Step 1: Register the user with Supabase Auth
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // Use the API service for signup and automatic signin
+      const { data, error: signUpError } = await authApi.signUpAndSignIn(
         email,
         password,
-        options: {
-          data: {
-            name,
-            role,
-          },
-        },
-      });
+        name,
+        role
+      );
 
       if (signUpError) throw new Error(signUpError.message);
-      if (!data?.user) throw new Error("Registration failed");
-
-      // Step 2: Create profile record
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        email,
-        name,
-        role,
-      });
-
-      if (profileError)
-        throw new Error(`Failed to create profile: ${profileError.message}`);
-
-      // Step 3: Sign in the user
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) throw new Error(signInError.message);
+      if (!data || !data.user) throw new Error("Registration failed");
 
       // Success - redirect to dashboard
       router.push("/dashboard");

@@ -64,6 +64,42 @@ export async function signUp(
 }
 
 /**
+ * Sign in after registration
+ * This is a convenience method that combines signUp and signIn
+ */
+export async function signUpAndSignIn(
+  email: string,
+  password: string,
+  name: string,
+  role: UserRole
+) {
+  try {
+    // First sign up the user
+    const { data: signUpData, error: signUpError } = await signUp(
+      email,
+      password,
+      name,
+      role
+    );
+
+    if (signUpError) throw signUpError;
+
+    // Then sign them in
+    const { data: signInData, error: signInError } = await signIn(
+      email,
+      password
+    );
+
+    if (signInError) throw signInError;
+
+    return { data: signInData, error: null };
+  } catch (error) {
+    console.error("Sign up and sign in error:", error);
+    return { data: null, error };
+  }
+}
+
+/**
  * Sign out the current user
  */
 export async function signOut() {
@@ -101,6 +137,25 @@ export async function getSession() {
     return { data: data.session, error: null };
   } catch (error) {
     console.error("Get session error:", error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Set auth session with token
+ * Used primarily for password reset flow
+ */
+export async function setSession(token: string, refreshToken: string = "") {
+  try {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: token,
+      refresh_token: refreshToken,
+    });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error("Set session error:", error);
     return { data: null, error };
   }
 }

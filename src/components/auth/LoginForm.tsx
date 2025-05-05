@@ -6,8 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { authApi } from "@/lib/api";
 
 /**
  * Login form component for user authentication
@@ -28,11 +28,8 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      // Attempt to sign in with provided credentials
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Use the API service instead of direct Supabase calls
+      const { data, error } = await authApi.signIn(email, password);
 
       if (error) {
         throw new Error(error.message);
