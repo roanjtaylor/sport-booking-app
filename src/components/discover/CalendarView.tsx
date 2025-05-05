@@ -11,9 +11,10 @@ import { LobbyList } from "@/components/lobbies/LobbyList";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
-import { authApi, bookingsApi, facilitiesApi, lobbiesApi } from "@/lib/api";
+import { bookingsApi, facilitiesApi, lobbiesApi } from "@/lib/api";
 import { Facility } from "@/types/facility";
 import { Lobby } from "@/types/lobby";
+import { useAuth } from "@/contexts/AuthContext";
 
 type BookingMode = "booking" | "lobby" | null;
 
@@ -162,6 +163,7 @@ export default function CalendarView({
   onCreateLobby,
 }: CalendarViewProps) {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
 
   // State for calendar and results
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -394,10 +396,7 @@ export default function CalendarView({
       setIsJoiningLobby(true);
       setError(null);
 
-      // Get current user using authApi
-      const { data: user, error: userError } = await authApi.getCurrentUser();
-
-      if (userError || !user) {
+      if (!user) {
         router.push(`/auth/login?redirect=/discover?mode=lobby`);
         return;
       }
@@ -444,6 +443,9 @@ export default function CalendarView({
   // Calculate max date (30 days from now)
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 30);
+
+  // Combine loading states to prevent UI flickering
+  const combinedLoading = isLoading || authLoading;
 
   return (
     <div>
@@ -517,7 +519,7 @@ export default function CalendarView({
       </Card>
 
       {/* Loading State */}
-      {isLoading ? (
+      {combinedLoading ? (
         <LoadingIndicator message="Loading availability..." />
       ) : error ? (
         <ErrorDisplay error={error} className="mb-6" />

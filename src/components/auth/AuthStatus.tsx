@@ -1,78 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { User } from "@supabase/supabase-js";
-import { authApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AuthStatus() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoading, signOut } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    // Check authentication state when component mounts
-    const checkAuth = async () => {
-      try {
-        // Use the authApi instead of direct Supabase calls
-        const { data: currentUser, error } = await authApi.getCurrentUser();
-        if (error) throw error;
-        setUser(currentUser);
-      } catch (error) {
-        console.error("Error checking auth status:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-
-    // Set up an interval to periodically check for auth changes
-    const authCheckInterval = setInterval(checkAuth, 5000);
-
-    // Clean up the interval when component unmounts
-    return () => {
-      clearInterval(authCheckInterval);
-    };
-  }, [router]);
-
   const handleSignOut = async () => {
-    try {
-      setIsLoading(true);
+    await signOut();
 
-      // Use the authApi.signOut method instead of direct Supabase call
-      const { success, error } = await authApi.signOut();
-
-      if (error) throw error;
-      if (success) {
-        // Clear all storage, not just the token
-        localStorage.clear();
-        sessionStorage.clear();
-
-        // Clear cookies by setting past expiration date
-        document.cookie.split(";").forEach((cookie) => {
-          const name = cookie.split("=")[0].trim();
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-        });
-
-        // Set user to null to immediately reflect the signed out state
-        setUser(null);
-
-        // Force a complete page reload rather than client-side navigation
-        window.location.href = "/";
-      }
-    } catch (error) {
-      console.error("Error signing out:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    // Force a complete page reload rather than client-side navigation
+    window.location.href = "/";
   };
 
   if (isLoading) {
-    // Show nothing while loading to prevent UI flickering
-    return null;
+    // Show a minimal loading state to prevent UI flickering
+    return (
+      <div className="flex items-center">
+        <div className="w-20 h-6 bg-gray-200 animate-pulse rounded"></div>
+      </div>
+    );
   }
 
   if (user) {

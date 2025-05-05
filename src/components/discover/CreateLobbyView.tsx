@@ -15,10 +15,13 @@ import {
 } from "@/lib/utils";
 import { TimeSlot } from "@/types/booking";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
-import { authApi, facilitiesApi, lobbiesApi, bookingsApi } from "@/lib/api";
+import { facilitiesApi, lobbiesApi, bookingsApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CreateLobbyView() {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [filteredFacilities, setFilteredFacilities] = useState<Facility[]>([]);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(
@@ -141,10 +144,7 @@ export default function CreateLobbyView() {
     setError(null);
 
     try {
-      // Get current user using auth API
-      const { data: user, error: userError } = await authApi.getCurrentUser();
-
-      if (userError || !user) {
+      if (!user) {
         router.push("/auth/login?redirect=/discover?mode=lobby");
         return;
       }
@@ -185,6 +185,18 @@ export default function CreateLobbyView() {
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 30);
   const maxDateString = maxDate.toISOString().split("T")[0];
+
+  // Combine loading states
+  const combinedLoading = isLoading || authLoading;
+
+  if (combinedLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div>

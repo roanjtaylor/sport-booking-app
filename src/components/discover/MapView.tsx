@@ -11,7 +11,8 @@ import dynamic from "next/dynamic";
 import { LobbyList } from "@/components/lobbies/LobbyList";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { facilitiesApi, lobbiesApi, authApi } from "@/lib/api";
+import { facilitiesApi, lobbiesApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -48,6 +49,7 @@ export default function MapView({ mode }: MapViewProps) {
   const [error, setError] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
 
   // New state variables
   const [isMapExpanded, setIsMapExpanded] = useState(true);
@@ -150,10 +152,7 @@ export default function MapView({ mode }: MapViewProps) {
     try {
       setIsJoiningLobby(true);
 
-      // Get current user using auth API
-      const { data: user, error: userError } = await authApi.getCurrentUser();
-
-      if (userError || !user) {
+      if (!user) {
         router.push(`/auth/login?redirect=/discover?mode=lobby`);
         return;
       }
@@ -184,7 +183,10 @@ export default function MapView({ mode }: MapViewProps) {
     }
   };
 
-  if (isLoading) {
+  // Combine loading states
+  const combinedLoading = isLoading || authLoading;
+
+  if (combinedLoading) {
     return <LoadingIndicator message="Loading map..." />;
   }
 
